@@ -1,0 +1,77 @@
+import { useState } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
+import Sidebar, { NAV } from './components/Sidebar.jsx'
+import MobileTopBar from './components/MobileTopBar.jsx'
+import Login from './pages/Login.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import POS from './pages/POS.jsx'
+import Inventory from './pages/Inventory.jsx'
+import Sales from './pages/Sales.jsx'
+import Purchases from './pages/Purchases.jsx'
+import Expenses from './pages/Expenses.jsx'
+import Debtors from './pages/Debtors.jsx'
+import Creditors from './pages/Creditors.jsx'
+import Reports from './pages/Reports.jsx'
+import Settings from './pages/Settings.jsx'
+
+function pageTitle(pathname) {
+  for (const entry of NAV) {
+    if (entry.type === 'item' && entry.path === pathname) return entry.label
+    if (entry.type === 'group') {
+      const child = entry.children.find((c) => c.path === pathname)
+      if (child) return child.label
+    }
+  }
+  return 'Zimbermanne'
+}
+
+function Layout({ children }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
+  return (
+    <div className="app-shell">
+      <MobileTopBar title={pageTitle(location.pathname)} open={mobileOpen} onToggle={() => setMobileOpen((o) => !o)} />
+      <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
+      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <div className="main-content">{children}</div>
+    </div>
+  )
+}
+
+function PrivateRoutes() {
+  const { user, loading } = useAuth()
+  if (loading) return <div style={{ padding: 40 }}>Loading…</div>
+  if (!user) return <Navigate to="/login" replace />
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pos" element={<POS />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/sales" element={<Sales />} />
+        <Route path="/purchases" element={<Purchases />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/debtors" element={<Debtors />} />
+        <Route path="/creditors" element={<Creditors />} />
+        <Route path="/reports/profit-loss" element={<Reports view="profit-loss" />} />
+        <Route path="/reports/financial-summary" element={<Reports view="financial-summary" />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={<PrivateRoutes />} />
+      </Routes>
+    </AuthProvider>
+  )
+}

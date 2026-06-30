@@ -1,0 +1,130 @@
+import { useEffect, useState } from 'react'
+import { useApi } from '../hooks/useApi.js'
+import Table from '../components/Table.jsx'
+import Modal from '../components/Modal.jsx'
+
+const empty = { name: '', sku: '', category: 'General', quantity: 0, unit: 'pcs', cost_price: 0, selling_price: 0, reorder_point: 5 }
+
+export default function Inventory() {
+  const api = useApi()
+  const [items, setItems] = useState([])
+  const [error, setError] = useState('')
+  const [editing, setEditing] = useState(null) // null = closed, {} = new, {...} = edit
+  const [form, setForm] = useState(empty)
+
+  const load = () => api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
+
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openNew = () => { setForm(empty); setEditing({}) }
+  const openEdit = (item) => { setForm(item); setEditing(item) }
+
+  const save = async () => {
+    try {
+      if (editing && editing.id) {
+        await api.put(`/inventory/${editing.id}`, form)
+      } else {
+        await api.post('/inventory/', form)
+      }
+      setEditing(null)
+      load()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  const remove = async (id) => {
+    if (!confirm('Delete this item?')) return
+    try {
+      await api.del(`/inventory/${id}`)
+      load()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  const columns = [
+    { key: 'name', header: 'Name' },
+    { key: 'category', header: 'Category' },
+    { key: 'quantity', header: 'Qty', render: (r) => `${r.quantity} ${r.unit}` },
+    { key: 'selling_price', header: 'Price', render: (r) => `TZS ${r.selling_price.toLocaleString()}` },
+    {
+      key: 'status', header: 'Status',
+      render: (r) => r.quantity <= r.reorder_point
+        ? <span className="badge badge-unpaid">Low Stock</span>
+        : <span className="badge badge-paid">OK</span>,
+    },
+    {
+      key: 'actions', header: '',
+      render: (r) => (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={() => openEdit(r)}>Edit</button>
+          <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h1>Inventory Ledger</h1>
+        <button className="btn btn-primary" onClick={openNew}>+ Add Item</button>
+      </div>
+
+      {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
+
+      <Table columns={columns} rows={items} />
+
+      {editing !== null && (
+        <Modal
+          title={editing.id ? 'Edit Item' : 'Add Item'}
+          onClose={() => setEditing(null)}
+          footer={(
+            <>
+              <button className="btn btn-outline" onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save}>Save</button>
+            </>
+          )}
+        >
+          <div className="form-row">
+            <label>Name</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="form-row">
+            <label>SKU</label>
+            <input value={form.sku || ''} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+          </div>
+          <div className="form-row">
+            <label>Category</label>
+            <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="form-row" style={{ flex: 1 }}>
+              <label>Quantity</label>
+              <input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
+            </div>
+            <div className="form-row" style={{ flex: 1 }}>
+              <label>Unit</label>
+              <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div className="form-row" style={{ flex: 1 }}>
+              <label>Cost Price</label>
+              <input type="number" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: Number(e.target.value) })} />
+            </div>
+            <div className="form-row" style={{ flex: 1 }}>
+              <label>Selling Price</label>
+              <input type="number" value={form.selling_price} onChange={(e) => setForm({ ...form, selling_price: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div className="form-row">
+            <label>Reorder Point</label>
+            <input type="number" value={form.reorder_point} onChange={(e) => setForm({ ...form, reorder_point: Number(e.target.value) })} />
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}

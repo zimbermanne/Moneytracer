@@ -1,0 +1,124 @@
+import io
+from typing import List, Optional
+
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import InventoryItem, User
+from schemas import InventoryCreate, InventoryUpdate, InventoryOut
+from auth import get_current_user, require_manager_up
+from activity import log_activity
+
+router = APIRouter(prefix="/api/inventory", tags=["inventory"])
+
+
+@router.get("/", response_model=List[InventoryOut])
+def list_items(category: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)):
+    query = db.query(InventoryItem)
+    if category:
+        query = query.filter(InventoryItem.category == category)
+    if q:
+        query = query.filter(InventoryItem.name.ilike(f"%{q}%"))
+    return query.order_by(InventoryItem.name).all()
+
+
+@router.post("/", response_model=InventoryOut)
+def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
+                 current_user: User = Depends(require_manager_up)):
+    item = InventoryItem(**payload.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    log_activity(db, current_user.username, "inventory_create", f"Added item {item.name}")
+    return item
+
+
+@router.get("/metrics")
+def metrics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    items = db.query(InventoryItem).all()
+    total_items = len(items)
+    total_units = sum(i.quantity for i in items)
+    total_value = sum(i.quantity * i.cost_price for i in items)
+    low_stock = [i for i in items if i.quantity <= i.reorder_point]
+    return {
+        "total_items": total_items,
+        "total_units": total_units,
+        "total_value": round(total_value, 2),
+        "low_stock_count": len(low_stock),
+    }
+
+
+@router.get("/low-stock/alerts", response_model=List[InventoryOut])
+def low_stock_alerts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return db.query(InventoryItem).filter(InventoryItem.quantity <= InventoryItem.reorder_point).all()
+
+
+@router.get("/categories/list")
+def categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rows = db.query(InventoryItem.category).distinct().all()
+    return sorted({r[0] for r in rows if r[0]})
+
+
+@router.post("/batch")
+async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_db),
+                        current_user: User = Depends(require_manager_up)):
+    content = await file.read()
+    if file.filename.endswith(".csv"):
+        df = pd.read_csv(io.BytesIO(content))
+    else:
+        df = pd.read_excel(io.BytesIO(content))
+
+    created = 0
+    for _, row in df.iterrows():
+        item = InventoryItem(
+            name=str(row.get("name", "")).strip(),
+            sku=str(row.get("sku", "")).strip() or None,
+            category=str(row.get("category", "General")).strip() or "General",
+            quantity=float(row.get("quantity", 0) or 0),
+            unit=str(row.get("unit", "pcs")).strip() or "pcs",
+            cost_price=float(row.get("cost_price", 0) or 0),
+            selling_price=float(row.get("selling_price", 0) or 0),
+            reorder_point=float(row.get("reorder_point", 5) or 5),
+        )
+        if item.name:
+            db.add(item)
+            created += 1
+    db.commit()
+    log_activity(db, current_user.username, "inventory_batch_import", f"Imported {created} items")
+    return {"created": created}
+
+
+@router.get("/{item_id}", response_model=InventoryOut)
+def get_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+
+@router.put("/{item_id}", response_model=InventoryOut)
+def update_item(item_id: int, payload: InventoryUpdate, db: Session = Depends(get_db),
+                 current_user: User = Depends(require_manager_up)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    db.commit()
+    db.refresh(item)
+    log_activity(db, current_user.username, "inventory_update", f"Updated item {item.name}")
+    return item
+
+
+@router.delete("/{item_id}")
+def delete_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_manager_up)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(item)
+    db.commit()
+    log_activity(db, current_user.username, "inventory_delete", f"Deleted item {item.name}")
+    return {"detail": "Item deleted"}
