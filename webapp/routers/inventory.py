@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -60,6 +61,29 @@ def low_stock_alerts(db: Session = Depends(get_db), current_user: User = Depends
 def categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     rows = db.query(InventoryItem.category).distinct().all()
     return sorted({r[0] for r in rows if r[0]})
+
+
+@router.get("/export/spreadsheet")
+def export_items(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    items = db.query(InventoryItem).order_by(InventoryItem.name).all()
+    df = pd.DataFrame([{
+        "name": i.name,
+        "sku": i.sku or "",
+        "category": i.category,
+        "quantity": i.quantity,
+        "unit": i.unit,
+        "cost_price": i.cost_price,
+        "selling_price": i.selling_price,
+        "reorder_point": i.reorder_point,
+    } for i in items])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Inventory")
+    buf.seek(0)
+    log_activity(db, current_user.username, "inventory_export", f"Exported {len(items)} items")
+    headers = {"Content-Disposition": 'attachment; filename="inventory_export.xlsx"'}
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                              headers=headers)
 
 
 @router.post("/batch")

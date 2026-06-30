@@ -1,5 +1,8 @@
+import io
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
+import pandas as pd
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -47,6 +50,60 @@ def purchase_stats(db: Session = Depends(get_db), current_user: User = Depends(g
         "total_purchases": len(purchases),
         "total_spent": round(sum(p.total for p in purchases), 2),
     }
+
+
+@router.post("/batch")
+async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_db),
+                        current_user: User = Depends(require_manager_up)):
+    content = await file.read()
+    if file.filename.endswith(".csv"):
+        df = pd.read_csv(io.BytesIO(content))
+    else:
+        df = pd.read_excel(io.BytesIO(content))
+
+    created = 0
+    for _, row in df.iterrows():
+        item_name = str(row.get("item_name", "")).strip()
+        if not item_name:
+            continue
+        quantity = float(row.get("quantity", 0) or 0)
+        unit_cost = float(row.get("unit_cost", 0) or 0)
+        purchase = Purchase(
+            item_name=item_name,
+            supplier=str(row.get("supplier", "")).strip(),
+            quantity=quantity,
+            unit_cost=unit_cost,
+            total=quantity * unit_cost,
+        )
+        db.add(purchase)
+        item = db.query(InventoryItem).filter(InventoryItem.name == item_name).first()
+        if item:
+            item.quantity += quantity
+        created += 1
+    db.commit()
+    log_activity(db, current_user.username, "purchase_batch_import", f"Imported {created} purchases")
+    return {"created": created}
+
+
+@router.get("/export/spreadsheet")
+def export_purchases(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    purchases = db.query(Purchase).order_by(Purchase.created_at.desc()).all()
+    df = pd.DataFrame([{
+        "date": p.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "item_name": p.item_name,
+        "supplier": p.supplier,
+        "quantity": p.quantity,
+        "unit_cost": p.unit_cost,
+        "total": p.total,
+    } for p in purchases])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Purchases")
+    buf.seek(0)
+    log_activity(db, current_user.username, "purchase_export", f"Exported {len(purchases)} purchases")
+    headers = {"Content-Disposition": 'attachment; filename="purchases_export.xlsx"'}
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                              headers=headers)
 
 
 @router.get("/{purchase_id}", response_model=PurchaseOut)

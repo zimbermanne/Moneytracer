@@ -123,6 +123,84 @@ class Creditor(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class DocumentStatus(str, enum.Enum):
+    draft = "draft"
+    sent = "sent"
+    paid = "paid"
+    accepted = "accepted"
+    rejected = "rejected"
+    expired = "expired"
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_no = Column(String(40), unique=True, index=True)
+    customer_name = Column(String(150), nullable=False, default="Walk-in")
+    customer_phone = Column(String(40), default="")
+    customer_address = Column(String(255), default="")
+    subtotal = Column(Float, default=0)
+    tax_rate = Column(Float, default=0)
+    tax_amount = Column(Float, default=0)
+    discount = Column(Float, default=0)
+    total = Column(Float, default=0)
+    notes = Column(String(500), default="")
+    status = Column(Enum(DocumentStatus), default=DocumentStatus.sent)
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
+
+
+class InvoiceItem(Base):
+    __tablename__ = "invoice_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=False)
+    description = Column(String(255), default="")
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    total = Column(Float, default=0)
+
+    invoice = relationship("Invoice", back_populates="items")
+
+
+class Quotation(Base):
+    __tablename__ = "quotations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    quote_no = Column(String(40), unique=True, index=True)
+    customer_name = Column(String(150), nullable=False, default="Walk-in")
+    customer_phone = Column(String(40), default="")
+    customer_address = Column(String(255), default="")
+    subtotal = Column(Float, default=0)
+    tax_rate = Column(Float, default=0)
+    tax_amount = Column(Float, default=0)
+    discount = Column(Float, default=0)
+    total = Column(Float, default=0)
+    notes = Column(String(500), default="")
+    valid_until = Column(DateTime, nullable=True)
+    status = Column(Enum(DocumentStatus), default=DocumentStatus.draft)
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    items = relationship("QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
+
+
+class QuotationItem(Base):
+    __tablename__ = "quotation_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    quotation_id = Column(Integer, ForeignKey("quotations.id"), nullable=False)
+    description = Column(String(255), default="")
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    total = Column(Float, default=0)
+
+    quotation = relationship("Quotation", back_populates="items")
+
+
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
 

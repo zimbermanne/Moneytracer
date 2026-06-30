@@ -139,6 +139,34 @@ def sales_stats(db: Session = Depends(get_db), current_user: User = Depends(get_
     }
 
 
+@router.get("/customers/history")
+def customer_purchase_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Returns each customer with the items they bought and when, for the Purchases Ledger view."""
+    sales = db.query(Sale).order_by(Sale.created_at.desc()).all()
+    grouped = {}
+    for s in sales:
+        key = s.customer_name or "Walk-in"
+        grouped.setdefault(key, []).append({
+            "item_name": s.item_name,
+            "quantity": s.quantity,
+            "unit_price": s.unit_price,
+            "total": s.total,
+            "payment_mode": s.payment_mode.value,
+            "receipt_no": s.receipt_no,
+            "date": s.created_at.isoformat(),
+        })
+    return [
+        {
+            "customer_name": name,
+            "purchase_count": len(purchases),
+            "total_spent": round(sum(p["total"] for p in purchases), 2),
+            "last_purchase": purchases[0]["date"] if purchases else None,
+            "purchases": purchases,
+        }
+        for name, purchases in grouped.items()
+    ]
+
+
 @router.get("/by-item/{item_id}", response_model=List[SaleOut])
 def sales_by_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Sale).filter(Sale.item_id == item_id).order_by(Sale.created_at.desc()).all()
