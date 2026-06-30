@@ -23,7 +23,8 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         full_name=payload.full_name or "",
         email=payload.email or "",
         hashed_password=hash_password(payload.password),
-        role=payload.role or RoleEnum.employee,
+        role=RoleEnum.employee,  # public self-registration is always lowest privilege;
+                                 # an admin can promote via PUT /api/users/{username}
     )
     db.add(user)
     db.commit()

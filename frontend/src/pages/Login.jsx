@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 
 export default function Login() {
@@ -72,6 +72,10 @@ export default function Login() {
         <button className="btn btn-gold" style={{ width: '100%' }} onClick={tryDemo} disabled={demoBusy}>
           {demoBusy ? 'Loading demo…' : '✨ Continue as Demo (no password)'}
         </button>
+
+        <div style={{ marginTop: 16, fontSize: 13, textAlign: 'center' }}>
+          Don't have an account? <Link to="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create one</Link>
+        </div>
 
         <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
           Default: admin / admin123
