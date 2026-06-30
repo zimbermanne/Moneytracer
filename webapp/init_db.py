@@ -2,8 +2,10 @@
 from database import SessionLocal, Base, engine
 from models import User, RoleEnum
 from auth import hash_password
+from migrate import run_migrations
 
 Base.metadata.create_all(bind=engine)
+run_migrations(engine)
 
 
 def seed():

@@ -5,9 +5,11 @@ from fastapi.staticfiles import StaticFiles
 
 from database import Base, engine
 import models  # noqa: F401 ensures models are registered before create_all
+from migrate import run_migrations
 from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent
 
 Base.metadata.create_all(bind=engine)
+run_migrations(engine)
 
 app = FastAPI(title="Zimbermanne Retail OS API", version="2.5.0")
 
