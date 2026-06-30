@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from database import Base, engine
 import models  # noqa: F401 ensures models are registered before create_all
 from migrate import run_migrations
-from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent
+from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations
 
 Base.metadata.create_all(bind=engine)
 run_migrations(engine)
@@ -35,6 +35,8 @@ app.include_router(users.router)
 app.include_router(activity.router)
 app.include_router(backup.router)
 app.include_router(agent.router)
+app.include_router(invoices.router)
+app.include_router(quotations.router)
 
 
 @app.get("/api/health")

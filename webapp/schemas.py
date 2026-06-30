@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
-from models import RoleEnum, PaymentMode, LedgerStatus
+from models import RoleEnum, PaymentMode, LedgerStatus, DocumentStatus
 
 
 # ---------- Auth / Users ----------
@@ -203,3 +203,95 @@ class ActivityOut(BaseModel):
     action: str
     details: str
     created_at: datetime
+
+# ---------- Admin: user profile ----------
+class UserProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    full_name: str
+    email: str
+    role: RoleEnum
+    is_active: bool
+    is_demo: bool
+    created_at: datetime
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
+
+
+# ---------- Invoices & Quotations (shared line-item shape) ----------
+class DocumentLineIn(BaseModel):
+    description: str
+    quantity: float = 1
+    unit_price: float = 0
+
+
+class DocumentLineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    description: str
+    quantity: float
+    unit_price: float
+    total: float
+
+
+class InvoiceCreate(BaseModel):
+    customer_name: str = "Walk-in"
+    customer_phone: Optional[str] = ""
+    customer_address: Optional[str] = ""
+    tax_rate: float = 0
+    discount: float = 0
+    notes: Optional[str] = ""
+    items: List[DocumentLineIn]
+
+
+class InvoiceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    invoice_no: str
+    customer_name: str
+    customer_phone: str
+    customer_address: str
+    subtotal: float
+    tax_rate: float
+    tax_amount: float
+    discount: float
+    total: float
+    notes: str
+    status: DocumentStatus
+    created_by: str
+    created_at: datetime
+    items: List[DocumentLineOut] = []
+
+
+class QuotationCreate(BaseModel):
+    customer_name: str = "Walk-in"
+    customer_phone: Optional[str] = ""
+    customer_address: Optional[str] = ""
+    tax_rate: float = 0
+    discount: float = 0
+    notes: Optional[str] = ""
+    valid_days: Optional[int] = 14
+    items: List[DocumentLineIn]
+
+
+class QuotationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    quote_no: str
+    customer_name: str
+    customer_phone: str
+    customer_address: str
+    subtotal: float
+    tax_rate: float
+    tax_amount: float
+    discount: float
+    total: float
+    notes: str
+    valid_until: Optional[datetime]
+    status: DocumentStatus
+    created_by: str
+    created_at: datetime
+    items: List[DocumentLineOut] = []
