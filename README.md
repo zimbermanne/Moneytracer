@@ -1,6 +1,6 @@
-# Zimbermanne Retail OS — v2.5 Scaffold
+# Zimbermanne Retail OS — v2.7 Scaffold
 
-This project was generated from `README2_5.md`. It implements the **"Currently Working (v2.5)"**
+This project was generated from `README2_7.md`. It implements the **"Currently Working (v2.5)"**
 feature set as a working FastAPI backend (`webapp/`) and a React + Vite frontend (`frontend/`),
 matching the project structure, sidebar design, and theme described in the README.
 
@@ -13,7 +13,7 @@ matching the project structure, sidebar design, and theme described in the READM
   create/list/restore/upload/delete, and an optional AI agent router (`/api/agent/*`,
   requires `ANTHROPIC_API_KEY`). SQLite is used by default (zero setup); set `DATABASE_URL`
   for PostgreSQL in production.
-- **Frontend** (`frontend/`): React + Vite app with the Zoho-style collapsible grouped sidebar
+- **Frontend** (`frontend/`): React + Vite app with the Z-style collapsible grouped sidebar
   (light theme, navy/gold/cream tokens), mobile hamburger drawer, JWT login, and pages for
   Dashboard, POS, Inventory, Sales, Purchases, Expenses, Debtors, Creditors, Reports, and
   Settings — all wired to the backend API.
