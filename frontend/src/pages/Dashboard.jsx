@@ -31,8 +31,9 @@ export default function Dashboard() {
 
       {error && <div className="error-text">{error}</div>}
 
-      <div className="card-grid">
-        <div className="card metric-card">
+      <div className="kip-grid">
+        <div className="card kip-card">
+          <div class="kpi-icon">🛒</div>
           <div className="label">Today's Earnings</div>
           <div className="value">TZS {daily ? daily.earnings.toLocaleString() : '—'}</div>
         </div>
