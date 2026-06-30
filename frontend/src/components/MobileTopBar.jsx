@@ -1,3 +1,5 @@
+import Clock from '../Clock.jsx'
+
 export default function MobileTopBar({ title, onToggle, open }) {
   return (
     <div className="mobile-topbar">
@@ -5,7 +7,8 @@ export default function MobileTopBar({ title, onToggle, open }) {
         {open ? '✕' : '☰'}
       </button>
       <div className="brand-logo" style={{ width: 26, height: 26, fontSize: 13 }}>Z</div>
-      <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+      <div style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{title}</div>
+      <Clock />
     </div>
   )
 }

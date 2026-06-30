@@ -287,7 +287,42 @@ label {
 }
 
 .mobile-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--navy);
+  color: #fff;
+  padding: 0 14px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.hamburger {
   display: none;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+}
+
+.clock-widget {
+  text-align: right;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-time {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.clock-date {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .mobile-backdrop {
@@ -306,26 +341,8 @@ label {
   }
   .sidebar.mobile-open { transform: translateX(0); }
 
-  .mobile-topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--navy);
-    color: #fff;
-    padding: 0 14px;
-    height: 56px;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
-
   .hamburger {
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 20px;
-    width: 32px;
-    height: 32px;
+    display: block;
   }
 
   .mobile-backdrop.open {

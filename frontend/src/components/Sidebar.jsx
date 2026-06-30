@@ -23,8 +23,8 @@ const NAV = [
    {
     type: 'group', label: 'Proforma/quotations', key: 'proforma',
     children: [
-      { label: 'Proforma', icon: '📦', path: '/proforma' },
-      { label: 'quotation/estimate', icon: '🏦', path: 'quotation/estimate' },
+      { label: 'Invoices', icon: '🧾', path: '/invoices' },
+      { label: 'Quotations / Estimates', icon: '📑', path: '/quotations' },
     ],
   },
   {
