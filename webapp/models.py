@@ -53,7 +53,7 @@ class InventoryItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    sale_items = relationship("SaleItem", back_populates="item")
+    sales = relationship("Sale", back_populates="item")
 
 
 class Sale(Base):
@@ -71,7 +71,7 @@ class Sale(Base):
     receipt_no = Column(String(40), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
-    item = relationship("InventoryItem", back_populates="sale_items")
+    item = relationship("InventoryItem", back_populates="sales")
 
 
 class Purchase(Base):
