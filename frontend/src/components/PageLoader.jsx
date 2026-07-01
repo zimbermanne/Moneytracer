@@ -7,10 +7,10 @@ import './PageLoader.css'
 export default function PageLoader({ label = 'Loading' }) {
   return (
     <div className="page-loader">
-      <div className="page-loader-orb">
-        <span className="page-loader-blob page-loader-blob-a" />
-        <span className="page-loader-blob page-loader-blob-b" />
-        <span className="page-loader-blob page-loader-blob-c" />
+      <div className="page-loader-dots">
+        <span className="page-loader-dot" />
+        <span className="page-loader-dot" />
+        <span className="page-loader-dot" />
       </div>
       <p className="page-loader-label">{label}</p>
     </div>
