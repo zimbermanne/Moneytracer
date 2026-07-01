@@ -59,6 +59,7 @@ def seed():
                 payment_terms_days=7,
                 is_active=True,
                 is_suspended=False,
+                onboarding_completed=True,  # seeded data, no wizard needed
             )
             db.add(default_account)
             db.commit()
@@ -103,6 +104,7 @@ def seed():
                 payment_terms_days=7,
                 is_active=True,
                 is_suspended=False,
+                onboarding_completed=True,  # seeded data, no wizard needed
             )
             db.add(demo_account)
             db.commit()

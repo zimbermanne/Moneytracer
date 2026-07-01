@@ -50,6 +50,7 @@ def migrate_to_multitenant():
             payment_terms_days=7,
             is_active=True,
             is_suspended=False,
+            onboarding_completed=True,  # pre-existing data, wizard not needed
         )
         db.add(default_account)
         db.commit()

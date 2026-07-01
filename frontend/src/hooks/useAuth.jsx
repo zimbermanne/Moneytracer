@@ -9,6 +9,29 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [account, setAccount] = useState(null)
+  const [accountLoading, setAccountLoading] = useState(false)
+
+  const fetchAccount = useCallback(async (tok, currentUser) => {
+    // Only account admins have (or need) an onboarding wizard; superadmin
+    // and staff accounts (manager/employee) never see it.
+    if (!currentUser || currentUser.role !== 'admin') {
+      setAccount(null)
+      return
+    }
+    setAccountLoading(true)
+    try {
+      const res = await fetch(apiUrl('/api/accounts/my-account'), {
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (!res.ok) throw new Error('failed')
+      setAccount(await res.json())
+    } catch {
+      setAccount(null)
+    } finally {
+      setAccountLoading(false)
+    }
+  }, [])
 
   const fetchMe = useCallback(async (tok) => {
     try {
@@ -18,14 +41,16 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error('unauthorized')
       const data = await res.json()
       setUser(data)
+      await fetchAccount(tok, data)
     } catch {
       setToken(null)
       setUser(null)
+      setAccount(null)
       sessionStorage.removeItem(TOKEN_KEY)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchAccount])
 
   useEffect(() => {
     if (token) {
@@ -34,6 +59,10 @@ export function AuthProvider({ children }) {
       setLoading(false)
     }
   }, [token, fetchMe])
+
+  const refreshAccount = useCallback(() => {
+    if (token && user) return fetchAccount(token, user)
+  }, [token, user, fetchAccount])
 
   const login = useCallback(async (username, password) => {
     let res
@@ -58,8 +87,9 @@ export function AuthProvider({ children }) {
     sessionStorage.setItem(TOKEN_KEY, data.access_token)
     setToken(data.access_token)
     setUser(data.user)
+    await fetchAccount(data.access_token, data.user)
     return data.user
-  }, [])
+  }, [fetchAccount])
 
   const loginAsDemo = useCallback(async () => {
     let res
@@ -80,17 +110,22 @@ export function AuthProvider({ children }) {
     sessionStorage.setItem(TOKEN_KEY, data.access_token)
     setToken(data.access_token)
     setUser(data.user)
+    await fetchAccount(data.access_token, data.user)
     return data.user
-  }, [])
+  }, [fetchAccount])
 
   const logout = useCallback(() => {
     sessionStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
+    setAccount(null)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, loginAsDemo, logout }}>
+    <AuthContext.Provider value={{
+      token, user, loading, login, loginAsDemo, logout,
+      account, accountLoading, setAccount, refreshAccount,
+    }}>
       {children}
     </AuthContext.Provider>
   )

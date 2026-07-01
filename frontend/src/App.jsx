@@ -6,6 +6,7 @@ import MobileTopBar from './components/MobileTopBar.jsx'
 import Clock from './Clock.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import Onboarding from './pages/Onboarding.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import POS from './pages/POS.jsx'
 import Inventory from './pages/Inventory.jsx'
@@ -50,9 +51,16 @@ function Layout({ children }) {
 }
 
 function PrivateRoutes() {
-  const { user, loading } = useAuth()
+  const { user, loading, account, accountLoading } = useAuth()
   if (loading) return <div style={{ padding: 40 }}>Loading…</div>
   if (!user) return <Navigate to="/login" replace />
+
+  // Only account admins go through onboarding; wait for the account to
+  // load before deciding, so we don't flash the dashboard first.
+  if (user.role === 'admin') {
+    if (accountLoading || account === null) return <div style={{ padding: 40 }}>Loading…</div>
+    if (!account.onboarding_completed) return <Onboarding />
+  }
 
   return (
     <Layout>

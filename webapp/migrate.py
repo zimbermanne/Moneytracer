@@ -19,6 +19,12 @@ _MIGRATIONS = {
     "users": [
         ("is_demo", "BOOLEAN", "false"),
     ],
+    "accounts": [
+        # Existing accounts predate the onboarding wizard, so they default to
+        # "already onboarded" and are never interrupted by it. Freshly
+        # registered accounts explicitly set this to False (see routers/auth.py).
+        ("onboarding_completed", "BOOLEAN", "true"),
+    ],
 }
 
 

@@ -19,12 +19,16 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
     
-    # Create a new account for self-service registration
+    # Create a new account for self-service registration. It starts
+    # un-onboarded so the new admin is walked through the setup wizard
+    # (business basics, branding, tax/invoicing defaults) before landing
+    # on the dashboard.
     account = Account(
         name=f"{payload.full_name}'s Business",
         owner_full_name=payload.full_name or payload.username,
         business_type="retail",
         email=payload.email or "",
+        onboarding_completed=False,
     )
     db.add(account)
     db.commit()
@@ -79,6 +83,7 @@ def demo_login(db: Session = Depends(get_db)):
             business_type="retail",
             email="demo@zimbermanne.co.tz",
             phone="+255123456789",
+            onboarding_completed=True,  # demo skips the wizard
         )
         db.add(demo_account)
         db.commit()

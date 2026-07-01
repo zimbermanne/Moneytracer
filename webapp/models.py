@@ -39,6 +39,7 @@ class Account(Base):
     payment_terms_days = Column(Integer, default=7)
     is_active = Column(Boolean, default=True)
     is_suspended = Column(Boolean, default=False)
+    onboarding_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="account")

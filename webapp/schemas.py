@@ -84,6 +84,7 @@ class AccountUpdate(BaseModel):
     payment_terms_days: Optional[int] = None
     is_active: Optional[bool] = None
     is_suspended: Optional[bool] = None
+    onboarding_completed: Optional[bool] = None
 
 
 class AccountOut(BaseModel):
@@ -105,6 +106,7 @@ class AccountOut(BaseModel):
     payment_terms_days: int
     is_active: bool
     is_suspended: bool
+    onboarding_completed: bool
     created_at: datetime
 
 
