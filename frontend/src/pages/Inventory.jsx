@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { apiUrl } from '../api-config.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 
@@ -7,17 +9,48 @@ const empty = { name: '', sku: '', category: 'General', quantity: 0, unit: 'pcs'
 
 export default function Inventory() {
   const api = useApi()
+  const { token } = useAuth()
+  const fileRef = useRef()
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState(null) // null = closed, {} = new, {...} = edit
+  const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(empty)
+  const [importing, setImporting] = useState(false)
 
   const load = () => api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
-
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openNew = () => { setForm(empty); setEditing({}) }
   const openEdit = (item) => { setForm(item); setEditing(item) }
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0]; if (!file) return
+    setImporting(true); setError('')
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch(apiUrl('/api/inventory/batch'), {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
+      })
+      if (!res.ok) throw new Error('Import failed')
+      const data = await res.json()
+      load()
+      alert(`✅ Imported ${data.created} items successfully.`)
+    } catch (e) { setError(e.message) }
+    finally { setImporting(false); e.target.value = '' }
+  }
+
+  const handleExport = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/inventory/export'), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'inventory-export.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { setError(e.message) }
+  }
 
   const save = async () => {
     try {
@@ -69,7 +102,14 @@ export default function Inventory() {
     <div className="page">
       <div className="page-header">
         <h1>Inventory Ledger</h1>
-        <button className="btn btn-primary" onClick={openNew}>+ Add Item</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImport} />
+          <button className="btn btn-outline" onClick={() => fileRef.current.click()} disabled={importing}>
+            {importing ? 'Importing…' : '⬆ Import'}
+          </button>
+          <button className="btn btn-outline" onClick={handleExport}>⬇ Export</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Add Item</button>
+        </div>
       </div>
 
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}

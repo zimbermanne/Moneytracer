@@ -1,8 +1,10 @@
+import io
 import uuid
 from datetime import datetime, date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -14,140 +16,187 @@ from activity import log_activity
 router = APIRouter(prefix="/api/quotations", tags=["quotations"])
 
 
-def _calc_totals(items: List, tax_rate: float, discount: float):
-    subtotal = sum((line.quantity * line.unit_price) for line in items)
-    tax_amount = subtotal * (tax_rate / 100.0)
-    total = subtotal + tax_amount - discount
-    return round(subtotal, 2), round(tax_amount, 2), round(total, 2)
+def _calc(items, tax_rate, discount):
+    sub = sum(l.quantity * l.unit_price for l in items)
+    tax = sub * (tax_rate / 100)
+    return round(sub,2), round(tax,2), round(sub+tax-discount,2)
 
 
 @router.post("/", response_model=QuotationOut)
 def create_quotation(payload: QuotationCreate, db: Session = Depends(get_db),
-                      current_user: User = Depends(get_current_user)):
+                     current_user: User = Depends(get_current_user)):
     if not payload.items:
-        raise HTTPException(status_code=400, detail="Quotation must have at least one line item")
-
-    subtotal, tax_amount, total = _calc_totals(payload.items, payload.tax_rate, payload.discount)
-    valid_days = payload.valid_days if payload.valid_days is not None else 14
-
-    quotation = Quotation(
+        raise HTTPException(400, "Quotation must have at least one line item")
+    sub, tax, total = _calc(payload.items, payload.tax_rate, payload.discount)
+    valid_until = datetime.utcnow() + timedelta(days=payload.valid_days or 14)
+    q = Quotation(
         quote_no=f"QUO-{uuid.uuid4().hex[:8].upper()}",
         customer_name=payload.customer_name or "Walk-in",
         customer_phone=payload.customer_phone or "",
         customer_address=payload.customer_address or "",
-        subtotal=subtotal,
-        tax_rate=payload.tax_rate,
-        tax_amount=tax_amount,
-        discount=payload.discount,
-        total=total,
-        notes=payload.notes or "",
-        valid_until=datetime.utcnow() + timedelta(days=valid_days),
-        status=DocumentStatus.draft,
+        subtotal=sub, tax_rate=payload.tax_rate, tax_amount=tax,
+        discount=payload.discount, total=total, notes=payload.notes or "",
+        valid_until=valid_until, status=DocumentStatus.draft,
         created_by=current_user.username,
     )
-    db.add(quotation)
-    db.flush()
-
-    for line in payload.items:
-        db.add(QuotationItem(
-            quotation_id=quotation.id,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price=line.unit_price,
-            total=round(line.quantity * line.unit_price, 2),
-        ))
-
-    db.commit()
-    db.refresh(quotation)
-    log_activity(db, current_user.username, "quotation_create", f"Created quotation {quotation.quote_no} total {total}")
-    return quotation
+    db.add(q); db.flush()
+    for ln in payload.items:
+        db.add(QuotationItem(quotation_id=q.id, description=ln.description,
+                             quantity=ln.quantity, unit_price=ln.unit_price,
+                             total=round(ln.quantity*ln.unit_price,2)))
+    db.commit(); db.refresh(q)
+    log_activity(db, current_user.username, "quotation_create", f"Created {q.quote_no}")
+    return q
 
 
 @router.get("/", response_model=List[QuotationOut])
-def list_quotations(start: Optional[date] = None, end: Optional[date] = None,
-                     status: Optional[DocumentStatus] = None,
-                     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Quotation)
-    if start:
-        query = query.filter(Quotation.created_at >= datetime.combine(start, datetime.min.time()))
-    if end:
-        query = query.filter(Quotation.created_at <= datetime.combine(end, datetime.max.time()))
-    if status:
-        query = query.filter(Quotation.status == status)
-    return query.order_by(Quotation.created_at.desc()).all()
+def list_quotations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return db.query(Quotation).order_by(Quotation.created_at.desc()).all()
 
 
-@router.get("/{quotation_id}", response_model=QuotationOut)
-def get_quotation(quotation_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
-    if not quotation:
-        raise HTTPException(status_code=404, detail="Quotation not found")
-    return quotation
+@router.get("/{qid}", response_model=QuotationOut)
+def get_quotation(qid: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    if not q: raise HTTPException(404, "Quotation not found")
+    return q
 
 
-@router.patch("/{quotation_id}/status", response_model=QuotationOut)
-def update_quotation_status(quotation_id: int, status: DocumentStatus,
-                             db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
-    if not quotation:
-        raise HTTPException(status_code=404, detail="Quotation not found")
-    quotation.status = status
-    db.commit()
-    db.refresh(quotation)
-    log_activity(db, current_user.username, "quotation_status_update", f"Quotation {quotation.quote_no} -> {status.value}")
-    return quotation
+@router.patch("/{qid}/status", response_model=QuotationOut)
+def update_status(qid: int, status: DocumentStatus,
+                  db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    if not q: raise HTTPException(404, "Quotation not found")
+    q.status = status; db.commit(); db.refresh(q)
+    return q
 
 
-@router.post("/{quotation_id}/convert", response_model=InvoiceOut)
-def convert_to_invoice(quotation_id: int, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
-    if not quotation:
-        raise HTTPException(status_code=404, detail="Quotation not found")
-    if quotation.status == DocumentStatus.rejected:
-        raise HTTPException(status_code=400, detail="Cannot convert a rejected quotation")
-
-    invoice = Invoice(
+@router.post("/{qid}/convert", response_model=InvoiceOut)
+def convert_to_invoice(qid: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_user)):
+    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    if not q: raise HTTPException(404, "Quotation not found")
+    inv = Invoice(
         invoice_no=f"INV-{uuid.uuid4().hex[:8].upper()}",
-        customer_name=quotation.customer_name,
-        customer_phone=quotation.customer_phone,
-        customer_address=quotation.customer_address,
-        subtotal=quotation.subtotal,
-        tax_rate=quotation.tax_rate,
-        tax_amount=quotation.tax_amount,
-        discount=quotation.discount,
-        total=quotation.total,
-        notes=f"Converted from quotation {quotation.quote_no}",
-        status=DocumentStatus.sent,
+        customer_name=q.customer_name, customer_phone=q.customer_phone,
+        customer_address=q.customer_address, subtotal=q.subtotal,
+        tax_rate=q.tax_rate, tax_amount=q.tax_amount, discount=q.discount,
+        total=q.total, notes=q.notes, status=DocumentStatus.sent,
         created_by=current_user.username,
     )
-    db.add(invoice)
-    db.flush()
-
-    for line in quotation.items:
-        db.add(InvoiceItem(
-            invoice_id=invoice.id,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price=line.unit_price,
-            total=line.total,
-        ))
-
-    quotation.status = DocumentStatus.accepted
-    db.commit()
-    db.refresh(invoice)
-    log_activity(db, current_user.username, "quotation_convert",
-                 f"Converted quotation {quotation.quote_no} to invoice {invoice.invoice_no}")
-    return invoice
+    db.add(inv); db.flush()
+    for ln in q.items:
+        db.add(InvoiceItem(invoice_id=inv.id, description=ln.description,
+                           quantity=ln.quantity, unit_price=ln.unit_price, total=ln.total))
+    q.status = DocumentStatus.accepted
+    db.commit(); db.refresh(inv)
+    log_activity(db, current_user.username, "quotation_convert", f"{q.quote_no} → {inv.invoice_no}")
+    return inv
 
 
-@router.delete("/{quotation_id}")
-def delete_quotation(quotation_id: int, db: Session = Depends(get_db),
-                      current_user: User = Depends(require_manager_up)):
-    quotation = db.query(Quotation).filter(Quotation.id == quotation_id).first()
-    if not quotation:
-        raise HTTPException(status_code=404, detail="Quotation not found")
-    db.delete(quotation)
-    db.commit()
-    log_activity(db, current_user.username, "quotation_delete", f"Deleted quotation {quotation.quote_no}")
+@router.delete("/{qid}")
+def delete_quotation(qid: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(require_manager_up)):
+    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    if not q: raise HTTPException(404, "Quotation not found")
+    db.delete(q); db.commit()
+    log_activity(db, current_user.username, "quotation_delete", f"Deleted {q.quote_no}")
     return {"detail": "Quotation deleted"}
+
+
+@router.get("/{qid}/pdf")
+def quotation_pdf(qid: int, db: Session = Depends(get_db),
+                  current_user: User = Depends(get_current_user)):
+    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    if not q: raise HTTPException(404, "Quotation not found")
+    # Reuse the invoice PDF renderer with a Quotation-shaped object
+    buf = _render_quotation_pdf(q)
+    log_activity(db, current_user.username, "quotation_pdf", f"Exported {q.quote_no}")
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="Quotation-{q.quote_no}.pdf"'})
+
+
+def _render_quotation_pdf(q: Quotation) -> io.BytesIO:
+    import os
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_RIGHT
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+    COMPANY_NAME    = os.getenv("COMPANY_NAME", "Zimbermanne Retail OS")
+    COMPANY_ADDRESS = os.getenv("COMPANY_ADDRESS", "Arusha, Tanzania")
+    COMPANY_PHONE   = os.getenv("COMPANY_PHONE", "")
+    COMPANY_EMAIL   = os.getenv("COMPANY_EMAIL", "")
+    CURRENCY        = os.getenv("CURRENCY", "TZS")
+
+    buf = io.BytesIO()
+    pdf = SimpleDocTemplate(buf, pagesize=A4,
+          topMargin=18*mm, bottomMargin=18*mm, leftMargin=18*mm, rightMargin=18*mm)
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle("N", parent=styles["Normal"], fontSize=10, leading=14)
+    right  = ParagraphStyle("R", parent=styles["Normal"], fontSize=10, leading=14, alignment=TA_RIGHT)
+    section = ParagraphStyle("S", parent=styles["Heading4"], fontSize=11)
+
+    elems = []
+    co_lines = [f"<b>{COMPANY_NAME}</b>", COMPANY_ADDRESS]
+    if COMPANY_PHONE: co_lines.append(f"Tel: {COMPANY_PHONE}")
+    if COMPANY_EMAIL: co_lines.append(COMPANY_EMAIL)
+    doc_lines = ["<b>QUOTATION</b>", f"No: {q.quote_no}",
+                 f"Date: {q.created_at.strftime('%d %b %Y')}"]
+    if q.valid_until: doc_lines.append(f"Valid until: {q.valid_until.strftime('%d %b %Y')}")
+    hdr = Table([[Paragraph("<br/>".join(co_lines), normal),
+                  Paragraph("<br/>".join(doc_lines), right)]],
+                colWidths=[100*mm, 72*mm])
+    hdr.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP")]))
+    elems += [hdr, Spacer(1,12*mm)]
+
+    elems.append(Paragraph("Quote For", section))
+    bt = [f"<b>{q.customer_name}</b>"]
+    if q.customer_phone: bt.append(q.customer_phone)
+    if q.customer_address: bt.append(q.customer_address)
+    elems += [Paragraph("<br/>".join(bt), normal), Spacer(1,8*mm)]
+
+    rows = [["#","Description","Qty",f"Unit Price ({CURRENCY})",f"Total ({CURRENCY})"]]
+    for i, ln in enumerate(q.items, 1):
+        rows.append([str(i), ln.description, f"{ln.quantity:g}",
+                     f"{ln.unit_price:,.2f}", f"{ln.total:,.2f}"])
+    t = Table(rows, colWidths=[14*mm,72*mm,18*mm,32*mm,36*mm], repeatRows=1)
+    t.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#0F1923")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),9.5),
+        ("ALIGN",(0,0),(1,-1),"LEFT"), ("ALIGN",(2,0),(2,-1),"CENTER"),
+        ("ALIGN",(3,0),(4,-1),"RIGHT"),
+        ("GRID",(0,0),(-1,-1),0.5,colors.HexColor("#e0ddd4")),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#faf8f3")]),
+        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ("LEFTPADDING",(0,0),(-1,-1),8),("RIGHTPADDING",(0,0),(-1,-1),8),
+    ]))
+    elems += [t, Spacer(1,6*mm)]
+
+    tot_rows = [["Subtotal", f"{CURRENCY} {q.subtotal:,.2f}"]]
+    if q.tax_rate: tot_rows.append([f"VAT ({q.tax_rate:g}%)", f"{CURRENCY} {q.tax_amount:,.2f}"])
+    if q.discount: tot_rows.append(["Discount", f"- {CURRENCY} {q.discount:,.2f}"])
+    tot_rows.append(["Grand Total", f"{CURRENCY} {q.total:,.2f}"])
+    tt = Table(tot_rows, colWidths=[40*mm,36*mm], hAlign="RIGHT")
+    tt.setStyle(TableStyle([
+        ("ALIGN",(0,0),(-1,-1),"RIGHT"), ("FONTSIZE",(0,0),(-1,-1),10),
+        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+        ("LINEABOVE",(0,-1),(-1,-1),0.75,colors.HexColor("#0F1923")),
+        ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"),("FONTSIZE",(0,-1),(-1,-1),11.5),
+    ]))
+    elems.append(tt)
+
+    if q.notes:
+        elems += [Spacer(1,10*mm), Paragraph("Notes", section),
+                  Paragraph(q.notes.replace("\n","<br/>"), normal)]
+
+    elems += [Spacer(1,14*mm),
+              Paragraph("This quotation is subject to confirmation of stock availability.",
+                        ParagraphStyle("F",parent=styles["Normal"],fontSize=9,
+                                       textColor=colors.HexColor("#6b7280")))]
+    pdf.build(elems)
+    buf.seek(0)
+    return buf

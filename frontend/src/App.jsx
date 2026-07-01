@@ -16,6 +16,7 @@ import Debtors from './pages/Debtors.jsx'
 import Creditors from './pages/Creditors.jsx'
 import Reports from './pages/Reports.jsx'
 import Documents from './pages/Documents.jsx'
+import Customers from './pages/Customers.jsx'
 import Settings from './pages/Settings.jsx'
 
 function pageTitle(pathname) {
@@ -68,6 +69,7 @@ function PrivateRoutes() {
         <Route path="/reports/financial-summary" element={<Reports view="financial-summary" />} />
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
+        <Route path="/customers" element={<Customers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

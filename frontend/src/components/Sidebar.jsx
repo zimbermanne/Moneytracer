@@ -9,7 +9,8 @@ const NAV = [
     type: 'group', label: 'Sales', key: 'sales',
     children: [
       { label: 'Sales History', icon: '📜', path: '/sales' },
-      { label: 'Clients / Debtors', icon: '👥', path: '/debtors' },
+      { label: 'Customers', icon: '👥', path: '/customers' },
+      { label: 'Clients / Debtors', icon: '📒', path: '/debtors' },
     ],
   },
   {
@@ -17,11 +18,10 @@ const NAV = [
     children: [
       { label: 'Purchases Ledger', icon: '📦', path: '/purchases' },
       { label: 'Creditors Ledger', icon: '🏦', path: '/creditors' },
-      { label: 'vendors', icon: '🏦', path: '/vendors' },
     ],
   },
-   {
-    type: 'group', label: 'Proforma/quotations', key: 'proforma',
+  {
+    type: 'group', label: 'Proforma / Quotations', key: 'proforma',
     children: [
       { label: 'Invoices', icon: '🧾', path: '/invoices' },
       { label: 'Quotations / Estimates', icon: '📑', path: '/quotations' },
@@ -47,7 +47,7 @@ const NAV = [
 export default function Sidebar({ mobileOpen, onClose }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [openGroups, setOpenGroups] = useState({})
 
   useEffect(() => {
@@ -125,10 +125,18 @@ export default function Sidebar({ mobileOpen, onClose }) {
 
       <div className="sidebar-footer">
         <div className="avatar">{initials}</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{user?.full_name || user?.username}</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role}</div>
         </div>
+        <button
+          onClick={logout}
+          title="Log out"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '4px 6px',
+                   color: 'var(--text-muted)', borderRadius: 6 }}
+          onMouseEnter={(e) => e.currentTarget.style.color='var(--danger)'}
+          onMouseLeave={(e) => e.currentTarget.style.color='var(--text-muted)'}
+        >⏻</button>
       </div>
     </aside>
   )
