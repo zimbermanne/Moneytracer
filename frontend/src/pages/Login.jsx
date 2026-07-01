@@ -45,41 +45,46 @@ export default function Login() {
 
   return (
     <div className="login-screen">
-      <div className="login-card">
-        <h1>Zimbermanne Accounting OS</h1>
-        <div className="sub">Login to your Business dashboard</div>
-        <form onSubmit={submit}>
-          <div className="form-row">
-            <label>Username</label>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <div className="login-brand">
+          <div className="login-brand-mark">Z</div>
+          <div className="login-brand-name">Zimbermanne</div>
+        </div>
+
+        <div className="login-card">
+          <h1>Welcome back</h1>
+          <div className="sub">Sign in to your business dashboard</div>
+          <form onSubmit={submit}>
+            <div className="form-row">
+              <label>Username</label>
+              <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+            </div>
+            <div className="form-row">
+              <label>Password</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            {error && <div className="error-text">{error}</div>}
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={busy}>
+              {busy ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0' }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 11, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>or</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
-          <div className="form-row">
-            <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          {error && <div className="error-text">{error}</div>}
-          <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign In'}
+
+          <button className="btn btn-outline" style={{ width: '100%' }} onClick={tryDemo} disabled={demoBusy}>
+            {demoBusy ? 'Loading demo…' : 'Continue as demo'}
           </button>
-        </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
-          <div style={{ flex: 1, height: 1, background: '#e8e4dc' }} />
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>or</span>
-          <div style={{ flex: 1, height: 1, background: '#e8e4dc' }} />
+          <div style={{ marginTop: 20, fontSize: 13, textAlign: 'center', color: 'var(--text-muted)' }}>
+            Don't have an account? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Create one</Link>
+          </div>
         </div>
 
-        <button className="btn btn-gold" style={{ width: '100%' }} onClick={tryDemo} disabled={demoBusy}>
-          {demoBusy ? 'Loading demo…' : '✨ Continue as Demo (no password)'}
-        </button>
-
-        <div style={{ marginTop: 16, fontSize: 13, textAlign: 'center' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--navy)', fontWeight: 600 }}>Create one</Link>
-        </div>
-
-        <div style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-          lets take care of your money problem.
-        </div>
+        <div className="login-tagline">Payroll, compliance, and books — handled quietly.</div>
       </div>
     </div>
   )
