@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
 import Sidebar, { NAV } from './components/Sidebar.jsx'
 import MobileTopBar from './components/MobileTopBar.jsx'
+import PageLoader from './components/PageLoader.jsx'
 import Clock from './Clock.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
@@ -52,13 +53,13 @@ function Layout({ children }) {
 
 function PrivateRoutes() {
   const { user, loading, account, accountLoading } = useAuth()
-  if (loading) return <div style={{ padding: 40 }}>Loading…</div>
+  if (loading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
 
   // Only account admins go through onboarding; wait for the account to
   // load before deciding, so we don't flash the dashboard first.
   if (user.role === 'admin') {
-    if (accountLoading || account === null) return <div style={{ padding: 40 }}>Loading…</div>
+    if (accountLoading || account === null) return <PageLoader label="Preparing your account" />
     if (!account.onboarding_completed) return <Onboarding />
   }
 
