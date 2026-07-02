@@ -29,11 +29,9 @@ export default function Inventory() {
     setImporting(true); setError('')
     try {
       const fd = new FormData(); fd.append('file', file)
-      const res = await fetch(apiUrl('/api/inventory/batch'), {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.detail || `Import failed (${res.status})`)
+      // Use the shared api hook (same URL/auth resolution as every other
+      // working request on this page) instead of a separate raw fetch call.
+      const data = await api.post('/inventory/batch', fd)
       load()
       const skippedNote = data.skipped ? ` (${data.skipped} row${data.skipped === 1 ? '' : 's'} skipped — missing name)` : ''
       alert(`✅ Imported ${data.created} items successfully.${skippedNote}`)
