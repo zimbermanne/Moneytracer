@@ -1,18 +1,15 @@
 import './PageLoader.css'
+import Spinner from './Spinner.jsx'
 
 /**
- * Full-page loading state — a soft, morphing gradient orb
- * (Gemini-style) built from the app's own warm palette.
+ * Full-page loading state — three bouncing dots, same animation used
+ * everywhere else in the app (see Spinner.jsx), just given room to sit
+ * centered in the viewport.
  */
 export default function PageLoader({ label = 'Loading' }) {
   return (
     <div className="page-loader">
-      <div className="page-loader-dots">
-        <span className="page-loader-dot" />
-        <span className="page-loader-dot" />
-        <span className="page-loader-dot" />
-      </div>
-      <p className="page-loader-label">{label}</p>
+      <Spinner label={label} />
     </div>
   )
 }

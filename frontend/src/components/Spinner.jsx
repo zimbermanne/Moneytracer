@@ -1,15 +1,22 @@
 /**
- * Lightweight loading indicator for use *inside* a page — a card, a table,
- * a modal, a button — as opposed to PageLoader, which takes over the whole
- * viewport. Drop <Spinner label="Loading invoices" /> anywhere data is
- * being fetched so every level of the app shows feedback, not just the
- * initial app boot.
+ * Shared loading indicator — three small bouncing dots — used at every
+ * level of the app: full-page (via PageLoader), inline in buttons, and
+ * blocked inside cards/tables while data loads. Always the same animation.
  */
 export default function Spinner({ label, inline = false }) {
-  if (inline) return <span className="spinner" aria-label={label || 'Loading'} />
+  const dots = (
+    <span className="dots-loader" role="status" aria-label={label || 'Loading'}>
+      <span className="dots-loader-dot" />
+      <span className="dots-loader-dot" />
+      <span className="dots-loader-dot" />
+    </span>
+  )
+
+  if (inline) return dots
+
   return (
     <div className="spinner-block">
-      <span className="spinner" aria-hidden="true" />
+      {dots}
       {label && <span>{label}</span>}
     </div>
   )
