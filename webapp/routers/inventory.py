@@ -5,6 +5,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from database import get_db
 from models import InventoryItem, User, RoleEnum
@@ -161,17 +162,39 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not read file: {exc}")
 
+    # SKU is unique in the DB. Track SKUs we've already committed (existing
+    # rows) or already queued in this same file, so a duplicate SKU is
+    # skipped instead of raising an unhandled IntegrityError that crashes
+    # the whole request with a 500 (which the browser then misreports as a
+    # CORS failure, since the error response never reaches CORSMiddleware).
+    existing_skus = {
+        s for (s,) in db.query(InventoryItem.sku)
+        .filter(InventoryItem.account_id == account_id, InventoryItem.sku.isnot(None))
+        .all()
+    }
+    seen_skus = set()
+
     created = 0
     skipped = 0
+    duplicate_skus = []
     for _, row in df.iterrows():
         name = _safe_str(row.get("name"))
         if not name:
             skipped += 1
             continue
+
+        sku = _safe_str(row.get("sku")) or None
+        if sku and (sku in existing_skus or sku in seen_skus):
+            skipped += 1
+            duplicate_skus.append(sku)
+            continue
+        if sku:
+            seen_skus.add(sku)
+
         item = InventoryItem(
             account_id=account_id,
             name=name,
-            sku=_safe_str(row.get("sku")) or None,
+            sku=sku,
             category=_safe_str(row.get("category"), "General") or "General",
             quantity=_safe_num(row.get("quantity"), 0),
             unit=_safe_str(row.get("unit"), "pcs") or "pcs",
@@ -181,9 +204,20 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
         )
         db.add(item)
         created += 1
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Import failed due to a data conflict: {exc.orig}")
+
     log_activity_for_user(db, current_user, "inventory_batch_import", f"Imported {created} items")
-    return {"created": created, "skipped": skipped}
+    response = {"created": created, "skipped": skipped}
+    if duplicate_skus:
+        preview = ", ".join(duplicate_skus[:5])
+        more = f" and {len(duplicate_skus) - 5} more" if len(duplicate_skus) > 5 else ""
+        response["duplicate_skus"] = f"Skipped duplicate SKU(s): {preview}{more}"
+    return response
 
 
 @router.get("/{item_id}", response_model=InventoryOut)

@@ -33,8 +33,9 @@ export default function Inventory() {
       // working request on this page) instead of a separate raw fetch call.
       const data = await api.post('/inventory/batch', fd)
       load()
-      const skippedNote = data.skipped ? ` (${data.skipped} row${data.skipped === 1 ? '' : 's'} skipped — missing name)` : ''
-      alert(`✅ Imported ${data.created} items successfully.${skippedNote}`)
+      const skippedNote = data.skipped ? ` (${data.skipped} row${data.skipped === 1 ? '' : 's'} skipped)` : ''
+      const dupNote = data.duplicate_skus ? `\n${data.duplicate_skus}` : ''
+      alert(`✅ Imported ${data.created} items successfully.${skippedNote}${dupNote}`)
     } catch (e) { setError(e.message) }
     finally { setImporting(false); e.target.value = '' }
   }
