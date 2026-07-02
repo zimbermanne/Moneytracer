@@ -32,10 +32,11 @@ export default function Inventory() {
       const res = await fetch(apiUrl('/api/inventory/batch'), {
         method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
       })
-      if (!res.ok) throw new Error('Import failed')
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || `Import failed (${res.status})`)
       load()
-      alert(`✅ Imported ${data.created} items successfully.`)
+      const skippedNote = data.skipped ? ` (${data.skipped} row${data.skipped === 1 ? '' : 's'} skipped — missing name)` : ''
+      alert(`✅ Imported ${data.created} items successfully.${skippedNote}`)
     } catch (e) { setError(e.message) }
     finally { setImporting(false); e.target.value = '' }
   }

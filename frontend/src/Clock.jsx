@@ -8,7 +8,15 @@ function isoWeek(d) {
   return Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
 }
 
-export default function Clock() {
+/**
+ * Topbar clock/reminders bar.
+ *
+ * `reminders` is optional — an array of { id, text } — so future features
+ * (due invoices, low stock, follow-ups, etc.) can just pass items in here.
+ * With none supplied it shows a quiet placeholder so the bar still reads
+ * as "reserved for reminders" rather than empty dead space.
+ */
+export default function Clock({ reminders = [] }) {
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -23,9 +31,21 @@ export default function Clock() {
   const day = now.getDate()
 
   return (
-    <div className="clock-widget" title={now.toString()}>
-      <div className="clock-time">{time}</div>
-      <div className="clock-date">Wk {week} · {month} {day} · {year}</div>
+    <div className="clock-bar" title={now.toString()}>
+      <div className="reminders-segment">
+        {reminders.length === 0 ? (
+          <span className="reminders-placeholder">No reminders</span>
+        ) : (
+          reminders.map((r) => (
+            <span key={r.id} className="reminder-chip">{r.text}</span>
+          ))
+        )}
+      </div>
+      <div className="clock-divider" />
+      <div className="clock-segment">
+        <div className="clock-time">{time}</div>
+        <div className="clock-date">Wk {week} · {month} {day} · {year}</div>
+      </div>
     </div>
   )
 }

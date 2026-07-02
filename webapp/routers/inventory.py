@@ -119,38 +119,71 @@ def export_items(db: Session = Depends(get_db), current_user: User = Depends(get
                               headers=headers)
 
 
+def _safe_str(value, default=""):
+    """pandas gives back float('nan') for blank cells — str(nan) would
+    otherwise become the literal text 'nan' in a name/sku/category field."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return default
+    return str(value).strip()
+
+
+def _safe_num(value, default=0.0):
+    """Same NaN problem for numeric cells: `NaN or 0` evaluates to NaN
+    (NaN is truthy in Python), so a blank quantity/price cell was silently
+    becoming NaN and breaking JSON serialization on the next list fetch —
+    which is what made the import look like it 'wasn't working'."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 @router.post("/batch")
 async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_db),
                         current_user: User = Depends(require_manager_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot import inventory items")
-    
+
+    filename = (file.filename or "").lower()
     content = await file.read()
-    if file.filename.endswith(".csv"):
-        df = pd.read_csv(io.BytesIO(content))
-    else:
-        df = pd.read_excel(io.BytesIO(content))
+    try:
+        if filename.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(content))
+        elif filename.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type — upload a .csv, .xlsx, or .xls file")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read file: {exc}")
 
     created = 0
+    skipped = 0
     for _, row in df.iterrows():
+        name = _safe_str(row.get("name"))
+        if not name:
+            skipped += 1
+            continue
         item = InventoryItem(
             account_id=account_id,
-            name=str(row.get("name", "")).strip(),
-            sku=str(row.get("sku", "")).strip() or None,
-            category=str(row.get("category", "General")).strip() or "General",
-            quantity=float(row.get("quantity", 0) or 0),
-            unit=str(row.get("unit", "pcs")).strip() or "pcs",
-            cost_price=float(row.get("cost_price", 0) or 0),
-            selling_price=float(row.get("selling_price", 0) or 0),
-            reorder_point=float(row.get("reorder_point", 5) or 5),
+            name=name,
+            sku=_safe_str(row.get("sku")) or None,
+            category=_safe_str(row.get("category"), "General") or "General",
+            quantity=_safe_num(row.get("quantity"), 0),
+            unit=_safe_str(row.get("unit"), "pcs") or "pcs",
+            cost_price=_safe_num(row.get("cost_price"), 0),
+            selling_price=_safe_num(row.get("selling_price"), 0),
+            reorder_point=_safe_num(row.get("reorder_point"), 5),
         )
-        if item.name:
-            db.add(item)
-            created += 1
+        db.add(item)
+        created += 1
     db.commit()
     log_activity_for_user(db, current_user, "inventory_batch_import", f"Imported {created} items")
-    return {"created": created}
+    return {"created": created, "skipped": skipped}
 
 
 @router.get("/{item_id}", response_model=InventoryOut)
