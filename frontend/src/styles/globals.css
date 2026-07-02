@@ -1,5 +1,13 @@
 @import './design-tokens.css';
 
+@font-face {
+  font-family: "Modern Mono";
+  src: url('../assets/fonts/Modern_Mono.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {
@@ -382,26 +390,6 @@ label {
   height: 32px;
 }
 
-.clock-widget {
-  text-align: right;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.clock-time {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.clock-date {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.mobile-topbar .clock-date {
-  color: rgba(255, 255, 255, 0.7);
-}
-
 .mobile-backdrop {
   display: none;
 }
@@ -519,7 +507,10 @@ label {
   margin-top: var(--space-8);
 }
 
-/* ---- Clock widget ---- */
+/* ---- Clock widget — skeuomorphic LCD module ----
+   A small dark bezel with beveled edges (simulated via layered inset/
+   outset shadows) housing a recessed "glass" screen where the digits
+   glow like an old digital clock/calculator readout. */
 .desktop-topbar {
   display: flex;
   justify-content: flex-end;
@@ -529,22 +520,76 @@ label {
 }
 
 .clock-widget {
+  position: relative;
   text-align: right;
   line-height: 1.3;
+  padding: 7px 16px 6px;
+  border-radius: 9px;
+  background: linear-gradient(155deg, #4a423a 0%, #26211c 55%, #1c1815 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.3),
+    0 3px 6px rgba(43, 38, 34, 0.28),
+    0 1px 2px rgba(43, 38, 34, 0.2);
+}
+
+/* recessed glass screen behind the digits */
+.clock-widget::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #191512 0%, #221d19 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.65), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  z-index: 0;
+}
+
+/* faint glass reflection sweeping across the top */
+.clock-widget::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px; right: 3px;
+  height: 40%;
+  border-radius: 6px 6px 40% 40% / 6px 6px 100% 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  z-index: 0;
+  pointer-events: none;
+}
+
+.clock-time, .clock-date {
+  position: relative;
+  z-index: 1;
 }
 
 .clock-time {
-  font-size: 22px;
+  font-family: var(--font-typewriter);
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--navy);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  color: #ffb28f;
+  text-shadow: 0 0 5px rgba(255, 143, 92, 0.75), 0 0 12px rgba(255, 108, 60, 0.35);
 }
 
 .clock-date {
-  font-size: 12px;
-  color: var(--text-muted);
-  letter-spacing: 0.03em;
+  font-family: var(--font-typewriter);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: #d8b9a8;
+  opacity: 0.75;
+}
+
+.mobile-topbar .clock-widget {
+  padding: 5px 12px 4px;
+}
+
+.mobile-topbar .clock-time {
+  font-size: 15px;
+}
+
+.mobile-topbar .clock-date {
+  font-size: 8.5px;
 }
 
 /* ---- Status / role badges ---- */
