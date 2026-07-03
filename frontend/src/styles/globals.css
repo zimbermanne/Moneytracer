@@ -396,6 +396,12 @@ label {
   display: none;
 }
 
+.mobile-info-row {
+  display: none;
+  background: var(--navy);
+  padding: 6px 10px 10px;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -414,6 +420,13 @@ label {
 
   .mobile-topbar {
     display: flex;
+  }
+
+  .mobile-info-row {
+    display: block;
+    position: sticky;
+    top: 56px;
+    z-index: 49;
   }
 
   .desktop-topbar {

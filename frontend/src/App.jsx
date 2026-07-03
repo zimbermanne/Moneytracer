@@ -63,7 +63,16 @@ function Layout({ children }) {
 
   return (
     <div className="app-shell">
-      <MobileTopBar title={pageTitle(location.pathname)} open={mobileOpen} onToggle={() => setMobileOpen((o) => !o)} accountName={company?.name} accountRank={user?.role} />
+      <MobileTopBar
+        title={pageTitle(location.pathname)}
+        open={mobileOpen}
+        onToggle={() => setMobileOpen((o) => !o)}
+        accountName={company?.name}
+        accountRank={user?.role}
+        reminders={reminders}
+        onAddReminder={addReminder}
+        onDismissReminder={dismissReminder}
+      />
       <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">

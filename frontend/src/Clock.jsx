@@ -25,7 +25,10 @@ const RANK_LABELS = {
  * `accountName` renders bold/large, `accountRank` renders small underneath —
  * just the values, no "Account name:" label text.
  */
-export default function Clock({ reminders = [], onAddReminder, onDismissReminder, accountName, accountRank }) {
+export default function Clock({
+  reminders = [], onAddReminder, onDismissReminder, accountName, accountRank,
+  showClock = true, showAccount = true, showReminders = true,
+}) {
   const [now, setNow] = useState(new Date())
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
@@ -52,56 +55,62 @@ export default function Clock({ reminders = [], onAddReminder, onDismissReminder
 
   return (
     <div className="clock-bar clock-bar-wide" title={now.toString()}>
-      <div className="reminders-segment">
-        {reminders.length === 0 && !adding && (
-          <span className="reminders-placeholder">No reminders</span>
-        )}
-        {reminders.map((r) => (
-          <span key={r.id} className="reminder-chip">
-            {r.text}
-            {onDismissReminder && (
-              <button
-                type="button"
-                className="reminder-chip-dismiss"
-                onClick={() => onDismissReminder(r.id)}
-                aria-label="Dismiss reminder"
-              >✕</button>
-            )}
-          </span>
-        ))}
-        {onAddReminder && (
-          adding ? (
-            <input
-              autoFocus
-              className="reminder-input"
-              placeholder="Type a reminder, press Enter…"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submitReminder()
-                if (e.key === 'Escape') { setAdding(false); setDraft('') }
-              }}
-              onBlur={submitReminder}
-            />
-          ) : (
-            <button type="button" className="reminder-add-btn" onClick={() => setAdding(true)}>+ Reminder</button>
-          )
-        )}
-      </div>
-      {(accountName || rankLabel) && (
+      {showReminders && (
+        <div className="reminders-segment">
+          {reminders.length === 0 && !adding && (
+            <span className="reminders-placeholder">No reminders</span>
+          )}
+          {reminders.map((r) => (
+            <span key={r.id} className="reminder-chip">
+              {r.text}
+              {onDismissReminder && (
+                <button
+                  type="button"
+                  className="reminder-chip-dismiss"
+                  onClick={() => onDismissReminder(r.id)}
+                  aria-label="Dismiss reminder"
+                >✕</button>
+              )}
+            </span>
+          ))}
+          {onAddReminder && (
+            adding ? (
+              <input
+                autoFocus
+                className="reminder-input"
+                placeholder="Type a reminder, press Enter…"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitReminder()
+                  if (e.key === 'Escape') { setAdding(false); setDraft('') }
+                }}
+                onBlur={submitReminder}
+              />
+            ) : (
+              <button type="button" className="reminder-add-btn" onClick={() => setAdding(true)}>+ Reminder</button>
+            )
+          )}
+        </div>
+      )}
+      {showAccount && (accountName || rankLabel) && (
         <>
-          <div className="clock-divider" />
+          {showReminders && <div className="clock-divider" />}
           <div className="account-segment">
             {accountName && <div className="account-name">{accountName}</div>}
             {rankLabel && <div className="account-rank">{rankLabel}</div>}
           </div>
         </>
       )}
-      <div className="clock-divider" />
-      <div className="clock-segment">
-        <div className="clock-time">{time}</div>
-        <div className="clock-date">Wk {week} · {month} {day} · {year}</div>
-      </div>
+      {showClock && (
+        <>
+          {(showReminders || showAccount) && <div className="clock-divider" />}
+          <div className="clock-segment">
+            <div className="clock-time">{time}</div>
+            <div className="clock-date">Wk {week} · {month} {day} · {year}</div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
