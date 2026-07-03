@@ -92,13 +92,26 @@ function Layout({ children }) {
 }
 
 function PrivateRoutes() {
-  const { user, loading, account, accountLoading } = useAuth()
+  const { user, loading, account, accountLoading, accountError, refreshAccount, logout } = useAuth()
   if (loading) return <PageLoader />
   if (!user) return <Navigate to="/login" replace />
 
   // Only account admins go through onboarding; wait for the account to
   // load before deciding, so we don't flash the dashboard first.
   if (user.role === 'admin') {
+    if (accountError) {
+      return (
+        <div className="page-loader">
+          <div className="spinner-block" style={{ flexDirection: 'column', gap: 14 }}>
+            <span>Couldn't load your account. This is usually a brief connection hiccup.</span>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-primary" onClick={refreshAccount}>Try again</button>
+              <button className="btn btn-outline" onClick={logout}>Log out</button>
+            </div>
+          </div>
+        </div>
+      )
+    }
     if (accountLoading || account === null) return <PageLoader label="Preparing your account" />
     if (!account.onboarding_completed) return <Onboarding />
   }

@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [account, setAccount] = useState(null)
   const [accountLoading, setAccountLoading] = useState(false)
+  const [accountError, setAccountError] = useState(false)
   const [currency, setCurrency] = useState('TZS')
 
   const fetchCurrency = useCallback(async (tok) => {
@@ -31,9 +32,11 @@ export function AuthProvider({ children }) {
     // and staff accounts (manager/employee) never see it.
     if (!currentUser || currentUser.role !== 'admin') {
       setAccount(null)
+      setAccountError(false)
       return
     }
     setAccountLoading(true)
+    setAccountError(false)
     try {
       const res = await fetch(apiUrl('/api/accounts/my-account'), {
         headers: { Authorization: `Bearer ${tok}` },
@@ -41,7 +44,12 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error('failed')
       setAccount(await res.json())
     } catch {
+      // IMPORTANT: don't just setAccount(null) here — that's the same value
+      // as "haven't fetched yet", which used to make a failed request look
+      // identical to a still-loading one and spin the loader forever with
+      // no way to recover. accountError lets the UI tell them apart.
       setAccount(null)
+      setAccountError(true)
     } finally {
       setAccountLoading(false)
     }
@@ -155,7 +163,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       token, user, loading, login, loginAsDemo, logout,
-      account, accountLoading, setAccount, refreshAccount,
+      account, accountLoading, accountError, setAccount, refreshAccount,
       currency, setCurrency,
     }}>
       {children}
