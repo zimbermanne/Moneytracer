@@ -18,7 +18,7 @@ from email_utils import send_email_with_attachment
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
-COMPANY_NAME    = os.getenv("COMPANY_NAME", "Zimbermanne Accounting OS")
+COMPANY_NAME    = os.getenv("COMPANY_NAME", "Moneytracer")
 COMPANY_ADDRESS = os.getenv("COMPANY_ADDRESS", "Arusha, Tanzania")
 COMPANY_PHONE   = os.getenv("COMPANY_PHONE", "")
 COMPANY_EMAIL   = os.getenv("COMPANY_EMAIL", "")
@@ -303,7 +303,7 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None) -> io.BytesIO:
 
     def draw_footer(canvas, pdf_doc):
         canvas.saveState()
-        p = Paragraph("Zimbermanne Accounting OS", footer_style)
+        p = Paragraph("Moneytracer", footer_style)
         w, h = p.wrap(pdf_doc.width, pdf_doc.bottomMargin)
         p.drawOn(canvas, pdf_doc.leftMargin, 10*mm)
         canvas.restoreState()

@@ -29,7 +29,7 @@ def seed():
             superadmin = User(
                 username="superadmin",
                 full_name="Platform Superadmin",
-                email="superadmin@zimbermanne.co.tz",
+                email="superadmin@moneytracer.africa",
                 hashed_password=hash_password("superadmin123"),
                 role=RoleEnum.superadmin,
                 account_id=None,  # Superadmin has no account
@@ -52,7 +52,7 @@ def seed():
                 district="",
                 street_address="",
                 phone="",
-                email="admin@zimbermanne.co.tz",
+                email="admin@moneytracer.africa",
                 logo_url="",
                 tax_rate=0,
                 invoice_prefix="INV",
@@ -74,7 +74,7 @@ def seed():
             admin = User(
                 username="admin",
                 full_name="System Administrator",
-                email="admin@zimbermanne.co.tz",
+                email="admin@moneytracer.africa",
                 hashed_password=hash_password("admin123"),
                 role=RoleEnum.admin,
                 account_id=default_account.id,
@@ -97,7 +97,7 @@ def seed():
                 district="",
                 street_address="",
                 phone="+255123456789",
-                email="demo@zimbermanne.co.tz",
+                email="demo@moneytracer.africa",
                 logo_url="",
                 tax_rate=0,
                 invoice_prefix="INV",
@@ -119,7 +119,7 @@ def seed():
             demo = User(
                 username="demo",
                 full_name="Demo User",
-                email="demo@zimbermanne.co.tz",
+                email="demo@moneytracer.africa",
                 hashed_password=hash_password(uuid.uuid4().hex),  # unused, unguessable
                 role=RoleEnum.manager,
                 is_demo=True,
@@ -140,7 +140,7 @@ def seed_legacy(db):
         admin = User(
             username="admin",
             full_name="System Administrator",
-            email="admin@zimbermanne.co.tz",
+            email="admin@moneytracer.africa",
             hashed_password=hash_password("admin123"),
             role=RoleEnum.admin,
         )
@@ -155,7 +155,7 @@ def seed_legacy(db):
         demo = User(
             username="demo",
             full_name="Demo User",
-            email="demo@zimbermanne.co.tz",
+            email="demo@moneytracer.africa",
             hashed_password=hash_password(uuid.uuid4().hex),  # unused, unguessable
             role=RoleEnum.manager,
             is_demo=True,

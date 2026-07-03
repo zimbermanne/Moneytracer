@@ -76,7 +76,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-logo">Z</div>
-        <div className="brand-text">Zimbermanne Accounting</div>
+        <div className="brand-text">Moneytracer</div>
       </div>
 
       <nav className="sidebar-nav">

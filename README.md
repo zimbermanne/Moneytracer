@@ -1,4 +1,4 @@
-# Zimbermanne Accounting. — v3.0 Skyscratcher
+# Moneytracer — v3.0 Skyscratcher
 
 This project was generated from `README3.0.md`. It implements the **"Currently Working (v3.0)"**
 feature set as a working FastAPI backend (`webapp/`) and a React + Vite frontend (`frontend/`),

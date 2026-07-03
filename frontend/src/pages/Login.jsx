@@ -48,7 +48,7 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div className="login-brand">
           <div className="login-brand-mark">Z</div>
-          <div className="login-brand-name">Zimbermanne</div>
+          <div className="login-brand-name">Moneytracer</div>
         </div>
 
         <div className="login-card">

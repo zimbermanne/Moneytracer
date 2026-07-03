@@ -66,7 +66,7 @@ export default function Register() {
     <div className="login-screen">
       <div className="login-card">
         <h1>Create Account</h1>
-        <div className="sub">Join Zimbermanne Retail OS</div>
+        <div className="sub">Join Moneytracer</div>
         <form onSubmit={submit}>
           <div className="form-row">
             <label>Full Name</label>

@@ -81,7 +81,7 @@ def demo_login(db: Session = Depends(get_db)):
             name="Demo Business",
             owner_full_name="Demo Owner",
             business_type="retail",
-            email="demo@zimbermanne.co.tz",
+            email="demo@moneytracer.africa",
             phone="+255123456789",
             onboarding_completed=True,  # demo skips the wizard
         )
@@ -92,7 +92,7 @@ def demo_login(db: Session = Depends(get_db)):
         user = User(
             username="demo",
             full_name="Demo User",
-            email="demo@zimbermanne.co.tz",
+            email="demo@moneytracer.africa",
             hashed_password=hash_password(uuid.uuid4().hex),  # unguessable, unused
             role=RoleEnum.manager,
             is_demo=True,

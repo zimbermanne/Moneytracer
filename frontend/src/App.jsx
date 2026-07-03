@@ -31,7 +31,7 @@ function pageTitle(pathname) {
       if (child) return child.label
     }
   }
-  return 'Zimbermanne'
+  return 'Moneytracer'
 }
 
 function Layout({ children }) {

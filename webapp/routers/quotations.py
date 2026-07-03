@@ -192,7 +192,7 @@ def email_quotation(qid: int, payload: EmailDocRequest, db: Session = Depends(ge
 
     account = db.query(Account).filter(Account.id == q.account_id).first()
     buf = _render_quotation_pdf(q, account)
-    company = (account.name if account else None) or "Zimbermanne Accounting OS"
+    company = (account.name if account else None) or "Moneytracer"
     body = payload.message or f"Dear {q.customer_name},\n\nPlease find attached Quotation {q.quote_no} for TZS {q.total:,.2f}.\n\nRegards,\n{company}"
 
     try:
@@ -230,7 +230,7 @@ def _render_quotation_pdf(q: Quotation, account: Account = None) -> io.BytesIO:
         biz_phone   = account.phone or ""
         biz_email   = account.email or ""
     else:
-        biz_name    = os.getenv("COMPANY_NAME", "Zimbermanne Accounting OS")
+        biz_name    = os.getenv("COMPANY_NAME", "Moneytracer")
         biz_owner   = ""
         biz_address = os.getenv("COMPANY_ADDRESS", "Arusha, Tanzania")
         biz_phone   = os.getenv("COMPANY_PHONE", "")
@@ -314,7 +314,7 @@ def _render_quotation_pdf(q: Quotation, account: Account = None) -> io.BytesIO:
 
     def draw_footer(canvas, pdf_doc):
         canvas.saveState()
-        p = Paragraph("Zimbermanne Accounting OS", footer_style)
+        p = Paragraph("Moneytracer", footer_style)
         w, h = p.wrap(pdf_doc.width, pdf_doc.bottomMargin)
         p.drawOn(canvas, pdf_doc.leftMargin, 10*mm)
         canvas.restoreState()

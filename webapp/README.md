@@ -1,4 +1,4 @@
-# Zimbermanne Retail OS — v2.5 Scaffold
+# Moneytracer — v2.5 Scaffold
 
 This project was generated from `README2_5.md`. It implements the **"Currently Working (v2.5)"**
 feature set as a working FastAPI backend (`webapp/`) and a React + Vite frontend (`frontend/`),

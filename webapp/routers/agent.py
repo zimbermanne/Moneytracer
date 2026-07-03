@@ -110,7 +110,7 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
     c = canvas.Canvas(buf, pagesize=A4)
     width, height = A4
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(40, height - 50, "Zimbermanne Retail OS — Invoice")
+    c.drawString(40, height - 50, "Moneytracer — Invoice")
     c.setFont("Helvetica", 11)
     c.drawString(40, height - 90, f"Receipt: {sale.receipt_no}")
     c.drawString(40, height - 110, f"Date: {sale.created_at}")
