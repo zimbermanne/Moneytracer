@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
@@ -7,6 +8,7 @@ const empty = { item_name: '', supplier: '', quantity: 1, unit_cost: 0 }
 
 export default function Purchases() {
   const api = useApi()
+  const { currency } = useAuth()
   const [purchases, setPurchases] = useState([])
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
@@ -48,7 +50,7 @@ export default function Purchases() {
     { key: 'item_name', header: 'Item' },
     { key: 'supplier', header: 'Supplier' },
     { key: 'quantity', header: 'Qty' },
-    { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (r) => `${currency} ${r.total.toLocaleString()}` },
     { key: 'actions', header: '', render: (r) => <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button> },
   ]
 
@@ -62,7 +64,7 @@ export default function Purchases() {
       {stats && (
         <div className="card-grid">
           <div className="card metric-card"><div className="label">Total Purchases</div><div className="value">{stats.total_purchases}</div></div>
-          <div className="card metric-card"><div className="label">Total Spent</div><div className="value">TZS {stats.total_spent.toLocaleString()}</div></div>
+          <div className="card metric-card"><div className="label">Total Spent</div><div className="value">{currency} {stats.total_spent.toLocaleString()}</div></div>
         </div>
       )}
       <Table columns={columns} rows={purchases} loading={listLoading} loadingText="Loading purchases…" />

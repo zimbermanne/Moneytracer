@@ -31,6 +31,8 @@ class Account(Base):
     region = Column(String(80), default="")
     district = Column(String(80), default="")
     street_address = Column(String(255), default="")
+    country = Column(String(80), default="")
+    currency = Column(String(10), default="TZS")
     phone = Column(String(40), default="")
     email = Column(String(120), default="")
     logo_url = Column(String(255), default="")

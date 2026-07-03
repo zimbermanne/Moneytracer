@@ -7,8 +7,19 @@ from models import Account, User, RoleEnum
 from schemas import AccountOut, AccountUpdate, AccountWithUsersOut
 from auth import require_superadmin, require_admin, get_current_user
 from activity import log_activity_for_user
+from african_currencies import VALID_COUNTRIES, VALID_CURRENCY_CODES, AFRICAN_COUNTRY_CURRENCIES
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
+
+
+@router.get("/countries")
+def list_countries():
+    """African countries and their currencies, for the account-setup wizard's
+    country/currency picker."""
+    return [
+        {"country": c, "iso2": iso2, "currency_code": code, "currency_name": name}
+        for c, iso2, code, name in AFRICAN_COUNTRY_CURRENCIES
+    ]
 
 
 @router.get("/company-info")
@@ -17,15 +28,17 @@ def company_info(current_user: User = Depends(get_current_user), db: Session = D
     used to render the company header on invoice/quotation previews.
     (my-account below is admin-only and returns far more than this needs.)"""
     if not current_user.account_id:
-        return {"name": "", "address": "", "email": "", "phone": ""}
+        return {"name": "", "address": "", "email": "", "phone": "", "currency": "TZS"}
     account = db.query(Account).filter(Account.id == current_user.account_id).first()
     if not account:
-        return {"name": "", "address": "", "email": "", "phone": ""}
+        return {"name": "", "address": "", "email": "", "phone": "", "currency": "TZS"}
     return {
         "name": account.name,
         "address": ", ".join(filter(None, [account.region, account.district, account.street_address])),
         "email": account.email,
         "phone": account.phone,
+        "country": account.country,
+        "currency": account.currency,
     }
 
 
@@ -56,7 +69,12 @@ def update_my_account(payload: AccountUpdate, db: Session = Depends(get_db),
     # Prevent account admins from changing suspension status
     if payload.is_suspended is not None:
         raise HTTPException(status_code=403, detail="Cannot change suspension status")
-    
+
+    if payload.country is not None and payload.country not in VALID_COUNTRIES:
+        raise HTTPException(status_code=400, detail="Please select a valid African country")
+    if payload.currency is not None and payload.currency not in VALID_CURRENCY_CODES:
+        raise HTTPException(status_code=400, detail="Please select a valid currency")
+
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(account, field, value)
     

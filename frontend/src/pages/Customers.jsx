@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 
 export default function Customers() {
   const api = useApi()
+  const { currency } = useAuth()
   const [customers, setCustomers] = useState([])
   const [selected, setSelected] = useState(null)
   const [purchases, setPurchases] = useState([])
@@ -30,7 +32,7 @@ export default function Customers() {
   const customerColumns = [
     { key: 'customer_name', header: 'Customer Name' },
     { key: 'purchase_count', header: 'Purchases' },
-    { key: 'total_spent', header: 'Total Spent', render: (r) => `TZS ${r.total_spent.toLocaleString()}` },
+    { key: 'total_spent', header: 'Total Spent', render: (r) => `${currency} ${r.total_spent.toLocaleString()}` },
     { key: 'last_purchase', header: 'Last Seen', render: (r) => new Date(r.last_purchase).toLocaleString() },
     { key: 'actions', header: '', render: (r) => (
       <button className="btn btn-outline" onClick={() => viewPurchases(r)}>View History</button>
@@ -41,8 +43,8 @@ export default function Customers() {
     { key: 'created_at', header: 'Date & Time', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'item_name', header: 'Item' },
     { key: 'quantity', header: 'Qty' },
-    { key: 'unit_price', header: 'Unit Price', render: (r) => `TZS ${r.unit_price.toLocaleString()}` },
-    { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
+    { key: 'unit_price', header: 'Unit Price', render: (r) => `${currency} ${r.unit_price.toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (r) => `${currency} ${r.total.toLocaleString()}` },
     { key: 'payment_mode', header: 'Payment', render: (r) => <span className={`badge badge-${r.payment_mode}`}>{r.payment_mode.replace('_',' ')}</span> },
     { key: 'receipt_no', header: 'Receipt #' },
   ]
@@ -59,7 +61,7 @@ export default function Customers() {
         </div>
         <div className="card metric-card">
           <div className="label">Total Spent (All)</div>
-          <div className="value">TZS {customers.reduce((s,c)=>s+c.total_spent,0).toLocaleString()}</div>
+          <div className="value">{currency} {customers.reduce((s,c)=>s+c.total_spent,0).toLocaleString()}</div>
         </div>
       </div>
 
@@ -74,7 +76,7 @@ export default function Customers() {
             </div>
           )}
           <div style={{ marginTop: 12, fontWeight: 700, textAlign: 'right' }}>
-            Total Spent: TZS {selected.total_spent.toLocaleString()}
+            Total Spent: {currency} {selected.total_spent.toLocaleString()}
           </div>
         </Modal>
       )}

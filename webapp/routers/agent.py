@@ -106,6 +106,10 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
 
+    from models import Account
+    account = db.query(Account).filter(Account.id == sale.account_id).first() if getattr(sale, "account_id", None) else None
+    currency = (account.currency if account and account.currency else None) or "TZS"
+
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     width, height = A4
@@ -119,7 +123,7 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
     c.drawString(40, height - 180, f"Quantity: {sale.quantity}")
     c.drawString(40, height - 200, f"Unit Price: {sale.unit_price}")
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(40, height - 230, f"Total: TZS {sale.total:,.2f}")
+    c.drawString(40, height - 230, f"Total: {currency} {sale.total:,.2f}")
     c.showPage()
     c.save()
     buf.seek(0)

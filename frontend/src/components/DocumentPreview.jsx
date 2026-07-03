@@ -3,13 +3,14 @@ import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 
-function money(n) {
-  return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+function money(n, currency = 'TZS') {
+  return `${currency} ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
 export default function DocumentPreview({ kind, doc, company, onClose }) {
   const api = useApi()
-  const { token } = useAuth()
+  const { token, currency: acctCurrency } = useAuth()
+  const currency = company?.currency || acctCurrency
   const isInvoice = kind === 'invoices'
   const numberKey = isInvoice ? 'invoice_no' : 'quote_no'
   const label = isInvoice ? 'Invoice' : 'Quotation'
@@ -162,18 +163,18 @@ export default function DocumentPreview({ kind, doc, company, onClose }) {
                     <td>{i + 1}</td>
                     <td>{line.description}</td>
                     <td style={{ textAlign: 'right' }}>{line.quantity}</td>
-                    <td style={{ textAlign: 'right' }}>{money(line.unit_price)}</td>
-                    <td style={{ textAlign: 'right' }}>{money(line.total)}</td>
+                    <td style={{ textAlign: 'right' }}>{money(line.unit_price, currency)}</td>
+                    <td style={{ textAlign: 'right' }}>{money(line.total, currency)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <div className="doc-sheet-totals">
-              <div><span>Subtotal</span><span>{money(doc.subtotal)}</span></div>
-              {doc.tax_rate > 0 && <div><span>Tax ({doc.tax_rate}%)</span><span>{money(doc.tax_amount)}</span></div>}
-              {doc.discount > 0 && <div><span>Discount</span><span>-{money(doc.discount)}</span></div>}
-              <div className="doc-sheet-total-row"><span>Total</span><span>{money(doc.total)}</span></div>
+              <div><span>Subtotal</span><span>{money(doc.subtotal, currency)}</span></div>
+              {doc.tax_rate > 0 && <div><span>Tax ({doc.tax_rate}%)</span><span>{money(doc.tax_amount, currency)}</span></div>}
+              {doc.discount > 0 && <div><span>Discount</span><span>-{money(doc.discount, currency)}</span></div>}
+              <div className="doc-sheet-total-row"><span>Total</span><span>{money(doc.total, currency)}</span></div>
             </div>
 
             {doc.notes && (

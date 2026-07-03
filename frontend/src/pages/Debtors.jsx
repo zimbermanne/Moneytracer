@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
@@ -13,6 +14,7 @@ function statusBadge(status) {
 
 export default function Debtors() {
   const api = useApi()
+  const { currency } = useAuth()
   const [debtors, setDebtors] = useState([])
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
@@ -50,9 +52,9 @@ export default function Debtors() {
   const columns = [
     { key: 'name', header: 'Client' },
     { key: 'phone', header: 'Phone' },
-    { key: 'total_owed', header: 'Owed', render: (r) => `TZS ${r.total_owed.toLocaleString()}` },
-    { key: 'amount_paid', header: 'Paid', render: (r) => `TZS ${r.amount_paid.toLocaleString()}` },
-    { key: 'balance', header: 'Balance', render: (r) => `TZS ${(r.total_owed - r.amount_paid).toLocaleString()}` },
+    { key: 'total_owed', header: 'Owed', render: (r) => `${currency} ${r.total_owed.toLocaleString()}` },
+    { key: 'amount_paid', header: 'Paid', render: (r) => `${currency} ${r.amount_paid.toLocaleString()}` },
+    { key: 'balance', header: 'Balance', render: (r) => `${currency} ${(r.total_owed - r.amount_paid).toLocaleString()}` },
     { key: 'status', header: 'Status', render: (r) => statusBadge(r.status) },
     {
       key: 'actions', header: '',
@@ -97,7 +99,7 @@ export default function Debtors() {
           </>)}
         >
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
-            Outstanding balance: TZS {(payTarget.total_owed - payTarget.amount_paid).toLocaleString()}
+            Outstanding balance: {currency} {(payTarget.total_owed - payTarget.amount_paid).toLocaleString()}
           </div>
           <div className="form-row"><label>Amount Paid</label><input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
         </Modal>

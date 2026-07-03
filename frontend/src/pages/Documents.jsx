@@ -15,7 +15,7 @@ const emptyForm = () => ({
 
 export default function Documents({ kind }) {
   const api = useApi()
-  const { token } = useAuth()
+  const { token, currency } = useAuth()
   const isInvoice = kind === 'invoices'
   const title = isInvoice ? 'Invoices' : 'Quotations / Proforma'
   const numberKey = isInvoice ? 'invoice_no' : 'quote_no'
@@ -83,7 +83,7 @@ export default function Documents({ kind }) {
     { key: 'no', header: 'No.', render: (r) => <span className="cheque-number">{r[numberKey]}</span> },
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'customer_name', header: 'Customer' },
-    { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (r) => `${currency} ${r.total.toLocaleString()}` },
     { key: 'status', header: 'Status', render: (r) => <span className={`badge badge-${r.status}`}>{r.status}</span> },
     {
       key: 'actions', header: '',
@@ -156,14 +156,14 @@ export default function Documents({ kind }) {
 
           <div className="form-row"><label>Tax Rate (%)</label>
             <input type="number" value={form.tax_rate} onChange={(e) => setForm({...form, tax_rate: Number(e.target.value)})} /></div>
-          <div className="form-row"><label>Discount (TZS)</label>
+          <div className="form-row"><label>Discount ({currency})</label>
             <input type="number" value={form.discount} onChange={(e) => setForm({...form, discount: Number(e.target.value)})} /></div>
           <div className="form-row"><label>Notes</label>
             <input value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} /></div>
 
           <div style={{ textAlign: 'right', fontWeight: 700, marginTop: 10, padding: '8px 0', borderTop: '1px solid #e0ddd4' }}>
             <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginRight: 8 }}>Total:</span>
-            TZS {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {currency} {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
           {error && <div className="error-text">{error}</div>}
         </Modal>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
@@ -7,6 +8,7 @@ const empty = { category: 'General', description: '', amount: 0 }
 
 export default function Expenses() {
   const api = useApi()
+  const { currency } = useAuth()
   const [expenses, setExpenses] = useState([])
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
@@ -47,7 +49,7 @@ export default function Expenses() {
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'category', header: 'Category' },
     { key: 'description', header: 'Description' },
-    { key: 'amount', header: 'Amount', render: (r) => `TZS ${r.amount.toLocaleString()}` },
+    { key: 'amount', header: 'Amount', render: (r) => `${currency} ${r.amount.toLocaleString()}` },
     { key: 'actions', header: '', render: (r) => <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button> },
   ]
 
@@ -61,7 +63,7 @@ export default function Expenses() {
       {stats && (
         <div className="card-grid">
           <div className="card metric-card"><div className="label">Total Expenses</div><div className="value">{stats.total_expenses}</div></div>
-          <div className="card metric-card"><div className="label">Total Amount</div><div className="value">TZS {stats.total_amount.toLocaleString()}</div></div>
+          <div className="card metric-card"><div className="label">Total Amount</div><div className="value">{currency} {stats.total_amount.toLocaleString()}</div></div>
         </div>
       )}
       <Table columns={columns} rows={expenses} loading={listLoading} loadingText="Loading expenses…" />

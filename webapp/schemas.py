@@ -59,6 +59,8 @@ class AccountCreate(BaseModel):
     region: Optional[str] = ""
     district: Optional[str] = ""
     street_address: Optional[str] = ""
+    country: Optional[str] = ""
+    currency: Optional[str] = "TZS"
     phone: Optional[str] = ""
     email: Optional[str] = ""
     logo_url: Optional[str] = ""
@@ -76,6 +78,8 @@ class AccountUpdate(BaseModel):
     region: Optional[str] = None
     district: Optional[str] = None
     street_address: Optional[str] = None
+    country: Optional[str] = None
+    currency: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     logo_url: Optional[str] = None
@@ -98,6 +102,8 @@ class AccountOut(BaseModel):
     region: str
     district: str
     street_address: str
+    country: str
+    currency: str
     phone: str
     email: str
     logo_url: str

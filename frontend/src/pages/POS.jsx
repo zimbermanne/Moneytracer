@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 
 export default function POS() {
   const api = useApi()
+  const { currency } = useAuth()
   const [items, setItems] = useState([])
   const [cart, setCart] = useState([]) // [{item_id, name, price, original_price, qty, stock}]
   const [saleMode, setSaleMode] = useState('pos') // 'pos' = locked prices, 'salesman' = editable
@@ -131,7 +133,7 @@ export default function POS() {
               >
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.category}</div>
-                <div style={{ marginTop: 8, fontWeight: 700 }}>TZS {item.selling_price.toLocaleString()}</div>
+                <div style={{ marginTop: 8, fontWeight: 700 }}>{currency} {item.selling_price.toLocaleString()}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Stock: {item.quantity}</div>
               </div>
             ))}
@@ -172,7 +174,7 @@ export default function POS() {
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>
-                  Line total: TZS {(c.price * c.qty).toLocaleString()}
+                  Line total: {currency} {(c.price * c.qty).toLocaleString()}
                 </div>
               </div>
             ))}
@@ -193,7 +195,7 @@ export default function POS() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16, marginBottom: 14 }}>
                   <span>Total</span>
-                  <span>TZS {total.toLocaleString()}</span>
+                  <span>{currency} {total.toLocaleString()}</span>
                 </div>
                 <button className="btn btn-gold" style={{ width: '100%' }} onClick={checkout} disabled={busy}>
                   {busy ? 'Processing…' : 'Complete Sale'}
@@ -208,11 +210,11 @@ export default function POS() {
               {receipt.sales.map((s) => (
                 <div key={s.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
                   <span>{s.item_name} x{s.quantity}</span>
-                  <span>TZS {s.total.toLocaleString()}</span>
+                  <span>{currency} {s.total.toLocaleString()}</span>
                 </div>
               ))}
               <div style={{ fontWeight: 700, marginTop: 8, borderTop: '1px solid #eee', paddingTop: 8 }}>
-                Total: TZS {receipt.total.toLocaleString()}
+                Total: {currency} {receipt.total.toLocaleString()}
               </div>
             </div>
           )}
