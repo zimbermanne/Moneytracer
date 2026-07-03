@@ -41,6 +41,7 @@ export function useApi() {
     get: (path) => request(path),
     post: (path, body) => request(path, { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }),
     put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
+    patch: (path, body) => request(path, { method: 'PATCH', ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
     del: (path) => request(path, { method: 'DELETE' }),
   }
 }

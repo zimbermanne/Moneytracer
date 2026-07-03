@@ -246,6 +246,18 @@ class QuotationItem(Base):
     quotation = relationship("Quotation", back_populates="items")
 
 
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    created_by = Column(String(80), default="")
+    text = Column(String(255), nullable=False)
+    due_at = Column(DateTime, nullable=True)  # optional; null = show until dismissed
+    is_done = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
 

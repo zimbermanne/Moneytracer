@@ -363,3 +363,18 @@ class QuotationOut(BaseModel):
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []
+
+
+class ReminderCreate(BaseModel):
+    text: str
+    due_at: Optional[datetime] = None
+
+
+class ReminderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    text: str
+    due_at: Optional[datetime]
+    is_done: bool
+    created_by: str
+    created_at: datetime

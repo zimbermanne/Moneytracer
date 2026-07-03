@@ -555,7 +555,7 @@ label {
 }
 
 .clock-bar-wide {
-  width: min(760px, 100%);
+  width: min(900px, 100%);
 }
 
 .reminders-segment, .clock-segment, .clock-divider, .account-segment {
@@ -601,12 +601,21 @@ label {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
-.account-chip {
+.account-name {
+  font-family: var(--font-typewriter);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffb28f;
+  text-shadow: 0 0 4px rgba(255, 143, 92, 0.5);
+}
+
+.account-rank {
   font-family: var(--font-typewriter);
   font-size: 10px;
   letter-spacing: 0.03em;
@@ -614,9 +623,60 @@ label {
   opacity: 0.85;
 }
 
-.account-chip strong {
+.reminder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reminder-chip-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  font-size: 9px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.reminder-chip-dismiss:hover { opacity: 1; }
+
+.reminder-add-btn {
+  font-family: var(--font-typewriter);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: #d8b9a8;
+  background: transparent;
+  border: 1px dashed rgba(216, 185, 168, 0.35);
+  border-radius: 5px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.reminder-add-btn:hover {
   color: #ffb28f;
-  font-weight: 700;
+  border-color: rgba(255, 143, 92, 0.4);
+}
+
+.reminder-input {
+  font-family: var(--font-typewriter);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: #ffcbb0;
+  background: rgba(255, 143, 92, 0.08);
+  border: 1px solid rgba(255, 143, 92, 0.3);
+  border-radius: 5px;
+  padding: 2px 8px;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+.reminder-input:focus {
+  outline: none;
+  border-color: rgba(255, 143, 92, 0.6);
 }
 
 .clock-divider {

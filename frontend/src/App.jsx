@@ -40,11 +40,26 @@ function Layout({ children }) {
   const { user } = useAuth()
   const api = useApi()
   const [company, setCompany] = useState(null)
+  const [reminders, setReminders] = useState([])
+
+  const loadReminders = () => {
+    api.get('/reminders/').then(setReminders).catch(() => {})
+  }
 
   useEffect(() => {
     api.get('/accounts/company-info').then(setCompany).catch(() => {})
+    loadReminders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const addReminder = (text) => {
+    api.post('/reminders/', { text }).then((r) => setReminders((prev) => [r, ...prev])).catch(() => {})
+  }
+
+  const dismissReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
+  }
 
   return (
     <div className="app-shell">
@@ -53,7 +68,13 @@ function Layout({ children }) {
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">
         <div className="desktop-topbar">
-          <Clock accountName={company?.name} accountRank={user?.role} />
+          <Clock
+            accountName={company?.name}
+            accountRank={user?.role}
+            reminders={reminders}
+            onAddReminder={addReminder}
+            onDismissReminder={dismissReminder}
+          />
         </div>
         {children}
       </div>

@@ -16,18 +16,19 @@ const RANK_LABELS = {
 }
 
 /**
- * Topbar clock/reminders bar.
+ * Topbar clock/reminders/account bar.
  *
- * `reminders` is optional — an array of { id, text } — so future features
- * (due invoices, low stock, follow-ups, etc.) can just pass items in here.
- * With none supplied it shows a quiet placeholder so the bar still reads
- * as "reserved for reminders" rather than empty dead space.
+ * `reminders` — array of { id, text } saved via `onAddReminder`; shown as
+ * dismissible chips. `onAddReminder(text)` / `onDismissReminder(id)` are
+ * optional — omit them to render a read-only bar (e.g. before data loads).
  *
- * `accountName`/`accountRank` render as a third segment (Account: X · Rank: Y)
- * so the bar doubles as a quick "who am I logged in as" indicator.
+ * `accountName` renders bold/large, `accountRank` renders small underneath —
+ * just the values, no "Account name:" label text.
  */
-export default function Clock({ reminders = [], accountName, accountRank }) {
+export default function Clock({ reminders = [], onAddReminder, onDismissReminder, accountName, accountRank }) {
   const [now, setNow] = useState(new Date())
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -41,23 +42,58 @@ export default function Clock({ reminders = [], accountName, accountRank }) {
   const day = now.getDate()
   const rankLabel = accountRank ? (RANK_LABELS[accountRank] || accountRank) : null
 
+  const submitReminder = () => {
+    const text = draft.trim()
+    if (!text || !onAddReminder) { setAdding(false); return }
+    onAddReminder(text)
+    setDraft('')
+    setAdding(false)
+  }
+
   return (
     <div className="clock-bar clock-bar-wide" title={now.toString()}>
       <div className="reminders-segment">
-        {reminders.length === 0 ? (
+        {reminders.length === 0 && !adding && (
           <span className="reminders-placeholder">No reminders</span>
-        ) : (
-          reminders.map((r) => (
-            <span key={r.id} className="reminder-chip">{r.text}</span>
-          ))
+        )}
+        {reminders.map((r) => (
+          <span key={r.id} className="reminder-chip">
+            {r.text}
+            {onDismissReminder && (
+              <button
+                type="button"
+                className="reminder-chip-dismiss"
+                onClick={() => onDismissReminder(r.id)}
+                aria-label="Dismiss reminder"
+              >✕</button>
+            )}
+          </span>
+        ))}
+        {onAddReminder && (
+          adding ? (
+            <input
+              autoFocus
+              className="reminder-input"
+              placeholder="Type a reminder, press Enter…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitReminder()
+                if (e.key === 'Escape') { setAdding(false); setDraft('') }
+              }}
+              onBlur={submitReminder}
+            />
+          ) : (
+            <button type="button" className="reminder-add-btn" onClick={() => setAdding(true)}>+ Reminder</button>
+          )
         )}
       </div>
       {(accountName || rankLabel) && (
         <>
           <div className="clock-divider" />
           <div className="account-segment">
-            {accountName && <span className="account-chip">Account name: <strong>{accountName}</strong></span>}
-            {rankLabel && <span className="account-chip">Account rank: <strong>{rankLabel}</strong></span>}
+            {accountName && <div className="account-name">{accountName}</div>}
+            {rankLabel && <div className="account-rank">{rankLabel}</div>}
           </div>
         </>
       )}
