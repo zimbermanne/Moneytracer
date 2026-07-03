@@ -11,6 +11,24 @@ from activity import log_activity_for_user
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
 
+@router.get("/company-info")
+def company_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Lightweight account name/address/contact for any logged-in user —
+    used to render the company header on invoice/quotation previews.
+    (my-account below is admin-only and returns far more than this needs.)"""
+    if not current_user.account_id:
+        return {"name": "", "address": "", "email": "", "phone": ""}
+    account = db.query(Account).filter(Account.id == current_user.account_id).first()
+    if not account:
+        return {"name": "", "address": "", "email": "", "phone": ""}
+    return {
+        "name": account.name,
+        "address": ", ".join(filter(None, [account.region, account.district, account.street_address])),
+        "email": account.email,
+        "phone": account.phone,
+    }
+
+
 @router.get("/my-account", response_model=AccountOut)
 def get_my_account(current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Get current user's account details (account admin only)."""

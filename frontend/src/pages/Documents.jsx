@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import Spinner from '../components/Spinner.jsx'
+import DocumentPreview from '../components/DocumentPreview.jsx'
 
 const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0 })
 const emptyForm = () => ({
@@ -25,12 +26,15 @@ export default function Documents({ kind }) {
   const [form, setForm] = useState(emptyForm())
   const [pdfLoading, setPdfLoading] = useState(null)
   const [listLoading, setListLoading] = useState(true)
+  const [previewDoc, setPreviewDoc] = useState(null)
+  const [company, setCompany] = useState(null)
 
   const load = () => {
     setListLoading(true)
     api.get(`/${kind}/`).then(setDocs).catch((e) => setError(e.message)).finally(() => setListLoading(false))
   }
   useEffect(() => { load() }, [kind]) // eslint-disable-line
+  useEffect(() => { api.get('/accounts/company-info').then(setCompany).catch(() => {}) }, []) // eslint-disable-line
 
   const updateLine = (idx, field, value) => {
     const items = form.items.map((l, i) => i === idx ? { ...l, [field]: value } : l)
@@ -83,6 +87,7 @@ export default function Documents({ kind }) {
     { key: 'status', header: 'Status', render: (r) => <span className={`badge badge-${r.status}`}>{r.status}</span> },
     {
       key: 'actions', header: '',
+      stopRowClick: true,
       render: (r) => (
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="btn btn-outline" onClick={() => downloadPdf(r)} disabled={pdfLoading === r.id}>
@@ -111,7 +116,11 @@ export default function Documents({ kind }) {
       </div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <Table columns={columns} rows={docs} loading={listLoading} loadingText={`Loading ${title.toLowerCase()}…`}
-        emptyText={`No ${title.toLowerCase()} yet.`} />
+        emptyText={`No ${title.toLowerCase()} yet.`} onRowClick={(row) => setPreviewDoc(row)} />
+
+      {previewDoc && (
+        <DocumentPreview kind={kind} doc={previewDoc} company={company} onClose={() => setPreviewDoc(null)} />
+      )}
 
       {open && (
         <Modal title={`New ${isInvoice ? 'Invoice' : 'Quotation'}`} onClose={() => setOpen(false)}

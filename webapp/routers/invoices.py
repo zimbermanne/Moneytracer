@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -13,6 +14,7 @@ from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account
 from schemas import InvoiceCreate, InvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
+from email_utils import send_email_with_attachment
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
@@ -153,13 +155,54 @@ def delete_invoice(invoice_id: int, db: Session = Depends(get_db),
 @router.get("/{invoice_id}/pdf")
 def invoice_pdf(invoice_id: int, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
-    inv = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    q = db.query(Invoice).filter(Invoice.id == invoice_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(Invoice.account_id == account_id)
+    inv = q.first()
     if not inv: raise HTTPException(404, "Invoice not found")
     account = get_account_details(db, inv.account_id)
     buf = _render_pdf(inv, "INVOICE", account)
     log_activity_for_user(db, current_user, "invoice_pdf", f"Exported {inv.invoice_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="Invoice-{inv.invoice_no}.pdf"'})
+
+
+class EmailDocRequest(BaseModel):
+    to_email: EmailStr
+    message: Optional[str] = ""
+
+
+@router.post("/{invoice_id}/email")
+def email_invoice(invoice_id: int, payload: EmailDocRequest, db: Session = Depends(get_db),
+                  current_user: User = Depends(get_current_user)):
+    q = db.query(Invoice).filter(Invoice.id == invoice_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(Invoice.account_id == account_id)
+    inv = q.first()
+    if not inv: raise HTTPException(404, "Invoice not found")
+
+    account = get_account_details(db, inv.account_id)
+    buf = _render_pdf(inv, "INVOICE", account)
+    company = (account or {}).get("name") or COMPANY_NAME
+    body = payload.message or f"Dear {inv.customer_name},\n\nPlease find attached Invoice {inv.invoice_no} for {CURRENCY} {inv.total:,.2f}.\n\nRegards,\n{company}"
+
+    try:
+        send_email_with_attachment(
+            to_email=payload.to_email,
+            subject=f"Invoice {inv.invoice_no} from {company}",
+            body=body,
+            attachment_bytes=buf.getvalue(),
+            attachment_filename=f"Invoice-{inv.invoice_no}.pdf",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(502, f"Failed to send email: {exc}")
+
+    log_activity_for_user(db, current_user, "invoice_email", f"Emailed {inv.invoice_no} to {payload.to_email}")
+    return {"detail": f"Invoice emailed to {payload.to_email}"}
 
 
 def _render_pdf(doc: Invoice, label: str, account: dict = None) -> io.BytesIO:

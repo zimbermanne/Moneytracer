@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -12,6 +13,7 @@ from models import Quotation, QuotationItem, Invoice, InvoiceItem, User, Documen
 from schemas import QuotationCreate, QuotationOut, InvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
+from email_utils import send_email_with_attachment
 
 router = APIRouter(prefix="/api/quotations", tags=["quotations"])
 
@@ -160,13 +162,54 @@ def delete_quotation(qid: int, db: Session = Depends(get_db),
 @router.get("/{qid}/pdf")
 def quotation_pdf(qid: int, db: Session = Depends(get_db),
                   current_user: User = Depends(get_current_user)):
-    q = db.query(Quotation).filter(Quotation.id == qid).first()
+    account_id = get_account_filter(current_user)
+    query = db.query(Quotation).filter(Quotation.id == qid)
+    if account_id is not None:
+        query = query.filter(Quotation.account_id == account_id)
+    q = query.first()
     if not q: raise HTTPException(404, "Quotation not found")
     account = db.query(Account).filter(Account.id == q.account_id).first()
     buf = _render_quotation_pdf(q, account)
     log_activity_for_user(db, current_user, "quotation_pdf", f"Exported {q.quote_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="Quotation-{q.quote_no}.pdf"'})
+
+
+class EmailDocRequest(BaseModel):
+    to_email: EmailStr
+    message: Optional[str] = ""
+
+
+@router.post("/{qid}/email")
+def email_quotation(qid: int, payload: EmailDocRequest, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Quotation).filter(Quotation.id == qid)
+    if account_id is not None:
+        query = query.filter(Quotation.account_id == account_id)
+    q = query.first()
+    if not q: raise HTTPException(404, "Quotation not found")
+
+    account = db.query(Account).filter(Account.id == q.account_id).first()
+    buf = _render_quotation_pdf(q, account)
+    company = (account.name if account else None) or "Zimbermanne Accounting OS"
+    body = payload.message or f"Dear {q.customer_name},\n\nPlease find attached Quotation {q.quote_no} for TZS {q.total:,.2f}.\n\nRegards,\n{company}"
+
+    try:
+        send_email_with_attachment(
+            to_email=payload.to_email,
+            subject=f"Quotation {q.quote_no} from {company}",
+            body=body,
+            attachment_bytes=buf.getvalue(),
+            attachment_filename=f"Quotation-{q.quote_no}.pdf",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(502, f"Failed to send email: {exc}")
+
+    log_activity_for_user(db, current_user, "quotation_email", f"Emailed {q.quote_no} to {payload.to_email}")
+    return {"detail": f"Quotation emailed to {payload.to_email}"}
 
 
 def _render_quotation_pdf(q: Quotation, account: Account = None) -> io.BytesIO:
