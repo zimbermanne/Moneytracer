@@ -63,11 +63,7 @@ export default function Landing() {
 
       {/* ---- Dual-path hero ---- */}
       <section className="landing-hero">
-        <div className="landing-hero-glow" aria-hidden="true" />
         <div className="landing-hero-inner">
-          <div className="landing-hero-badge">
-            <span>Built for African SMEs &amp; community groups</span>
-          </div>
           <h1>MoneyTracer: Your Wealth, Managed.</h1>
           <p className="landing-hero-sub">
             Whether you're building a business empire or organizing a community
