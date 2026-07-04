@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
-from models import RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure
+from models import (
+    RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
+    AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus,
+)
 
 
 # ---------- Auth / Users ----------
@@ -11,6 +14,9 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = ""
     email: Optional[str] = ""
     role: Optional[RoleEnum] = RoleEnum.employee
+    # Only meaningful on /api/auth/register (self-serve signup): which kind of
+    # account this creates. Ignored elsewhere (e.g. admin creating staff).
+    account_type: Optional[AccountType] = AccountType.business
 
 
 class UserOut(BaseModel):
@@ -59,8 +65,6 @@ class AccountCreate(BaseModel):
     region: Optional[str] = ""
     district: Optional[str] = ""
     street_address: Optional[str] = ""
-    country: Optional[str] = ""
-    currency: Optional[str] = "TZS"
     phone: Optional[str] = ""
     email: Optional[str] = ""
     logo_url: Optional[str] = ""
@@ -78,8 +82,6 @@ class AccountUpdate(BaseModel):
     region: Optional[str] = None
     district: Optional[str] = None
     street_address: Optional[str] = None
-    country: Optional[str] = None
-    currency: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     logo_url: Optional[str] = None
@@ -94,6 +96,7 @@ class AccountUpdate(BaseModel):
 class AccountOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    account_type: AccountType
     business_structure: BusinessStructure
     name: str
     tin: Optional[str]
@@ -102,8 +105,6 @@ class AccountOut(BaseModel):
     region: str
     district: str
     street_address: str
-    country: str
-    currency: str
     phone: str
     email: str
     logo_url: str
@@ -384,3 +385,146 @@ class ReminderOut(BaseModel):
     is_done: bool
     created_by: str
     created_at: datetime
+
+
+# ---------- Community-based informal finance ----------
+class CommunityGroupSetup(BaseModel):
+    """Steps 1-3 of the community onboarding wizard, submitted together as one
+    call once the account exists (mirrors the business onboarding pattern)."""
+    name: str
+    group_type: Optional[str] = ""  # cultural label only: VICOBA, Vibati, Chama, etc.
+    region: Optional[str] = ""
+    district: Optional[str] = ""
+    contribution_style: ContributionStyle = ContributionStyle.fixed
+    contribution_amount: Optional[float] = None
+    currency: Optional[str] = "TZS"
+    cycle_frequency: CycleFrequency = CycleFrequency.monthly
+    meeting_day: Optional[str] = ""
+    rotation_enabled: bool = False
+    lending_enabled: bool = False
+
+
+class CommunityGroupUpdate(BaseModel):
+    name: Optional[str] = None
+    group_type: Optional[str] = None
+    region: Optional[str] = None
+    district: Optional[str] = None
+    contribution_style: Optional[ContributionStyle] = None
+    contribution_amount: Optional[float] = None
+    currency: Optional[str] = None
+    cycle_frequency: Optional[CycleFrequency] = None
+    meeting_day: Optional[str] = None
+    rotation_enabled: Optional[bool] = None
+    lending_enabled: Optional[bool] = None
+
+
+class SavingsGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    group_type: str
+    region: str
+    district: str
+    contribution_style: ContributionStyle
+    contribution_amount: Optional[float]
+    currency: str
+    cycle_frequency: CycleFrequency
+    meeting_day: str
+    rotation_enabled: bool
+    lending_enabled: bool
+    created_at: datetime
+
+
+class GroupMemberCreate(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    is_recorder: bool = False
+
+
+class GroupMemberOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str
+    is_recorder: bool
+    has_login: bool = False
+    joined_at: datetime
+
+
+class MemberLoginCreate(BaseModel):
+    """Recorder creates these directly for a member — no OTP/WhatsApp self-service."""
+    username: str
+    password: str
+
+
+class ContributionCreate(BaseModel):
+    member_id: int
+    cycle_label: str
+    amount: float
+
+
+class ContributionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    group_id: int
+    member_id: int
+    cycle_label: str
+    amount: float
+    recorded_by: str
+    created_at: datetime
+
+
+class PayoutCreate(BaseModel):
+    member_id: int
+    cycle_label: str
+    amount: float
+
+
+class PayoutOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    group_id: int
+    member_id: int
+    cycle_label: str
+    amount: float
+    recorded_by: str
+    created_at: datetime
+
+
+class GroupLoanCreate(BaseModel):
+    member_id: int
+    principal: float
+    interest_rate: float = 0
+
+
+class GroupLoanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    group_id: int
+    member_id: int
+    principal: float
+    interest_rate: float
+    balance: float
+    status: GroupLoanStatus
+    issued_at: datetime
+
+
+class GroupLoanRepaymentCreate(BaseModel):
+    amount: float
+
+
+class GroupLoanRepaymentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    loan_id: int
+    amount: float
+    created_at: datetime
+
+
+class CommunitySummary(BaseModel):
+    member_count: int
+    total_contributions: float
+    total_payouts: float
+    total_loans_outstanding: float
+    rotation_enabled: bool
+    lending_enabled: bool

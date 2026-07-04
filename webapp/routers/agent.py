@@ -7,19 +7,10 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import get_db
-from models import Sale, Expense, Purchase, InventoryItem, User, RoleEnum
+from models import Sale, Expense, Purchase, InventoryItem, User
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
-
-
-def get_account_filter(current_user: User):
-    """Return account_id filter for queries. Superadmin gets None (no filter)."""
-    if current_user.role == RoleEnum.superadmin:
-        return None
-    if not current_user.account_id:
-        raise HTTPException(status_code=403, detail="User must belong to an account")
-    return current_user.account_id
 
 
 class ChatRequest(BaseModel):
@@ -36,11 +27,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User
     except ImportError:
         raise HTTPException(status_code=503, detail="anthropic package not installed on server")
 
-    account_id = get_account_filter(current_user)
-    q = db.query(Sale)
-    if account_id is not None:
-        q = q.filter(Sale.account_id == account_id)
-    sales = q.order_by(Sale.created_at.desc()).limit(50).all()
+    sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(50).all()
     context = "\n".join(f"{s.created_at}: {s.item_name} x{s.quantity} = {s.total}" for s in sales)
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -58,15 +45,10 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User
 
 @router.get("/analytics")
 def analytics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    account_id = get_account_filter(current_user)
-
-    def _scoped(model_query, model):
-        return model_query.filter(model.account_id == account_id) if account_id is not None else model_query
-
-    sales = _scoped(db.query(Sale), Sale).all()
-    expenses = _scoped(db.query(Expense), Expense).all()
-    purchases = _scoped(db.query(Purchase), Purchase).all()
-    items = _scoped(db.query(InventoryItem), InventoryItem).all()
+    sales = db.query(Sale).all()
+    expenses = db.query(Expense).all()
+    purchases = db.query(Purchase).all()
+    items = db.query(InventoryItem).all()
     return {
         "total_sales": len(sales),
         "total_revenue": round(sum(s.total for s in sales), 2),
@@ -124,10 +106,6 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
 
-    from models import Account
-    account = db.query(Account).filter(Account.id == sale.account_id).first() if getattr(sale, "account_id", None) else None
-    currency = (account.currency if account and account.currency else None) or "TZS"
-
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     width, height = A4
@@ -141,7 +119,7 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
     c.drawString(40, height - 180, f"Quantity: {sale.quantity}")
     c.drawString(40, height - 200, f"Unit Price: {sale.unit_price}")
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(40, height - 230, f"Total: {currency} {sale.total:,.2f}")
+    c.drawString(40, height - 230, f"Total: TZS {sale.total:,.2f}")
     c.showPage()
     c.save()
     buf.seek(0)

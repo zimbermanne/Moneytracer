@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, RoleEnum, Account
+from models import User, RoleEnum, Account, AccountType
 from schemas import UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate
 from auth import (
     hash_password, authenticate_user, create_access_token,
@@ -18,34 +18,49 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def register(payload: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
-    
-    # Create a new account for self-service registration. It starts
-    # un-onboarded so the new admin is walked through the setup wizard
-    # (business basics, branding, tax/invoicing defaults) before landing
-    # on the dashboard.
-    account = Account(
-        name=f"{payload.full_name}'s Business",
-        owner_full_name=payload.full_name or payload.username,
-        business_type="retail",
-        email=payload.email or "",
-        onboarding_completed=False,
-    )
+
+    account_type = payload.account_type or AccountType.business
+
+    if account_type == AccountType.community:
+        # Community groups skip the business fields entirely — the community
+        # onboarding wizard (POST /api/community/setup) fills in the group's
+        # own details afterwards.
+        account = Account(
+            account_type=AccountType.community,
+            name=f"{payload.full_name or payload.username}'s Group",
+            owner_full_name=payload.full_name or payload.username,
+            email=payload.email or "",
+            onboarding_completed=False,
+        )
+    else:
+        # Create a new account for self-service registration. It starts
+        # un-onboarded so the new admin is walked through the setup wizard
+        # (business basics, branding, tax/invoicing defaults) before landing
+        # on the dashboard.
+        account = Account(
+            account_type=AccountType.business,
+            name=f"{payload.full_name}'s Business",
+            owner_full_name=payload.full_name or payload.username,
+            business_type="retail",
+            email=payload.email or "",
+            onboarding_completed=False,
+        )
     db.add(account)
     db.commit()
     db.refresh(account)
-    
+
     user = User(
         username=payload.username,
         full_name=payload.full_name or "",
         email=payload.email or "",
         hashed_password=hash_password(payload.password),
-        role=RoleEnum.admin,  # First user in an account becomes admin
+        role=RoleEnum.admin,  # The person who creates an account is its admin/treasurer
         account_id=account.id,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    log_activity_for_user(db, user, "register", f"New account created: {account.name}")
+    log_activity_for_user(db, user, "register", f"New {account_type.value} account created: {account.name}")
     return user
 
 

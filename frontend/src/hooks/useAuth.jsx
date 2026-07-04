@@ -11,32 +11,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [account, setAccount] = useState(null)
   const [accountLoading, setAccountLoading] = useState(false)
-  const [accountError, setAccountError] = useState(false)
-  const [currency, setCurrency] = useState('TZS')
-
-  const fetchCurrency = useCallback(async (tok) => {
-    try {
-      const res = await fetch(apiUrl('/api/accounts/company-info'), {
-        headers: { Authorization: `Bearer ${tok}` },
-      })
-      if (!res.ok) throw new Error('failed')
-      const data = await res.json()
-      if (data?.currency) setCurrency(data.currency)
-    } catch {
-      // keep previous/default currency
-    }
-  }, [])
 
   const fetchAccount = useCallback(async (tok, currentUser) => {
     // Only account admins have (or need) an onboarding wizard; superadmin
     // and staff accounts (manager/employee) never see it.
     if (!currentUser || currentUser.role !== 'admin') {
       setAccount(null)
-      setAccountError(false)
       return
     }
     setAccountLoading(true)
-    setAccountError(false)
     try {
       const res = await fetch(apiUrl('/api/accounts/my-account'), {
         headers: { Authorization: `Bearer ${tok}` },
@@ -44,12 +27,7 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error('failed')
       setAccount(await res.json())
     } catch {
-      // IMPORTANT: don't just setAccount(null) here — that's the same value
-      // as "haven't fetched yet", which used to make a failed request look
-      // identical to a still-loading one and spin the loader forever with
-      // no way to recover. accountError lets the UI tell them apart.
       setAccount(null)
-      setAccountError(true)
     } finally {
       setAccountLoading(false)
     }
@@ -64,7 +42,6 @@ export function AuthProvider({ children }) {
       const data = await res.json()
       setUser(data)
       await fetchAccount(tok, data)
-      await fetchCurrency(tok)
     } catch {
       setToken(null)
       setUser(null)
@@ -73,7 +50,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false)
     }
-  }, [fetchAccount, fetchCurrency])
+  }, [fetchAccount])
 
   useEffect(() => {
     if (token) {
@@ -84,11 +61,8 @@ export function AuthProvider({ children }) {
   }, [token, fetchMe])
 
   const refreshAccount = useCallback(() => {
-    if (token && user) {
-      fetchAccount(token, user)
-      fetchCurrency(token)
-    }
-  }, [token, user, fetchAccount, fetchCurrency])
+    if (token && user) return fetchAccount(token, user)
+  }, [token, user, fetchAccount])
 
   const login = useCallback(async (username, password) => {
     let res
@@ -114,9 +88,8 @@ export function AuthProvider({ children }) {
     setToken(data.access_token)
     setUser(data.user)
     await fetchAccount(data.access_token, data.user)
-    await fetchCurrency(data.access_token)
     return data.user
-  }, [fetchAccount, fetchCurrency])
+  }, [fetchAccount])
 
   const loginAsDemo = useCallback(async () => {
     let res
@@ -138,9 +111,8 @@ export function AuthProvider({ children }) {
     setToken(data.access_token)
     setUser(data.user)
     await fetchAccount(data.access_token, data.user)
-    await fetchCurrency(data.access_token)
     return data.user
-  }, [fetchAccount, fetchCurrency])
+  }, [fetchAccount])
 
   const logout = useCallback(() => {
     if (token) {
@@ -157,14 +129,12 @@ export function AuthProvider({ children }) {
     setToken(null)
     setUser(null)
     setAccount(null)
-    setCurrency('TZS')
   }, [token])
 
   return (
     <AuthContext.Provider value={{
       token, user, loading, login, loginAsDemo, logout,
-      account, accountLoading, accountError, setAccount, refreshAccount,
-      currency, setCurrency,
+      account, accountLoading, setAccount, refreshAccount,
     }}>
       {children}
     </AuthContext.Provider>

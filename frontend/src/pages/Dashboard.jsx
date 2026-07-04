@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
-import { useAuth } from '../hooks/useAuth.jsx'
 
-function money(n, currency = 'TZS') {
-  return `${currency} ${Number(n || 0).toLocaleString()}`
+function money(n) {
+  return `TZS ${Number(n || 0).toLocaleString()}`
 }
 
-function CashflowChart({ series, currency }) {
+function CashflowChart({ series }) {
   if (!series || series.length === 0) return null
   return (
     <div className="card" style={{ marginBottom: 20 }}>
@@ -36,7 +35,7 @@ function CashflowChart({ series, currency }) {
             tickFormatter={(v) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}K` : v)}
           />
           <Tooltip
-            formatter={(value, name) => [money(value, currency), name]}
+            formatter={(value, name) => [money(value), name]}
             contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
           />
           <Area type="monotone" dataKey="incoming" name="Incoming" stroke="var(--success)" fill="url(#incomingFill)" strokeWidth={2} />
@@ -49,7 +48,6 @@ function CashflowChart({ series, currency }) {
 
 export default function Dashboard() {
   const api = useApi()
-  const { currency } = useAuth()
   const [daily, setDaily] = useState(null)
   const [inv, setInv] = useState(null)
   const [fin, setFin] = useState(null)
@@ -84,7 +82,7 @@ export default function Dashboard() {
       <div className="card-grid">
         <div className="card metric-card">
           <div className="label">Today's Earnings</div>
-          <div className="value">{currency} {daily ? daily.earnings.toLocaleString() : '—'}</div>
+          <div className="value">TZS {daily ? daily.earnings.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
           <div className="label">Items Sold Today</div>
@@ -103,7 +101,7 @@ export default function Dashboard() {
       <div className="card-grid">
         <div className="card metric-card">
           <div className="label">Inventory Value</div>
-          <div className="value">{currency} {inv ? inv.total_value.toLocaleString() : '—'}</div>
+          <div className="value">TZS {inv ? inv.total_value.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
           <div className="label">Total Stock Units</div>
@@ -111,15 +109,15 @@ export default function Dashboard() {
         </div>
         <div className="card metric-card">
           <div className="label">Net Profit (All-time)</div>
-          <div className="value">{currency} {fin ? fin.net_profit.toLocaleString() : '—'}</div>
+          <div className="value">TZS {fin ? fin.net_profit.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
           <div className="label">Total Revenue (All-time)</div>
-          <div className="value">{currency} {fin ? fin.revenue.toLocaleString() : '—'}</div>
+          <div className="value">TZS {fin ? fin.revenue.toLocaleString() : '—'}</div>
         </div>
       </div>
 
-      <CashflowChart series={cashflow?.series} currency={currency} />
+      <CashflowChart series={cashflow?.series} />
     </div>
   )
 }

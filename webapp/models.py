@@ -12,6 +12,7 @@ class RoleEnum(str, enum.Enum):
     admin = "admin"
     manager = "manager"
     employee = "employee"
+    member = "member"  # read-only community-group member login (own records only)
 
 
 class BusinessStructure(str, enum.Enum):
@@ -19,10 +20,16 @@ class BusinessStructure(str, enum.Enum):
     company = "company"
 
 
+class AccountType(str, enum.Enum):
+    business = "business"
+    community = "community"
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, index=True)
+    account_type = Column(Enum(AccountType), default=AccountType.business)
     business_structure = Column(Enum(BusinessStructure), default=BusinessStructure.solo)
     name = Column(String(150), nullable=False, index=True)
     tin = Column(String(50), nullable=True)  # Tax Identification Number, required for company
@@ -31,8 +38,6 @@ class Account(Base):
     region = Column(String(80), default="")
     district = Column(String(80), default="")
     street_address = Column(String(255), default="")
-    country = Column(String(80), default="")
-    currency = Column(String(10), default="TZS")
     phone = Column(String(40), default="")
     email = Column(String(120), default="")
     logo_url = Column(String(255), default="")
@@ -269,3 +274,123 @@ class ActivityLog(Base):
     action = Column(String(255))
     details = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+# ---------- Community-based informal finance (VICOBA / Vibati / Chama / etc.) ----------
+# One Account (account_type == community) has exactly one SavingsGroup. Ordinary
+# members are just name+phone records (GroupMember) with no login by default;
+# a member only gets a login (a User with role=member) if the recorder
+# explicitly creates one for them, so they can view their own contributions
+# and loan balance in-app. No OTP/WhatsApp self-service for now.
+
+class ContributionStyle(str, enum.Enum):
+    fixed = "fixed"       # everyone pays the same amount each cycle (classic "Vibati")
+    flexible = "flexible"  # members vary how much they contribute (classic "VICOBA")
+
+
+class CycleFrequency(str, enum.Enum):
+    weekly = "weekly"
+    biweekly = "biweekly"
+    monthly = "monthly"
+
+
+class GroupLoanStatus(str, enum.Enum):
+    active = "active"
+    paid = "paid"
+    defaulted = "defaulted"
+
+
+class SavingsGroup(Base):
+    __tablename__ = "savings_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, unique=True, index=True)
+    name = Column(String(150), nullable=False)
+    # Cultural label only (VICOBA, Vibati, Chama, Stokvel, Susu, Tontine, Other...) —
+    # does NOT drive behavior. Behavior is driven by rotation_enabled/lending_enabled.
+    group_type = Column(String(50), default="")
+    region = Column(String(80), default="")
+    district = Column(String(80), default="")
+    contribution_style = Column(Enum(ContributionStyle), default=ContributionStyle.fixed)
+    contribution_amount = Column(Float, nullable=True)  # used when contribution_style == fixed
+    currency = Column(String(10), default="TZS")
+    cycle_frequency = Column(Enum(CycleFrequency), default=CycleFrequency.monthly)
+    meeting_day = Column(String(20), default="")
+    rotation_enabled = Column(Boolean, default=False)  # ROSCA-style pot rotation
+    lending_enabled = Column(Boolean, default=False)   # ASCA-style internal lending
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    account = relationship("Account")
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+
+
+class GroupMember(Base):
+    __tablename__ = "group_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("savings_groups.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # set only if member has a login
+    name = Column(String(150), nullable=False)
+    phone = Column(String(40), default="")
+    is_recorder = Column(Boolean, default=False)  # treasurer/secretary who logs in and records entries
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    group = relationship("SavingsGroup", back_populates="members")
+    user = relationship("User")
+
+
+class Contribution(Base):
+    __tablename__ = "contributions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("savings_groups.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("group_members.id"), nullable=False, index=True)
+    cycle_label = Column(String(40), default="")  # e.g. "2026-07" or "Cycle 3"
+    amount = Column(Float, default=0)
+    recorded_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("GroupMember")
+
+
+class Payout(Base):
+    """Rotating pot payout — only meaningful when SavingsGroup.rotation_enabled."""
+    __tablename__ = "payouts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("savings_groups.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("group_members.id"), nullable=False, index=True)
+    cycle_label = Column(String(40), default="")
+    amount = Column(Float, default=0)
+    recorded_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("GroupMember")
+
+
+class GroupLoan(Base):
+    """Internal member borrowing from the group's pooled fund — only meaningful
+    when SavingsGroup.lending_enabled. Distinct from the business-side bank Loan."""
+    __tablename__ = "group_loans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("savings_groups.id"), nullable=False, index=True)
+    member_id = Column(Integer, ForeignKey("group_members.id"), nullable=False, index=True)
+    principal = Column(Float, default=0)
+    interest_rate = Column(Float, default=0)  # flat % applied once at issuance (simplest model for v1)
+    balance = Column(Float, default=0)  # outstanding = principal*(1+interest_rate/100) - repayments
+    status = Column(Enum(GroupLoanStatus), default=GroupLoanStatus.active)
+    issued_at = Column(DateTime, default=datetime.utcnow)
+
+    member = relationship("GroupMember")
+    repayments = relationship("GroupLoanRepayment", back_populates="loan", cascade="all, delete-orphan")
+
+
+class GroupLoanRepayment(Base):
+    __tablename__ = "group_loan_repayments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    loan_id = Column(Integer, ForeignKey("group_loans.id"), nullable=False, index=True)
+    amount = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    loan = relationship("GroupLoan", back_populates="repayments")

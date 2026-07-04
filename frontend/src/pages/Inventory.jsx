@@ -9,7 +9,7 @@ const empty = { name: '', sku: '', category: 'General', quantity: 0, unit: 'pcs'
 
 export default function Inventory() {
   const api = useApi()
-  const { token, currency } = useAuth()
+  const { token } = useAuth()
   const fileRef = useRef()
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
@@ -81,7 +81,7 @@ export default function Inventory() {
     { key: 'name', header: 'Name' },
     { key: 'category', header: 'Category' },
     { key: 'quantity', header: 'Qty', render: (r) => `${r.quantity} ${r.unit}` },
-    { key: 'selling_price', header: 'Price', render: (r) => `${currency} ${r.selling_price.toLocaleString()}` },
+    { key: 'selling_price', header: 'Price', render: (r) => `TZS ${r.selling_price.toLocaleString()}` },
     {
       key: 'status', header: 'Status',
       render: (r) => r.quantity <= r.reorder_point

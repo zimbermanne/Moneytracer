@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 
 export default function Sales() {
   const api = useApi()
-  const { currency } = useAuth()
   const [sales, setSales] = useState([])
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
@@ -33,7 +31,7 @@ export default function Sales() {
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'item_name', header: 'Item' },
     { key: 'quantity', header: 'Qty' },
-    { key: 'total', header: 'Total', render: (r) => `${currency} ${r.total.toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
     { key: 'payment_mode', header: 'Payment' },
     { key: 'customer_name', header: 'Customer' },
     { key: 'actions', header: '', render: (r) => <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button> },
@@ -46,8 +44,8 @@ export default function Sales() {
       {stats && (
         <div className="card-grid">
           <div className="card metric-card"><div className="label">Total Sales</div><div className="value">{stats.total_sales}</div></div>
-          <div className="card metric-card"><div className="label">Total Revenue</div><div className="value">{currency} {stats.total_revenue.toLocaleString()}</div></div>
-          <div className="card metric-card"><div className="label">Average Sale</div><div className="value">{currency} {stats.average_sale.toLocaleString()}</div></div>
+          <div className="card metric-card"><div className="label">Total Revenue</div><div className="value">TZS {stats.total_revenue.toLocaleString()}</div></div>
+          <div className="card metric-card"><div className="label">Average Sale</div><div className="value">TZS {stats.average_sale.toLocaleString()}</div></div>
         </div>
       )}
       <Table columns={columns} rows={sales} loading={listLoading} loadingText="Loading sales…" />

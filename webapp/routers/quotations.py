@@ -193,8 +193,7 @@ def email_quotation(qid: int, payload: EmailDocRequest, db: Session = Depends(ge
     account = db.query(Account).filter(Account.id == q.account_id).first()
     buf = _render_quotation_pdf(q, account)
     company = (account.name if account else None) or "Moneytracer"
-    doc_currency = (account.currency if account and account.currency else None) or "TZS"
-    body = payload.message or f"Dear {q.customer_name},\n\nPlease find attached Quotation {q.quote_no} for {doc_currency} {q.total:,.2f}.\n\nRegards,\n{company}"
+    body = payload.message or f"Dear {q.customer_name},\n\nPlease find attached Quotation {q.quote_no} for TZS {q.total:,.2f}.\n\nRegards,\n{company}"
 
     try:
         send_email_with_attachment(
@@ -230,14 +229,13 @@ def _render_quotation_pdf(q: Quotation, account: Account = None) -> io.BytesIO:
         biz_address = ", ".join(p for p in [account.region, account.district, account.street_address] if p)
         biz_phone   = account.phone or ""
         biz_email   = account.email or ""
-        CURRENCY    = account.currency or os.getenv("CURRENCY", "TZS")
     else:
         biz_name    = os.getenv("COMPANY_NAME", "Moneytracer")
         biz_owner   = ""
         biz_address = os.getenv("COMPANY_ADDRESS", "Arusha, Tanzania")
         biz_phone   = os.getenv("COMPANY_PHONE", "")
         biz_email   = os.getenv("COMPANY_EMAIL", "")
-        CURRENCY    = os.getenv("CURRENCY", "TZS")
+    CURRENCY = os.getenv("CURRENCY", "TZS")
 
     buf = io.BytesIO()
     pdf = SimpleDocTemplate(buf, pagesize=A4,

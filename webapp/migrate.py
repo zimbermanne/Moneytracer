@@ -24,11 +24,9 @@ _MIGRATIONS = {
         # "already onboarded" and are never interrupted by it. Freshly
         # registered accounts explicitly set this to False (see routers/auth.py).
         ("onboarding_completed", "BOOLEAN", "true"),
-        # Multi-country rollout: existing accounts default to Tanzania/TZS
-        # (the app's original home market); new accounts pick these in the
-        # onboarding wizard.
-        ("country", "VARCHAR(80)", "'Tanzania'"),
-        ("currency", "VARCHAR(10)", "'TZS'"),
+        # Existing accounts predate the business/community split — they're all
+        # businesses (that's all that existed before this feature).
+        ("account_type", "VARCHAR(20)", "'business'"),
     ],
 }
 

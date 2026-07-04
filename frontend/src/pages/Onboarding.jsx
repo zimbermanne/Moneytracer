@@ -13,13 +13,12 @@ const STEPS = [
 const BUSINESS_TYPES = ['Retail shop', 'Restaurant', 'Pharmacy', 'Wholesale', 'Salon / Barbershop', 'Hardware store', 'Other']
 
 export default function Onboarding() {
-  const { account, setAccount, refreshAccount, logout, setCurrency } = useAuth()
+  const { account, setAccount, refreshAccount, logout } = useAuth()
   const api = useApi()
 
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [countries, setCountries] = useState([])
 
   const [form, setForm] = useState({
     business_structure: 'solo',
@@ -30,8 +29,6 @@ export default function Onboarding() {
     region: '',
     district: '',
     street_address: '',
-    country: '',
-    currency: '',
     phone: '',
     email: '',
     logo_url: '',
@@ -39,12 +36,6 @@ export default function Onboarding() {
     invoice_prefix: 'INV',
     payment_terms_days: 7,
   })
-
-  // Load the African country/currency list for the picker.
-  useEffect(() => {
-    api.get('/accounts/countries').then(setCountries).catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Pre-fill from the account created at registration time.
   useEffect(() => {
@@ -56,8 +47,6 @@ export default function Onboarding() {
         business_type: account.business_type || f.business_type,
         email: account.email || f.email,
         phone: account.phone || f.phone,
-        country: account.country || f.country,
-        currency: account.currency || f.currency,
         tax_rate: account.tax_rate ?? f.tax_rate,
         invoice_prefix: account.invoice_prefix || f.invoice_prefix,
         payment_terms_days: account.payment_terms_days ?? f.payment_terms_days,
@@ -68,12 +57,6 @@ export default function Onboarding() {
   const set = (field) => (e) => {
     const val = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
     setForm((f) => ({ ...f, [field]: val }))
-  }
-
-  const setCountryField = (e) => {
-    const country = e.target.value
-    const match = countries.find((c) => c.country === country)
-    setForm((f) => ({ ...f, country, currency: match ? match.currency_code : f.currency }))
   }
 
   // ---- Step 4: first inventory items ----
@@ -106,8 +89,6 @@ export default function Onboarding() {
       if (!form.owner_full_name.trim()) return 'Owner / representative full name is required.'
       if (form.business_structure === 'company' && !form.tin.trim()) return 'TIN is required for a registered company.'
       if (!form.region.trim() || !form.district.trim()) return 'Region and district are required.'
-      if (!form.country.trim()) return 'Please select your country.'
-      if (!form.currency.trim()) return 'Please select your currency.'
       return ''
     }
     if (step === 2) {
@@ -132,7 +113,6 @@ export default function Onboarding() {
       try {
         const updated = await api.put('/accounts/my-account', form)
         setAccount(updated)
-        if (updated?.currency) setCurrency(updated.currency)
       } catch (e) {
         setError(e.message)
         setSaving(false)
@@ -267,26 +247,6 @@ export default function Onboarding() {
               <div className="form-row">
                 <label>District *</label>
                 <input value={form.district} onChange={set('district')} />
-              </div>
-              <div className="form-row">
-                <label>Country *</label>
-                <select value={form.country} onChange={setCountryField}>
-                  <option value="">Select country…</option>
-                  {countries.map((c) => (
-                    <option key={c.country} value={c.country}>{c.country}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-row">
-                <label>Currency *</label>
-                <select value={form.currency} onChange={set('currency')}>
-                  <option value="">Select currency…</option>
-                  {countries.map((c) => (
-                    <option key={c.currency_code} value={c.currency_code}>
-                      {c.currency_code} — {c.currency_name}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div className="form-row" style={{ gridColumn: '1 / -1' }}>
                 <label>Street / physical address</label>
