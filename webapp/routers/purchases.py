@@ -116,17 +116,35 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
     else:
         df = pd.read_excel(io.BytesIO(content))
 
+    # Two rows are only treated as "the same purchase" if every field matches
+    # exactly — same item, supplier, quantity and cost. Legitimate purchases
+    # of the same item from different suppliers (or at different quantities)
+    # are NOT duplicates and are still imported normally.
+    seen_rows = set()
+
     created = 0
+    skipped = 0
+    duplicate_rows = 0
     for _, row in df.iterrows():
         item_name = str(row.get("item_name", "")).strip()
         if not item_name:
+            skipped += 1
             continue
         quantity = float(row.get("quantity", 0) or 0)
         unit_cost = float(row.get("unit_cost", 0) or 0)
+        supplier = str(row.get("supplier", "")).strip()
+
+        row_key = (item_name.lower(), supplier.lower(), quantity, unit_cost)
+        if row_key in seen_rows:
+            skipped += 1
+            duplicate_rows += 1
+            continue
+        seen_rows.add(row_key)
+
         purchase = Purchase(
             account_id=account_id,
             item_name=item_name,
-            supplier=str(row.get("supplier", "")).strip(),
+            supplier=supplier,
             quantity=quantity,
             unit_cost=unit_cost,
             total=quantity * unit_cost,
@@ -142,7 +160,10 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
         created += 1
     db.commit()
     log_activity_for_user(db, current_user, "purchase_batch_import", f"Imported {created} purchases")
-    return {"created": created}
+    response = {"created": created, "skipped": skipped}
+    if duplicate_rows:
+        response["duplicate_rows"] = f"Skipped {duplicate_rows} exact duplicate row(s) in the file"
+    return response
 
 
 @router.get("/export/spreadsheet")

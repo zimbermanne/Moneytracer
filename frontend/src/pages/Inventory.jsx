@@ -37,7 +37,8 @@ export default function Inventory() {
       load()
       const skippedNote = data.skipped ? ` (${data.skipped} row${data.skipped === 1 ? '' : 's'} skipped)` : ''
       const dupNote = data.duplicate_skus ? `\n${data.duplicate_skus}` : ''
-      alert(`✅ Imported ${data.created} items successfully.${skippedNote}${dupNote}`)
+      const dupNameNote = data.duplicate_names ? `\n${data.duplicate_names}` : ''
+      alert(`✅ Imported ${data.created} items successfully.${skippedNote}${dupNote}${dupNameNote}`)
     } catch (e) { setError(e.message) }
     finally { setImporting(false); e.target.value = '' }
   }

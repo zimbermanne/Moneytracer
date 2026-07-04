@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 
 const empty = {
-  mode: 'existing', item_id: '', item_name: '', category: 'General', unit: 'pcs',
-  selling_price: '', supplier: '', quantity: 1, unit_cost: 0,
+  item_name: '', category: 'General', unit: 'pcs', selling_price: '',
+  supplier: '', quantity: 1, unit_cost: 0,
 }
 
 export default function Purchases() {
@@ -28,17 +28,24 @@ export default function Purchases() {
 
   useEffect(() => { load(); loadInventory() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const itemById = (id) => inventory.find((i) => String(i.id) === String(id))
-  const selectedItem = itemById(form.item_id)
+  // Matches the typed name against inventory (case-insensitive) so picking
+  // a name from the dropdown restocks that exact item instead of risking a
+  // near-duplicate ("Sugar 1kg" vs "sugar 1kg ") being created by accident.
+  const matchedItem = useMemo(
+    () => inventory.find((i) => i.name.trim().toLowerCase() === form.item_name.trim().toLowerCase()),
+    [inventory, form.item_name]
+  )
+  const isNewItem = form.item_name.trim().length > 0 && !matchedItem
   const total = Number(form.quantity || 0) * Number(form.unit_cost || 0)
 
   const save = async () => {
     setError('')
     try {
       setSaving(true)
-      const payload = form.mode === 'existing'
+      if (!form.item_name.trim()) throw new Error('Item name is required')
+      const payload = matchedItem
         ? {
-            item_id: Number(form.item_id),
+            item_id: matchedItem.id,
             supplier: form.supplier,
             quantity: Number(form.quantity),
             unit_cost: Number(form.unit_cost),
@@ -52,8 +59,6 @@ export default function Purchases() {
             quantity: Number(form.quantity),
             unit_cost: Number(form.unit_cost),
           }
-      if (form.mode === 'existing' && !form.item_id) throw new Error('Pick an item from the list')
-      if (form.mode === 'new' && !form.item_name.trim()) throw new Error('New item needs a name')
       await api.post('/purchases/', payload)
       setOpen(false)
       setForm(empty)
@@ -111,26 +116,31 @@ export default function Purchases() {
         >
           {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button type="button" className={form.mode === 'existing' ? 'btn btn-primary' : 'btn btn-outline'}
-              onClick={() => setForm({ ...form, mode: 'existing' })}>Existing Item</button>
-            <button type="button" className={form.mode === 'new' ? 'btn btn-primary' : 'btn btn-outline'}
-              onClick={() => setForm({ ...form, mode: 'new' })}>+ New Item</button>
+          <div className="form-row">
+            <label>Item Name</label>
+            <input
+              list="purchase-item-options"
+              value={form.item_name}
+              placeholder="Type or pick from inventory…"
+              onChange={(e) => setForm({ ...form, item_name: e.target.value })}
+            />
+            <datalist id="purchase-item-options">
+              {inventory.map((inv) => <option key={inv.id} value={inv.name} />)}
+            </datalist>
+            {matchedItem && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                Matches existing item — {matchedItem.quantity} {matchedItem.unit} currently in stock. This purchase will restock it.
+              </div>
+            )}
+            {isNewItem && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                No match found — this will create a new inventory item.
+              </div>
+            )}
           </div>
 
-          {form.mode === 'existing' ? (
-            <div className="form-row">
-              <label>Item</label>
-              <select value={form.item_id} onChange={(e) => setForm({ ...form, item_id: e.target.value })}>
-                <option value="">Select item from inventory…</option>
-                {inventory.map((inv) => (
-                  <option key={inv.id} value={inv.id}>{inv.name} ({inv.quantity} {inv.unit} in stock)</option>
-                ))}
-              </select>
-            </div>
-          ) : (
+          {isNewItem && (
             <>
-              <div className="form-row"><label>Item Name</label><input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} /></div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div className="form-row" style={{ flex: 1 }}><label>Category</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
                 <div className="form-row" style={{ flex: 1 }}><label>Unit</label><input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
@@ -145,7 +155,7 @@ export default function Purchases() {
             <div className="form-row" style={{ flex: 1 }}>
               <label>Unit Cost</label>
               <input type="number" value={form.unit_cost}
-                placeholder={form.mode === 'existing' && selectedItem ? `TZS ${selectedItem.cost_price}` : undefined}
+                placeholder={matchedItem ? `TZS ${matchedItem.cost_price}` : undefined}
                 onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} />
             </div>
           </div>
