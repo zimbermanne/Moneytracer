@@ -168,6 +168,21 @@ export default function Inventory() {
           )}
         >
           <div className="form-row">
+            <label>Existing Item</label>
+            <select
+              value=""
+              onChange={(e) => {
+                const picked = items.find((i) => String(i.id) === e.target.value)
+                if (picked) { setForm(picked); setEditing(picked) }
+              }}
+            >
+              <option value="">Select item to edit… (or type a new name below)</option>
+              {[...items].sort((a, b) => a.name.localeCompare(b.name)).map((i) => (
+                <option key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit} in stock)</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
             <label>Name</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
