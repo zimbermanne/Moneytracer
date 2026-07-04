@@ -1129,23 +1129,13 @@ label {
 }
 
 .landing-hero {
-  position: relative;
   padding: 96px 24px 64px;
   text-align: center;
-  background-image:
-    linear-gradient(180deg, rgba(20, 24, 20, 0.72) 0%, rgba(20, 24, 20, 0.82) 55%, rgba(20, 24, 20, 0.92) 100%),
-    url('/images/hero-bg.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: #fff;
 }
 
 .landing-hero-inner {
   max-width: 720px;
   margin: 0 auto;
-  position: relative;
-  z-index: 1;
 }
 
 .landing-hero h1 {
@@ -1153,36 +1143,14 @@ label {
   font-size: clamp(2rem, 5vw, var(--text-3xl));
   line-height: var(--leading-tight);
   margin: 0 0 20px;
-  color: #fff;
 }
 
 .landing-hero-sub {
   font-size: var(--text-md);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-muted);
   line-height: var(--leading-loose);
   margin: 0 auto 32px;
   max-width: 560px;
-}
-
-.landing-preview {
-  background-image: url('/images/dashboard-preview.png');
-  background-size: cover;
-  background-position: top center;
-  background-repeat: no-repeat;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.landing-preview-inner {
-  max-width: 1120px;
-  margin: 0 auto;
-  aspect-ratio: 16 / 9;
-}
-
-@media (max-width: 640px) {
-  .landing-preview-inner {
-    aspect-ratio: 4 / 3;
-  }
 }
 
 .landing-track-switch {
@@ -1233,7 +1201,7 @@ label {
 }
 
 .landing-btn-secondary {
-  color: #fff;
+  color: var(--text-dark);
   text-decoration: none;
   font-weight: 600;
   padding: 12px 24px;
