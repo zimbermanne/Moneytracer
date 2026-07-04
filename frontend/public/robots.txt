@@ -13,4 +13,4 @@ Disallow: /login
 Disallow: /register
 Disallow: /onboarding
 
-Sitemap: https://moneytracer.com/sitemap.xml
+Sitemap: https://moneytracer.up.railway.app/sitemap.xml
