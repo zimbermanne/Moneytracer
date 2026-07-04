@@ -1317,3 +1317,34 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+/* Account type switch on the register form */
+.account-type-switch {
+  display: flex;
+  gap: 8px;
+}
+
+.account-type-switch button {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.account-type-switch button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.account-type-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: var(--leading-normal);
+}
