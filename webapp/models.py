@@ -306,6 +306,7 @@ class SavingsGroup(Base):
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, unique=True, index=True)
     name = Column(String(150), nullable=False)
+    registration_number = Column(String(80), default="")  # optional govt/community registration number
     # Cultural label only (VICOBA, Vibati, Chama, Stokvel, Susu, Tontine, Other...) —
     # does NOT drive behavior. Behavior is driven by rotation_enabled/lending_enabled.
     group_type = Column(String(50), default="")
@@ -331,7 +332,9 @@ class GroupMember(Base):
     group_id = Column(Integer, ForeignKey("savings_groups.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # set only if member has a login
     name = Column(String(150), nullable=False)
+    age = Column(Integer, nullable=True)
     phone = Column(String(40), default="")
+    group_role = Column(String(30), default="member")  # 'chairman' | 'treasurer' | 'secretary' | 'member'
     is_recorder = Column(Boolean, default=False)  # treasurer/secretary who logs in and records entries
     joined_at = Column(DateTime, default=datetime.utcnow)
 

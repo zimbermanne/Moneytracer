@@ -392,6 +392,7 @@ class CommunityGroupSetup(BaseModel):
     """Steps 1-3 of the community onboarding wizard, submitted together as one
     call once the account exists (mirrors the business onboarding pattern)."""
     name: str
+    registration_number: Optional[str] = ""
     group_type: Optional[str] = ""  # cultural label only: VICOBA, Vibati, Chama, etc.
     region: Optional[str] = ""
     district: Optional[str] = ""
@@ -406,6 +407,7 @@ class CommunityGroupSetup(BaseModel):
 
 class CommunityGroupUpdate(BaseModel):
     name: Optional[str] = None
+    registration_number: Optional[str] = None
     group_type: Optional[str] = None
     region: Optional[str] = None
     district: Optional[str] = None
@@ -422,6 +424,7 @@ class SavingsGroupOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    registration_number: str
     group_type: str
     region: str
     district: str
@@ -437,7 +440,9 @@ class SavingsGroupOut(BaseModel):
 
 class GroupMemberCreate(BaseModel):
     name: str
+    age: Optional[int] = None
     phone: Optional[str] = ""
+    group_role: str = "member"  # 'chairman' | 'treasurer' | 'secretary' | 'member'
     is_recorder: bool = False
 
 
@@ -445,7 +450,9 @@ class GroupMemberOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    age: Optional[int] = None
     phone: str
+    group_role: str
     is_recorder: bool
     has_login: bool = False
     joined_at: datetime

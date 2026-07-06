@@ -95,7 +95,7 @@ export default function Landing() {
           </div>
 
           <div className="landing-hero-actions">
-            <Link to="/register" className="landing-btn-primary">
+            <Link to={`/register?track=${track}`} className="landing-btn-primary">
               {track === 'business' && 'Set up my business'}
               {track === 'community' && 'Set up my savings group'}
               {track === 'personal' && 'Start tracking my spending'}
@@ -176,7 +176,7 @@ export default function Landing() {
       <section id="pricing" className="landing-section landing-cta-band">
         <h2>Ready to get your finances in order?</h2>
         <p className="landing-section-sub">Create an account in minutes. No spreadsheet required.</p>
-        <Link to="/register" className="landing-btn-primary">Get started free</Link>
+        <Link to={`/register?track=${track}`} className="landing-btn-primary">Get started free</Link>
       </section>
 
       <footer className="landing-footer">
