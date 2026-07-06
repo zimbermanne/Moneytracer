@@ -32,6 +32,17 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
             email=payload.email or "",
             onboarding_completed=False,
         )
+    elif account_type == AccountType.personal:
+        # Personal spending accounts have no business/community setup wizard —
+        # categories and budgets are created on the fly from the dashboard, so
+        # these go straight through onboarding.
+        account = Account(
+            account_type=AccountType.personal,
+            name=f"{payload.full_name or payload.username}'s Personal Account",
+            owner_full_name=payload.full_name or payload.username,
+            email=payload.email or "",
+            onboarding_completed=True,
+        )
     else:
         # Create a new account for self-service registration. It starts
         # un-onboarded so the new admin is walked through the setup wizard

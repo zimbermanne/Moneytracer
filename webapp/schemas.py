@@ -392,6 +392,7 @@ class CommunityGroupSetup(BaseModel):
     """Steps 1-3 of the community onboarding wizard, submitted together as one
     call once the account exists (mirrors the business onboarding pattern)."""
     name: str
+    registration_number: Optional[str] = ""
     group_type: Optional[str] = ""  # cultural label only: VICOBA, Vibati, Chama, etc.
     region: Optional[str] = ""
     district: Optional[str] = ""
@@ -406,6 +407,7 @@ class CommunityGroupSetup(BaseModel):
 
 class CommunityGroupUpdate(BaseModel):
     name: Optional[str] = None
+    registration_number: Optional[str] = None
     group_type: Optional[str] = None
     region: Optional[str] = None
     district: Optional[str] = None
@@ -422,6 +424,7 @@ class SavingsGroupOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    registration_number: str
     group_type: str
     region: str
     district: str
@@ -437,7 +440,9 @@ class SavingsGroupOut(BaseModel):
 
 class GroupMemberCreate(BaseModel):
     name: str
+    age: Optional[int] = None
     phone: Optional[str] = ""
+    group_role: str = "member"  # 'chairman' | 'treasurer' | 'secretary' | 'member'
     is_recorder: bool = False
 
 
@@ -445,7 +450,9 @@ class GroupMemberOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    age: Optional[int] = None
     phone: str
+    group_role: str
     is_recorder: bool
     has_login: bool = False
     joined_at: datetime
@@ -528,3 +535,118 @@ class CommunitySummary(BaseModel):
     total_loans_outstanding: float
     rotation_enabled: bool
     lending_enabled: bool
+
+
+# ---------------------------------------------------------------------------
+# Personal spending track
+# ---------------------------------------------------------------------------
+
+class SpendingCategoryCreate(BaseModel):
+    name: str
+    icon: str = ""
+    monthly_budget: float = 0
+
+
+class SpendingCategoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    icon: str
+    monthly_budget: float
+    is_default: bool
+
+
+class SpendingTransactionCreate(BaseModel):
+    category_id: int
+    amount: float
+    note: str = ""
+    tag: Optional[str] = None  # "necessary" | "impulse", habit mode only
+
+
+class SpendingTransactionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    category_id: int
+    amount: float
+    note: str
+    tag: Optional[str]
+    spent_at: datetime
+
+
+class EnvelopeCategorySummary(BaseModel):
+    category_id: int
+    category_name: str
+    budget: float
+    spent: float
+    remaining: float
+
+
+class EnvelopeSummary(BaseModel):
+    categories: List[EnvelopeCategorySummary]
+    safe_to_spend_today: float
+
+
+class HabitSummary(BaseModel):
+    this_week_impulse_pct: float
+    last_week_impulse_pct: float
+    change_vs_last_week: float
+
+
+class SpendingGroupCreate(BaseModel):
+    name: str
+    goal_amount: float
+    target_date: Optional[datetime] = None
+
+
+class SpendingGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    goal_amount: float
+    target_date: Optional[datetime]
+    invite_code: str
+    created_at: datetime
+
+
+class SpendingGroupContributionCreate(BaseModel):
+    amount: float
+
+
+class SpendingGroupProgress(BaseModel):
+    total_saved: float
+    goal_amount: float
+    percent: float
+    member_count: int
+    members_on_track: int
+
+
+# ---------------------------------------------------------------------------
+# Smart tracking (rule-based, no external AI)
+# ---------------------------------------------------------------------------
+
+class CategorySuggestion(BaseModel):
+    category_id: Optional[int]
+    category_name: Optional[str]
+    confidence: str  # "high" | "low" | "none"
+
+
+class RecurringExpense(BaseModel):
+    category_id: int
+    category_name: str
+    typical_amount: float
+    typical_day_of_month: int
+    last_seen: datetime
+    occurrences: int
+
+
+class SpendingAlert(BaseModel):
+    type: str  # "spike" | "projected_overspend" | "small_leaks"
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+    message: str
+    severity: str  # "info" | "warning"
+
+
+class SmartInsights(BaseModel):
+    alerts: List[SpendingAlert]
+    recurring: List[RecurringExpense]
