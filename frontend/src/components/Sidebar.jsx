@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 const NAV = [
   { type: 'item', label: 'Home', icon: '🏠', path: '/app' },
@@ -47,7 +48,7 @@ const NAV = [
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const location = useLocation()
-  const navigate = useNavigate()
+  const { guardedNavigate } = useNavigationGuard()
   const { user, logout } = useAuth()
   const [openGroups, setOpenGroups] = useState({})
 
@@ -61,7 +62,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   }, [location.pathname])
 
   const go = (path) => {
-    navigate(path)
+    guardedNavigate(path)
     onClose?.()
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 export default function POS() {
   const api = useApi()
@@ -12,11 +13,28 @@ export default function POS() {
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState(null)
   const [busy, setBusy] = useState(false)
+  const { setDirty, setDirtyMessage } = useNavigationGuard()
 
   useEffect(() => {
     api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Mark the sale as "in progress" as soon as there's at least one item in
+  // the cart, so navigating away (sidebar, back button, refresh, tab close)
+  // warns before the cart is silently lost.
+  useEffect(() => {
+    if (cart.length > 0) {
+      setDirtyMessage('You have items in this sale with prices set that haven\u2019t been checked out yet. Leaving this page now will delete the current sale.')
+      setDirty(true)
+    } else {
+      setDirty(false)
+    }
+    // Clear the guard when this page unmounts (e.g. after navigating away
+    // once confirmed) so it doesn't leak into other pages.
+    return () => setDirty(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart])
 
   const addToCart = (item) => {
     setCart((prev) => {
