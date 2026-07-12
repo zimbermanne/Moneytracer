@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
+import PurchaseDetailPanel from '../components/PurchaseDetailPanel.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
@@ -22,8 +23,8 @@ export default function Purchases() {
   const [rows, setRows] = useState([emptyRow()])
   const [saving, setSaving] = useState(false)
 
-  // Edit-single-purchase modal state
-  const [editId, setEditId] = useState(null)
+  // Detail/edit side panel state
+  const [editPurchase, setEditPurchase] = useState(null)
   const [editForm, setEditForm] = useState(emptyEdit)
   const [savingEdit, setSavingEdit] = useState(false)
 
@@ -83,9 +84,9 @@ export default function Purchases() {
     }
   }
 
-  // ---- Edit a purchase ----
+  // ---- View / edit a purchase in the side panel ----
   const openEdit = (purchase) => {
-    setEditId(purchase.id)
+    setEditPurchase(purchase)
     setEditForm({
       item_name: purchase.item_name,
       supplier: purchase.supplier,
@@ -95,16 +96,11 @@ export default function Purchases() {
     setError('')
   }
 
-  const handleEditItemName = (name) => {
-    const match = findMatch(name)
-    setEditForm((f) => ({ ...f, item_name: name, unit_cost: match ? match.cost_price : f.unit_cost }))
-  }
-
   const saveEdit = async () => {
     setSavingEdit(true)
     try {
-      await api.put(`/purchases/${editId}`, editForm)
-      setEditId(null)
+      await api.put(`/purchases/${editPurchase.id}`, editForm)
+      setEditPurchase(null) // collapse the panel once the save succeeds
       load()
     } catch (e) {
       setError(e.message)
@@ -119,7 +115,7 @@ export default function Purchases() {
     { key: 'supplier', header: 'Supplier' },
     { key: 'quantity', header: 'Qty' },
     { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
-    { key: 'actions', header: '', render: (r) => <button className="btn btn-outline" onClick={() => openEdit(r)}>Edit</button> },
+    { key: 'actions', header: '', stopRowClick: true, render: (r) => <button className="btn btn-outline" onClick={() => openEdit(r)}>View / Edit</button> },
   ]
 
   const { query, setQuery, filtered } = useSearch(purchases, [
@@ -144,7 +140,7 @@ export default function Purchases() {
       <div style={{ display: 'flex', marginBottom: 14 }}>
         <SearchBar value={query} onChange={setQuery} placeholder="Search by item, supplier, or date…" />
       </div>
-      <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading purchases…" emptyText={query ? 'No purchases match your search.' : 'No purchases yet.'} />
+      <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading purchases…" emptyText={query ? 'No purchases match your search.' : 'No purchases yet.'} onRowClick={openEdit} />
 
       <datalist id="purchase-inventory-options">
         {inventory.map((i) => (
@@ -202,31 +198,16 @@ export default function Purchases() {
         </Modal>
       )}
 
-      {editId !== null && (
-        <Modal
-          title="Edit Purchase"
-          onClose={() => setEditId(null)}
-          footer={(<>
-            <button className="btn btn-outline" onClick={() => setEditId(null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save Changes'}</button>
-          </>)}
-        >
-          <div className="form-row">
-            <label>Item Name</label>
-            <input
-              list="purchase-inventory-options"
-              value={editForm.item_name}
-              onChange={(e) => handleEditItemName(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="form-row"><label>Supplier</label><input value={editForm.supplier} onChange={(e) => setEditForm({ ...editForm, supplier: e.target.value })} /></div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div className="form-row" style={{ flex: 1 }}><label>Quantity</label><input type="number" value={editForm.quantity} onChange={(e) => setEditForm({ ...editForm, quantity: Number(e.target.value) })} /></div>
-            <div className="form-row" style={{ flex: 1 }}><label>Unit Cost</label><input type="number" value={editForm.unit_cost} onChange={(e) => setEditForm({ ...editForm, unit_cost: Number(e.target.value) })} /></div>
-          </div>
-        </Modal>
-      )}
+      <PurchaseDetailPanel
+        purchase={editPurchase}
+        form={editForm}
+        onChange={setEditForm}
+        matchedItem={findMatch(editForm.item_name)}
+        saving={savingEdit}
+        error={error}
+        onCancel={() => setEditPurchase(null)}
+        onSave={saveEdit}
+      />
     </div>
   )
 }
