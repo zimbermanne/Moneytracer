@@ -168,6 +168,42 @@ def invoice_pdf(invoice_id: int, db: Session = Depends(get_db),
         headers={"Content-Disposition": f'attachment; filename="Invoice-{inv.invoice_no}.pdf"'})
 
 
+@router.get("/{invoice_id}/packing-list/pdf")
+def invoice_packing_list_pdf(invoice_id: int, db: Session = Depends(get_db),
+                              current_user: User = Depends(get_current_user)):
+    """Same line items as the invoice, but quantities only — no prices — for
+    whoever is physically packing or checking the goods."""
+    q = db.query(Invoice).filter(Invoice.id == invoice_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(Invoice.account_id == account_id)
+    inv = q.first()
+    if not inv: raise HTTPException(404, "Invoice not found")
+    account = get_account_details(db, inv.account_id)
+    buf = _render_pdf(inv, "PACKING LIST", account, show_prices=False)
+    log_activity_for_user(db, current_user, "invoice_packing_list_pdf", f"Exported packing list for {inv.invoice_no}")
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="PackingList-{inv.invoice_no}.pdf"'})
+
+
+@router.get("/{invoice_id}/delivery-note/pdf")
+def invoice_delivery_note_pdf(invoice_id: int, db: Session = Depends(get_db),
+                               current_user: User = Depends(get_current_user)):
+    """Same line items as the invoice, no prices, plus a signature block for
+    the customer to confirm receipt on delivery."""
+    q = db.query(Invoice).filter(Invoice.id == invoice_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(Invoice.account_id == account_id)
+    inv = q.first()
+    if not inv: raise HTTPException(404, "Invoice not found")
+    account = get_account_details(db, inv.account_id)
+    buf = _render_pdf(inv, "DELIVERY NOTE", account, show_prices=False, signature_block=True)
+    log_activity_for_user(db, current_user, "invoice_delivery_note_pdf", f"Exported delivery note for {inv.invoice_no}")
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="DeliveryNote-{inv.invoice_no}.pdf"'})
+
+
 class EmailDocRequest(BaseModel):
     to_email: EmailStr
     message: Optional[str] = ""
@@ -205,7 +241,7 @@ def email_invoice(invoice_id: int, payload: EmailDocRequest, db: Session = Depen
     return {"detail": f"Invoice emailed to {payload.to_email}"}
 
 
-def _render_pdf(doc: Invoice, label: str, account: dict = None) -> io.BytesIO:
+def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: bool = True, signature_block: bool = False) -> io.BytesIO:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -256,18 +292,28 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None) -> io.BytesIO:
     elems += [Paragraph("<br/>".join(bt), normal), Spacer(1,8*mm)]
 
     # Line items
-    rows = [["#", "Description", "Qty", f"Unit Price ({CURRENCY})", f"Total ({CURRENCY})"]]
-    for i, ln in enumerate(doc.items, 1):
-        rows.append([str(i), ln.description, f"{ln.quantity:g}",
-                     f"{ln.unit_price:,.2f}", f"{ln.total:,.2f}"])
-    t = Table(rows, colWidths=[14*mm,72*mm,18*mm,32*mm,36*mm], repeatRows=1)
+    if show_prices:
+        rows = [["#", "Description", "Qty", f"Unit Price ({CURRENCY})", f"Total ({CURRENCY})"]]
+        for i, ln in enumerate(doc.items, 1):
+            rows.append([str(i), ln.description, f"{ln.quantity:g}",
+                         f"{ln.unit_price:,.2f}", f"{ln.total:,.2f}"])
+        col_widths = [14*mm, 72*mm, 18*mm, 32*mm, 36*mm]
+        align_style = [("ALIGN",(0,0),(1,-1),"LEFT"), ("ALIGN",(2,0),(2,-1),"CENTER"), ("ALIGN",(3,0),(4,-1),"RIGHT")]
+    else:
+        # Packing list / delivery note: quantities and descriptions only, no pricing.
+        rows = [["#", "Description", "Qty"]]
+        for i, ln in enumerate(doc.items, 1):
+            rows.append([str(i), ln.description, f"{ln.quantity:g}"])
+        col_widths = [14*mm, 118*mm, 24*mm]
+        align_style = [("ALIGN",(0,0),(1,-1),"LEFT"), ("ALIGN",(2,0),(2,-1),"CENTER")]
+
+    t = Table(rows, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),ACCENT),
         ("TEXTCOLOR",(0,0),(-1,0),colors.white),
         ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
         ("FONTSIZE",(0,0),(-1,-1),9.5),
-        ("ALIGN",(0,0),(1,-1),"LEFT"), ("ALIGN",(2,0),(2,-1),"CENTER"),
-        ("ALIGN",(3,0),(4,-1),"RIGHT"),
+        *align_style,
         ("GRID",(0,0),(-1,-1),0.5,colors.HexColor("#e0ddd4")),
         ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,colors.HexColor("#faf8f3")]),
         ("TOPPADDING",(0,0),(-1,-1),6), ("BOTTOMPADDING",(0,0),(-1,-1),6),
@@ -275,23 +321,36 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None) -> io.BytesIO:
     ]))
     elems += [t, Spacer(1,6*mm)]
 
-    # Totals
-    tot_rows = [["Subtotal", f"{CURRENCY} {doc.subtotal:,.2f}"]]
-    if doc.tax_rate: tot_rows.append([f"VAT ({doc.tax_rate:g}%)", f"{CURRENCY} {doc.tax_amount:,.2f}"])
-    if doc.discount: tot_rows.append(["Discount", f"- {CURRENCY} {doc.discount:,.2f}"])
-    tot_rows.append(["Grand Total", f"{CURRENCY} {doc.total:,.2f}"])
-    tt = Table(tot_rows, colWidths=[40*mm,36*mm], hAlign="RIGHT")
-    tt.setStyle(TableStyle([
-        ("ALIGN",(0,0),(-1,-1),"RIGHT"), ("FONTSIZE",(0,0),(-1,-1),10),
-        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
-        ("LINEABOVE",(0,-1),(-1,-1),0.75,ACCENT),
-        ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"), ("FONTSIZE",(0,-1),(-1,-1),11.5),
-    ]))
-    elems.append(tt)
+    # Totals — omitted entirely for packing lists / delivery notes, since the
+    # whole point is that the receiving party sees quantities, not values.
+    if show_prices:
+        tot_rows = [["Subtotal", f"{CURRENCY} {doc.subtotal:,.2f}"]]
+        if doc.tax_rate: tot_rows.append([f"VAT ({doc.tax_rate:g}%)", f"{CURRENCY} {doc.tax_amount:,.2f}"])
+        if doc.discount: tot_rows.append(["Discount", f"- {CURRENCY} {doc.discount:,.2f}"])
+        tot_rows.append(["Grand Total", f"{CURRENCY} {doc.total:,.2f}"])
+        tt = Table(tot_rows, colWidths=[40*mm,36*mm], hAlign="RIGHT")
+        tt.setStyle(TableStyle([
+            ("ALIGN",(0,0),(-1,-1),"RIGHT"), ("FONTSIZE",(0,0),(-1,-1),10),
+            ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ("LINEABOVE",(0,-1),(-1,-1),0.75,ACCENT),
+            ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"), ("FONTSIZE",(0,-1),(-1,-1),11.5),
+        ]))
+        elems.append(tt)
 
     if doc.notes:
         elems += [Spacer(1,10*mm), Paragraph("Notes", section),
                   Paragraph(doc.notes.replace("\n","<br/>"), normal)]
+
+    if signature_block:
+        elems += [Spacer(1,16*mm), Paragraph("Received By", section), Spacer(1,4*mm)]
+        sig_rows = [["Name:", "_" * 32, "Signature:", "_" * 24],
+                    ["Date:", "_" * 32, "", ""]]
+        sig = Table(sig_rows, colWidths=[20*mm, 62*mm, 25*mm, 45*mm])
+        sig.setStyle(TableStyle([
+            ("FONTSIZE",(0,0),(-1,-1),10),
+            ("TOPPADDING",(0,0),(-1,-1),6), ("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ]))
+        elems.append(sig)
 
     elems += [Spacer(1,14*mm),
               Paragraph("Thank you for your business.",

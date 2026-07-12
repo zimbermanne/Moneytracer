@@ -63,10 +63,11 @@ export default function Documents({ kind }) {
     catch (e) { setError(e.message) }
   }
 
-  const downloadPdf = async (doc) => {
-    setPdfLoading(doc.id)
+  const downloadPdf = async (doc, variant = 'pdf', filenamePrefix = isInvoice ? 'Invoice' : 'Quotation') => {
+    setPdfLoading(`${doc.id}:${variant}`)
     try {
-      const res = await fetch(apiUrl(`/api/${kind}/${doc.id}/pdf`), {
+      const path = variant === 'pdf' ? `/${kind}/${doc.id}/pdf` : `/${kind}/${doc.id}/${variant}/pdf`
+      const res = await fetch(apiUrl(`/api${path}`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('PDF generation failed')
@@ -74,7 +75,7 @@ export default function Documents({ kind }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${isInvoice ? 'Invoice' : 'Quotation'}-${doc[numberKey]}.pdf`
+      a.download = `${filenamePrefix}-${doc[numberKey]}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) { setError(e.message) }
@@ -91,10 +92,20 @@ export default function Documents({ kind }) {
       key: 'actions', header: '',
       stopRowClick: true,
       render: (r) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-outline" onClick={() => downloadPdf(r)} disabled={pdfLoading === r.id}>
-            {pdfLoading === r.id ? <Spinner inline /> : '⬇ PDF'}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button className="btn btn-outline" onClick={() => downloadPdf(r)} disabled={pdfLoading === `${r.id}:pdf`}>
+            {pdfLoading === `${r.id}:pdf` ? <Spinner inline /> : '⬇ PDF'}
           </button>
+          {isInvoice && (
+            <>
+              <button className="btn btn-outline" onClick={() => downloadPdf(r, 'packing-list', 'PackingList')} disabled={pdfLoading === `${r.id}:packing-list`}>
+                {pdfLoading === `${r.id}:packing-list` ? <Spinner inline /> : '📦 Packing List'}
+              </button>
+              <button className="btn btn-outline" onClick={() => downloadPdf(r, 'delivery-note', 'DeliveryNote')} disabled={pdfLoading === `${r.id}:delivery-note`}>
+                {pdfLoading === `${r.id}:delivery-note` ? <Spinner inline /> : '🚚 Delivery Note'}
+              </button>
+            </>
+          )}
           {!isInvoice && !['accepted','rejected'].includes(r.status) && (
             <button className="btn btn-outline" onClick={() => convert(r.id)}>→ Invoice</button>
           )}
