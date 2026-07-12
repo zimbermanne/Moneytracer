@@ -118,6 +118,10 @@ function PrivateRoutes() {
         <Route path="/creditors" element={<Creditors />} />
         <Route path="/reports/profit-loss" element={<Reports view="profit-loss" />} />
         <Route path="/reports/financial-summary" element={<Reports view="financial-summary" />} />
+        <Route path="/reports/cashflow" element={<Reports view="cashflow" />} />
+        <Route path="/reports/debtors" element={<Reports view="debtors" />} />
+        <Route path="/reports/creditors" element={<Reports view="creditors" />} />
+        <Route path="/reports/inventory-valuation" element={<Reports view="inventory-valuation" />} />
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />

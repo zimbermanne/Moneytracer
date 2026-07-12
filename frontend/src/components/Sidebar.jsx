@@ -39,6 +39,10 @@ const NAV = [
     children: [
       { label: 'Profit & Loss', icon: '📈', path: '/app/reports/profit-loss' },
       { label: 'Financial Summary', icon: '💰', path: '/app/reports/financial-summary' },
+      { label: 'Cash Flow', icon: '💵', path: '/app/reports/cashflow' },
+      { label: 'Debtors Report', icon: '📒', path: '/app/reports/debtors' },
+      { label: 'Creditors Report', icon: '🏦', path: '/app/reports/creditors' },
+      { label: 'Inventory Valuation', icon: '📦', path: '/app/reports/inventory-valuation' },
     ],
   },
   { type: 'item', label: 'Expenses', icon: '💸', path: '/app/expenses' },

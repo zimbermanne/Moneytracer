@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from typing import Optional
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends
@@ -24,23 +25,37 @@ def _scoped(query, model, account_id):
     return query.filter(model.account_id == account_id) if account_id is not None else query
 
 
-def _compute_core_financials(db: Session, account_id):
+def _compute_core_financials(db: Session, account_id, start: datetime = None, end: datetime = None):
     """Single source of truth for revenue/COGS/expenses/net profit, so every
     report endpoint agrees on what 'net profit' means. Uses the cost snapshotted
     at time of sale (cost_price_at_sale) when available, falling back to the
-    item's current cost_price for sales recorded before that column existed."""
-    sales = _scoped(db.query(Sale), Sale, account_id).all()
-    expenses = _scoped(db.query(Expense), Expense, account_id).all()
+    item's current cost_price for sales recorded before that column existed.
+    Pass start/end to scope to a date range; omit for all-time."""
+    sales_q = _scoped(db.query(Sale), Sale, account_id)
+    expenses_q = _scoped(db.query(Expense), Expense, account_id)
+    if start is not None:
+        sales_q = sales_q.filter(Sale.created_at >= start)
+        expenses_q = expenses_q.filter(Expense.created_at >= start)
+    if end is not None:
+        sales_q = sales_q.filter(Sale.created_at <= end)
+        expenses_q = expenses_q.filter(Expense.created_at <= end)
+    sales = sales_q.all()
+    expenses = expenses_q.all()
 
     revenue_by_item = defaultdict(float)
+    qty_by_item = defaultdict(float)
+    cogs_by_item = defaultdict(float)
     cogs = 0.0
     for s in sales:
         revenue_by_item[s.item_name] += s.total
+        qty_by_item[s.item_name] += s.quantity
         unit_cost = s.cost_price_at_sale
         if unit_cost is None and s.item:
             unit_cost = s.item.cost_price
         if unit_cost:
-            cogs += unit_cost * s.quantity
+            item_cogs = unit_cost * s.quantity
+            cogs += item_cogs
+            cogs_by_item[s.item_name] += item_cogs
 
     expense_by_category = defaultdict(float)
     for e in expenses:
@@ -51,6 +66,20 @@ def _compute_core_financials(db: Session, account_id):
     gross_profit = revenue - cogs
     net_profit = gross_profit - total_expenses
 
+    item_profitability = []
+    for name, rev in revenue_by_item.items():
+        item_cogs = cogs_by_item.get(name, 0.0)
+        margin = rev - item_cogs
+        item_profitability.append({
+            "item_name": name,
+            "quantity_sold": qty_by_item.get(name, 0.0),
+            "revenue": round(rev, 2),
+            "cogs": round(item_cogs, 2),
+            "gross_profit": round(margin, 2),
+            "gross_margin_pct": round((margin / rev * 100), 1) if rev else 0,
+        })
+    item_profitability.sort(key=lambda r: r["gross_profit"], reverse=True)
+
     return {
         "revenue": revenue,
         "cogs": cogs,
@@ -59,16 +88,27 @@ def _compute_core_financials(db: Session, account_id):
         "net_profit": net_profit,
         "revenue_by_item": revenue_by_item,
         "expense_by_category": expense_by_category,
+        "item_profitability": item_profitability,
     }
 
 
 @router.get("/financial-summary")
-def financial_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def financial_summary(start: Optional[date] = None, end: Optional[date] = None,
+                       db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
-    core = _compute_core_financials(db, account_id)
-    purchases = _scoped(db.query(Purchase), Purchase, account_id).all()
-    total_purchases = sum(p.total for p in purchases)
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end, datetime.max.time()) if end else None
+    core = _compute_core_financials(db, account_id, start_dt, end_dt)
 
+    purchases_q = _scoped(db.query(Purchase), Purchase, account_id)
+    if start_dt is not None:
+        purchases_q = purchases_q.filter(Purchase.created_at >= start_dt)
+    if end_dt is not None:
+        purchases_q = purchases_q.filter(Purchase.created_at <= end_dt)
+    total_purchases = sum(p.total for p in purchases_q.all())
+
+    # Receivables/payables are point-in-time balances, not period activity —
+    # they aren't filtered by the date range.
     debtors = _scoped(db.query(Debtor), Debtor, account_id).all()
     creditors = _scoped(db.query(Creditor), Creditor, account_id).all()
     receivables = sum(d.total_owed - d.amount_paid for d in debtors)
@@ -77,6 +117,8 @@ def financial_summary(db: Session = Depends(get_db), current_user: User = Depend
     revenue = core["revenue"]
     net_profit = core["net_profit"]
     return {
+        "start": str(start) if start else None,
+        "end": str(end) if end else None,
         "revenue": round(revenue, 2),
         "cogs": round(core["cogs"], 2),
         "gross_profit": round(core["gross_profit"], 2),
@@ -144,11 +186,16 @@ def cashflow(months: int = 12, db: Session = Depends(get_db), current_user: User
 
 
 @router.get("/profit-loss")
-def profit_loss(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def profit_loss(start: Optional[date] = None, end: Optional[date] = None,
+                 db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
-    core = _compute_core_financials(db, account_id)
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end, datetime.max.time()) if end else None
+    core = _compute_core_financials(db, account_id, start_dt, end_dt)
 
     return {
+        "start": str(start) if start else None,
+        "end": str(end) if end else None,
         "revenue_by_item": {k: round(v, 2) for k, v in core["revenue_by_item"].items()},
         "total_revenue": round(core["revenue"], 2),
         "cogs": round(core["cogs"], 2),
@@ -156,6 +203,7 @@ def profit_loss(db: Session = Depends(get_db), current_user: User = Depends(get_
         "total_expenses": round(core["total_expenses"], 2),
         "gross_profit": round(core["gross_profit"], 2),
         "net_profit": round(core["net_profit"], 2),
+        "item_profitability": core["item_profitability"],
     }
 
 
@@ -167,10 +215,15 @@ def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(g
     by_status = defaultdict(int)
     for d in debtors:
         by_status[d.status.value] += 1
+    top = sorted(
+        ({"name": d.name, "outstanding": round(d.total_owed - d.amount_paid, 2), "status": d.status.value} for d in debtors),
+        key=lambda r: r["outstanding"], reverse=True
+    )[:10]
     return {
         "total_outstanding": round(total_owed, 2),
         "count": len(debtors),
         "by_status": dict(by_status),
+        "top_debtors": top,
     }
 
 
@@ -182,10 +235,15 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
     by_status = defaultdict(int)
     for c in creditors:
         by_status[c.status.value] += 1
+    top = sorted(
+        ({"name": c.name, "outstanding": round(c.total_owed - c.amount_paid, 2), "status": c.status.value} for c in creditors),
+        key=lambda r: r["outstanding"], reverse=True
+    )[:10]
     return {
         "total_outstanding": round(total_owed, 2),
         "count": len(creditors),
         "by_status": dict(by_status),
+        "top_creditors": top,
     }
 
 
@@ -197,9 +255,20 @@ def inventory_valuation(db: Session = Depends(get_db), current_user: User = Depe
     for i in items:
         by_category[i.category] += i.quantity * i.cost_price
     total_value = sum(by_category.values())
+    top_items = sorted(
+        ({
+            "item_name": i.name,
+            "quantity": i.quantity,
+            "cost_price": i.cost_price,
+            "value": round(i.quantity * i.cost_price, 2),
+            "low_stock": i.quantity <= i.reorder_point,
+        } for i in items),
+        key=lambda r: r["value"], reverse=True
+    )[:10]
     return {
         "total_value": round(total_value, 2),
         "by_category": {k: round(v, 2) for k, v in by_category.items()},
+        "top_items": top_items,
     }
 
 
