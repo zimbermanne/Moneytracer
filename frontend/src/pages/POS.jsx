@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { apiUrl } from '../api-config.js'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 export default function POS() {
@@ -231,6 +232,14 @@ export default function POS() {
               ))}
               <div style={{ fontWeight: 700, marginTop: 8, borderTop: '1px solid #eee', paddingTop: 8 }}>
                 Total: TZS {receipt.total.toLocaleString()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 14 }}>
+                <img
+                  src={apiUrl(`/api/public/qr/receipt/${receipt.receipt_no}.png`)}
+                  alt="Scan to verify receipt"
+                  width={110} height={110}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Scan to verify receipt</div>
               </div>
             </div>
           )}

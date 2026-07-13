@@ -24,6 +24,7 @@ import Documents from './pages/Documents.jsx'
 import Customers from './pages/Customers.jsx'
 import Settings from './pages/Settings.jsx'
 import ActivityLogs from './pages/ActivityLogs.jsx'
+import VerifyDocument from './pages/VerifyDocument.jsx'
 
 function pageTitle(pathname) {
   for (const entry of NAV) {
@@ -141,6 +142,8 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify/invoice/:id" element={<VerifyDocument kind="invoice" />} />
+          <Route path="/verify/receipt/:id" element={<VerifyDocument kind="receipt" />} />
           <Route path="/app/*" element={<PrivateRoutes />} />
         </Routes>
       </NavigationGuardProvider>

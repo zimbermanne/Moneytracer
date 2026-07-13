@@ -77,6 +77,7 @@ class AccountUpdate(BaseModel):
     business_structure: Optional[BusinessStructure] = None
     name: Optional[str] = None
     tin: Optional[str] = None
+    vrn: Optional[str] = None
     owner_full_name: Optional[str] = None
     business_type: Optional[str] = None
     region: Optional[str] = None
@@ -88,6 +89,10 @@ class AccountUpdate(BaseModel):
     tax_rate: Optional[float] = None
     invoice_prefix: Optional[str] = None
     payment_terms_days: Optional[int] = None
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_branch: Optional[str] = None
     is_active: Optional[bool] = None
     is_suspended: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
@@ -100,6 +105,7 @@ class AccountOut(BaseModel):
     business_structure: BusinessStructure
     name: str
     tin: Optional[str]
+    vrn: Optional[str] = None
     owner_full_name: str
     business_type: str
     region: str
@@ -111,6 +117,10 @@ class AccountOut(BaseModel):
     tax_rate: float
     invoice_prefix: str
     payment_terms_days: int
+    bank_name: Optional[str] = ""
+    bank_account_name: Optional[str] = ""
+    bank_account_number: Optional[str] = ""
+    bank_branch: Optional[str] = ""
     is_active: bool
     is_suspended: bool
     onboarding_completed: bool
@@ -329,6 +339,10 @@ class InvoiceCreate(BaseModel):
     customer_name: str = "Walk-in"
     customer_phone: Optional[str] = ""
     customer_address: Optional[str] = ""
+    customer_tin: Optional[str] = ""
+    customer_vrn: Optional[str] = ""
+    due_date: Optional[datetime] = None
+    po_number: Optional[str] = ""
     tax_rate: float = 0
     discount: float = 0
     notes: Optional[str] = ""
@@ -342,6 +356,11 @@ class InvoiceOut(BaseModel):
     customer_name: str
     customer_phone: str
     customer_address: str
+    customer_tin: Optional[str] = ""
+    customer_vrn: Optional[str] = ""
+    due_date: Optional[datetime] = None
+    po_number: Optional[str] = ""
+    verify_token: Optional[str] = None
     subtotal: float
     tax_rate: float
     tax_amount: float

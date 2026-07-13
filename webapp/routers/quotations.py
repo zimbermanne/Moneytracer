@@ -119,15 +119,25 @@ def convert_to_invoice(qid: int, db: Session = Depends(get_db),
     # Get account settings for invoice prefix
     account = db.query(Account).filter(Account.id == account_id).first()
     prefix = account.invoice_prefix if account else "INV"
-    
+
+    # Sequential, zero-padded numbering to match how create_invoice() numbers
+    # invoices directly — keeps the sequence consistent regardless of path.
+    existing_count = db.query(Invoice).filter(Invoice.account_id == account_id).count()
+    invoice_no = f"{prefix}-{existing_count + 1:04d}"
+    attempt = existing_count + 1
+    while db.query(Invoice).filter(Invoice.invoice_no == invoice_no).first() is not None:
+        attempt += 1
+        invoice_no = f"{prefix}-{attempt:04d}"
+
     inv = Invoice(
         account_id=account_id,
-        invoice_no=f"{prefix}-{uuid.uuid4().hex[:8].upper()}",
+        invoice_no=invoice_no,
         customer_name=q.customer_name, customer_phone=q.customer_phone,
         customer_address=q.customer_address, subtotal=q.subtotal,
         tax_rate=q.tax_rate, tax_amount=q.tax_amount, discount=q.discount,
         total=q.total, notes=q.notes, status=DocumentStatus.sent,
         created_by=current_user.username,
+        verify_token=uuid.uuid4().hex,
     )
     db.add(inv); db.flush()
     for ln in q.items:

@@ -12,6 +12,7 @@ import { useSearch } from '../hooks/useSearch.js'
 const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0 })
 const emptyForm = () => ({
   customer_name: '', customer_phone: '', customer_address: '',
+  customer_tin: '', customer_vrn: '', due_date: '', po_number: '',
   tax_rate: 0, discount: 0, notes: '', valid_days: 14, items: [emptyLine()],
 })
 
@@ -46,7 +47,15 @@ export default function Documents({ kind }) {
   const save = async () => {
     setError('')
     try {
-      const payload = { ...form, items: form.items.filter((l) => l.description.trim()) }
+      const { customer_tin, customer_vrn, due_date, po_number, valid_days, ...rest } = form
+      const payload = {
+        ...rest,
+        items: form.items.filter((l) => l.description.trim()),
+        ...(isInvoice ? {
+          customer_tin, customer_vrn, po_number,
+          due_date: due_date ? new Date(due_date).toISOString() : null,
+        } : { valid_days }),
+      }
       if (!payload.items.length) { setError('Add at least one line item'); return }
       await api.post(`/${kind}/`, payload)
       setOpen(false); setForm(emptyForm()); load()
@@ -156,6 +165,18 @@ export default function Documents({ kind }) {
             <input value={form.customer_phone} onChange={(e) => setForm({...form, customer_phone: e.target.value})} /></div>
           <div className="form-row"><label>Address</label>
             <input value={form.customer_address} onChange={(e) => setForm({...form, customer_address: e.target.value})} /></div>
+          {isInvoice && (
+            <>
+              <div className="form-row"><label>Customer TIN</label>
+                <input value={form.customer_tin} onChange={(e) => setForm({...form, customer_tin: e.target.value})} /></div>
+              <div className="form-row"><label>Customer VRN</label>
+                <input value={form.customer_vrn} onChange={(e) => setForm({...form, customer_vrn: e.target.value})} /></div>
+              <div className="form-row"><label>Due Date</label>
+                <input type="date" value={form.due_date} onChange={(e) => setForm({...form, due_date: e.target.value})} /></div>
+              <div className="form-row"><label>PO / DO Number</label>
+                <input value={form.po_number} onChange={(e) => setForm({...form, po_number: e.target.value})} /></div>
+            </>
+          )}
           {!isInvoice && (
             <div className="form-row"><label>Valid for (days)</label>
               <input type="number" value={form.valid_days} onChange={(e) => setForm({...form, valid_days: Number(e.target.value)})} /></div>

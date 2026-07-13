@@ -28,6 +28,12 @@ _MIGRATIONS = {
         # Existing accounts predate the business/community split — they're all
         # businesses (that's all that existed before this feature).
         ("account_type", "VARCHAR(20)", "'business'"),
+        # VAT registration number + bank details for the redesigned invoice template.
+        ("vrn", "VARCHAR(50)", None),
+        ("bank_name", "VARCHAR(120)", "''"),
+        ("bank_account_name", "VARCHAR(120)", "''"),
+        ("bank_account_number", "VARCHAR(60)", "''"),
+        ("bank_branch", "VARCHAR(120)", "''"),
     ],
 }
 
@@ -43,6 +49,17 @@ _SCHEMA_MIGRATIONS = {
     ("business", "purchases"): [
         # Proper FK to inventory instead of relying solely on name-matching.
         ("item_id", "INTEGER", None),
+    ],
+    ("business", "invoices"): [
+        # Fields for the redesigned Tanzania-style tax invoice template.
+        ("customer_tin", "VARCHAR(50)", "''"),
+        ("customer_vrn", "VARCHAR(50)", "''"),
+        ("due_date", "TIMESTAMP", None),
+        ("po_number", "VARCHAR(80)", "''"),
+        # Random, unguessable token for the QR-code public verification link —
+        # deliberately separate from invoice_no, which is sequential and easy
+        # to guess, so scanning a QR can't be used to enumerate invoices.
+        ("verify_token", "VARCHAR(40)", None),
     ],
 }
 

@@ -185,6 +185,10 @@ export default function Settings() {
               <input value={account.tin || ''} onChange={(e) => setAccount({...account, tin: e.target.value})} />
             </div>
             <div className="form-row">
+              <label>VRN (VAT Reg. Number)</label>
+              <input value={account.vrn || ''} onChange={(e) => setAccount({...account, vrn: e.target.value})} />
+            </div>
+            <div className="form-row">
               <label>Phone</label>
               <input value={account.phone || ''} onChange={(e) => setAccount({...account, phone: e.target.value})} />
             </div>
@@ -215,6 +219,26 @@ export default function Settings() {
             <div className="form-row">
               <label>Payment Terms (days)</label>
               <input type="number" value={account.payment_terms_days} onChange={(e) => setAccount({...account, payment_terms_days: parseInt(e.target.value) || 7})} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, marginBottom: 12, fontWeight: 600 }}>🏦 Bank Details (shown on invoices)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+            <div className="form-row">
+              <label>Bank Name</label>
+              <input value={account.bank_name || ''} onChange={(e) => setAccount({...account, bank_name: e.target.value})} />
+            </div>
+            <div className="form-row">
+              <label>Account Name</label>
+              <input value={account.bank_account_name || ''} onChange={(e) => setAccount({...account, bank_account_name: e.target.value})} />
+            </div>
+            <div className="form-row">
+              <label>Account Number</label>
+              <input value={account.bank_account_number || ''} onChange={(e) => setAccount({...account, bank_account_number: e.target.value})} />
+            </div>
+            <div className="form-row">
+              <label>Branch</label>
+              <input value={account.bank_branch || ''} onChange={(e) => setAccount({...account, bank_branch: e.target.value})} />
             </div>
           </div>
           

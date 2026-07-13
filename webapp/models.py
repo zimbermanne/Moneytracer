@@ -34,6 +34,7 @@ class Account(Base):
     business_structure = Column(Enum(BusinessStructure), default=BusinessStructure.solo)
     name = Column(String(150), nullable=False, index=True)
     tin = Column(String(50), nullable=True)  # Tax Identification Number, required for company
+    vrn = Column(String(50), nullable=True)  # VAT Registration Number, shown on tax invoices
     owner_full_name = Column(String(150), nullable=False)
     business_type = Column(String(80), default="retail")
     region = Column(String(80), default="")
@@ -45,6 +46,11 @@ class Account(Base):
     tax_rate = Column(Float, default=0)
     invoice_prefix = Column(String(20), default="INV")
     payment_terms_days = Column(Integer, default=7)
+    # Bank details for invoice footers — optional; left blank until the owner fills them in.
+    bank_name = Column(String(120), default="")
+    bank_account_name = Column(String(120), default="")
+    bank_account_number = Column(String(60), default="")
+    bank_branch = Column(String(120), default="")
     is_active = Column(Boolean, default=True)
     is_suspended = Column(Boolean, default=False)
     onboarding_completed = Column(Boolean, default=False)
@@ -205,6 +211,11 @@ class Invoice(Base):
     customer_name = Column(String(150), nullable=False, default="Walk-in")
     customer_phone = Column(String(40), default="")
     customer_address = Column(String(255), default="")
+    customer_tin = Column(String(50), default="")
+    customer_vrn = Column(String(50), default="")
+    due_date = Column(DateTime, nullable=True)
+    po_number = Column(String(80), default="")  # client's Purchase/Delivery Order number
+    verify_token = Column(String(40), unique=True, index=True, nullable=True)  # for QR-code public verification
     subtotal = Column(Float, default=0)
     tax_rate = Column(Float, default=0)
     tax_amount = Column(Float, default=0)
