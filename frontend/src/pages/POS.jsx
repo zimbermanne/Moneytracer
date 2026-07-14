@@ -101,24 +101,16 @@ export default function POS() {
     <div className="page">
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <h1>Point of Sale</h1>
-        <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div className="mode-switch">
           <button
+            className={saleMode === 'pos' ? 'active' : ''}
             onClick={() => switchMode('pos')}
-            style={{
-              padding: '6px 14px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-              background: saleMode === 'pos' ? 'var(--accent)' : 'var(--surface)',
-              color: saleMode === 'pos' ? '#fff' : 'var(--text-muted)',
-            }}
           >
             🔒 POS (locked prices)
           </button>
           <button
+            className={saleMode === 'salesman' ? 'active' : ''}
             onClick={() => switchMode('salesman')}
-            style={{
-              padding: '6px 14px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-              background: saleMode === 'salesman' ? 'var(--accent)' : 'var(--surface)',
-              color: saleMode === 'salesman' ? '#fff' : 'var(--text-muted)',
-            }}
           >
             ✎ Salesman (editable prices)
           </button>

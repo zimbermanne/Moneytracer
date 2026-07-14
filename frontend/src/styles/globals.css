@@ -1269,6 +1269,38 @@ label {
   box-shadow: var(--neu-raised-sm);
 }
 
+/* ---- Generic segmented mode switch (e.g. POS vs Salesman) ----
+   Same neumorphic recipe as .landing-track-switch: a recessed track with
+   a raised, accent-colored pill for the active option. */
+.mode-switch {
+  display: inline-flex;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  box-shadow: var(--neu-pressed);
+}
+
+.mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), box-shadow var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+.mode-switch button.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--neu-accent-raised);
+}
+
 .landing-hero-actions {
   display: flex;
   align-items: center;
