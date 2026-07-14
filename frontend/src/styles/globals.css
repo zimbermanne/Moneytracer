@@ -60,9 +60,9 @@ button {
 }
 
 .card {
-  background: #fff;
+  background: var(--surface);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--neu-raised);
   padding: 18px;
 }
 
@@ -184,37 +184,48 @@ td, .stat-value, input[type="number"] {
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: 8px;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
   border: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-dark);
+  box-shadow: var(--neu-raised);
+  transition: box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
+.btn:active { box-shadow: var(--neu-pressed); transform: translateY(1px); }
 
-.btn-primary { background: var(--accent); color: var(--surface); }
+.btn-primary { background: var(--accent); color: var(--surface); box-shadow: var(--neu-accent-raised); }
 .btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:active { box-shadow: var(--neu-accent-pressed); }
 .btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
-.btn-outline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-dark); }
+.btn-gold:active { box-shadow: var(--neu-pressed); }
+.btn-outline { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text-dark); box-shadow: var(--neu-raised); }
 .btn-outline:hover { background: var(--surface-sunken); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline:active { box-shadow: var(--neu-pressed); }
+.btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
+.btn-danger:active { box-shadow: inset 3px 3px 6px rgba(43,38,34,0.25), inset -2px -2px 5px rgba(255,255,255,0.4); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
 input, select, textarea {
   padding: 9px 12px;
   border-radius: var(--radius);
-  border: 1px solid var(--border-strong);
+  border: 1px solid transparent;
   font-size: 14px;
   width: 100%;
   background: var(--surface);
   font-family: inherit;
+  box-shadow: var(--neu-pressed);
   transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: var(--neu-pressed), 0 0 0 3px var(--accent-soft);
 }
 
 label {
@@ -232,6 +243,7 @@ label {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  box-shadow: var(--neu-raised-sm);
 }
 
 .badge-paid { background: #e3f6ec; color: var(--success); }
@@ -249,13 +261,14 @@ label {
 }
 
 .modal {
-  background: #fff;
-  border-radius: var(--radius);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   padding: 24px;
   width: 420px;
   max-width: 92vw;
   max-height: 88vh;
   overflow-y: auto;
+  box-shadow: var(--neu-raised), var(--shadow-lg);
 }
 
 .modal h2 { margin-top: 0; }
@@ -337,12 +350,13 @@ label {
   margin: 2px 0;
 }
 
-.menu-item:hover { background: var(--sidebar-hover); }
+.menu-item:hover { background: var(--sidebar-hover); box-shadow: var(--neu-raised-sm); }
 
 .menu-item.active {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-text);
   font-weight: 700;
+  box-shadow: var(--neu-pressed-sm);
 }
 
 .menu-item.child { padding-left: 28px; font-size: 13px; }
@@ -1179,6 +1193,7 @@ label {
   border-radius: var(--radius-full);
   padding: 4px;
   margin-bottom: 28px;
+  box-shadow: var(--neu-pressed);
 }
 
 .landing-track-switch button {
@@ -1190,11 +1205,13 @@ label {
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
+  transition: box-shadow var(--duration) var(--ease);
 }
 
 .landing-track-switch button.active {
   background: var(--accent-soft);
   color: var(--accent-hover);
+  box-shadow: var(--neu-raised-sm);
 }
 
 .landing-hero-actions {
