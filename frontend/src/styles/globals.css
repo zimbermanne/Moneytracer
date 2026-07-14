@@ -1420,6 +1420,63 @@ label {
   padding-bottom: 96px;
 }
 
+/* ---- About us ---- */
+.landing-about-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  text-align: left;
+  align-items: start;
+}
+
+.landing-about-copy p {
+  color: var(--text-muted);
+  line-height: var(--leading-loose);
+  margin: 0 0 16px;
+}
+
+.landing-about-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.landing-about-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  color: var(--accent);
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.landing-about-stat-label {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  max-width: 160px;
+  line-height: var(--leading-normal);
+}
+
+.landing-about-values {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-about-value-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--neu-raised);
+}
+
+@media (max-width: 860px) {
+  .landing-about-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .landing-footer {
   max-width: 1120px;
   margin: 0 auto;

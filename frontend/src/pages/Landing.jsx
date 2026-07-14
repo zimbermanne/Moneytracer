@@ -56,6 +56,7 @@ export default function Landing() {
           <nav className="landing-nav">
             <a href="#features">Features</a>
             <a href="#community">Community groups</a>
+            <a href="#about">About us</a>
             <a href="#pricing">Pricing</a>
             <Link to="/login" className="landing-nav-login">Log in</Link>
             <Link to="/register" className="landing-nav-cta">Get started</Link>
@@ -168,6 +169,69 @@ export default function Landing() {
             <div className="landing-feature-text">
               Budgets, habits, and savings goals for anyone who wants to spend more
               wisely, on their own or with friends.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" className="landing-section landing-about">
+        <div className="landing-about-grid">
+          <div className="landing-about-copy">
+            <h2>Built for the way money actually moves</h2>
+            <p>
+              Moneytracer started as a simple idea: the tools that help a shop owner,
+              a savings group treasurer, or someone budgeting their own salary
+              shouldn't require an accounting degree or a spreadsheet. Whether you're
+              running a hardware store, managing a chama's monthly contributions, or
+              just trying to see where your money goes, Moneytracer gives you one
+              clear, honest record you can trust.
+            </p>
+            <p>
+              We built it for African businesses and communities first — with
+              multi-currency support across the continent, offline-friendly workflows,
+              and pricing that makes sense for a small business, not a global
+              enterprise. No jargon, no bloated features you'll never use — just the
+              numbers that matter, always up to date.
+            </p>
+            <div className="landing-about-stats">
+              <div className="landing-about-stat">
+                <div className="landing-about-stat-value">54</div>
+                <div className="landing-about-stat-label">African countries supported</div>
+              </div>
+              <div className="landing-about-stat">
+                <div className="landing-about-stat-value">3</div>
+                <div className="landing-about-stat-label">Account types — business, community, personal</div>
+              </div>
+              <div className="landing-about-stat">
+                <div className="landing-about-stat-value">1</div>
+                <div className="landing-about-stat-label">Dashboard for everything you track</div>
+              </div>
+            </div>
+          </div>
+          <div className="landing-about-values">
+            <div className="landing-about-value-card">
+              <div className="landing-feature-icon">🎯</div>
+              <div className="landing-feature-title">Built to be simple</div>
+              <div className="landing-feature-text">
+                No training required. If you can use a phone, you can run your books
+                on Moneytracer from day one.
+              </div>
+            </div>
+            <div className="landing-about-value-card">
+              <div className="landing-feature-icon">🔒</div>
+              <div className="landing-feature-title">Your data, protected</div>
+              <div className="landing-feature-text">
+                Every account is isolated and secured, with a full activity log so you
+                always know who changed what.
+              </div>
+            </div>
+            <div className="landing-about-value-card">
+              <div className="landing-feature-icon">🌍</div>
+              <div className="landing-feature-title">Made for Africa</div>
+              <div className="landing-feature-text">
+                Local currencies, local realities — designed around how businesses and
+                communities here actually operate.
+              </div>
             </div>
           </div>
         </div>
