@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
+import PasswordInput from '../components/PasswordInput.jsx'
 
 const TRACK_COPY = {
   business: { heading: 'Set up your business account', sub: 'Track sales, stock, and invoices with Moneytracer' },
@@ -94,11 +95,11 @@ export default function Register() {
           </div>
           <div className="form-row">
             <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
           </div>
           <div className="form-row">
             <label>Confirm Password</label>
-            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
           </div>
           {error && <div className="error-text">{error}</div>}
           <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={busy}>

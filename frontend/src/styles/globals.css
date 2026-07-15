@@ -304,6 +304,37 @@ label {
 
 .form-row { margin-bottom: 14px; }
 
+/* ---- Password field with show/hide toggle ---- */
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 42px;
+}
+
+.password-input-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
+}
+
+.password-input-toggle:hover { color: var(--accent); background: var(--sidebar-hover); }
+
 .badge {
   display: inline-block;
   padding: 2px 10px;
