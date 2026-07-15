@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
 import Table from '../components/Table.jsx'
-import Modal from '../components/Modal.jsx'
 import DocumentPreview from '../components/DocumentPreview.jsx'
+import InvoiceEditor from '../components/InvoiceEditor.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { useSearch } from '../hooks/useSearch.js'
@@ -30,6 +30,7 @@ export default function Documents({ kind }) {
   const [previewDoc, setPreviewDoc] = useState(null)
   const [company, setCompany] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   const lockedStatuses = isInvoice ? ['paid'] : ['accepted', 'rejected', 'expired']
   const isLocked = (doc) => lockedStatuses.includes(doc.status)
@@ -45,6 +46,8 @@ export default function Documents({ kind }) {
     const items = form.items.map((l, i) => i === idx ? { ...l, [field]: value } : l)
     setForm({ ...form, items })
   }
+  const addLine = () => setForm({ ...form, items: [...form.items, emptyLine()] })
+  const removeLine = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) })
 
   const openEdit = (doc) => {
     setEditingId(doc.id)
@@ -68,6 +71,7 @@ export default function Documents({ kind }) {
 
   const save = async () => {
     setError('')
+    setSaving(true)
     try {
       const { customer_tin, customer_vrn, due_date, po_number, valid_days, ...rest } = form
       const payload = {
@@ -78,7 +82,7 @@ export default function Documents({ kind }) {
           due_date: due_date ? new Date(due_date).toISOString() : null,
         } : { valid_days }),
       }
-      if (!payload.items.length) { setError('Add at least one line item'); return }
+      if (!payload.items.length) { setError('Add at least one line item'); setSaving(false); return }
       if (editingId) {
         await api.put(`/${kind}/${editingId}`, payload)
       } else {
@@ -86,6 +90,7 @@ export default function Documents({ kind }) {
       }
       setOpen(false); setEditingId(null); setForm(emptyForm()); load()
     } catch (e) { setError(e.message) }
+    finally { setSaving(false) }
   }
 
   const remove = async (id) => {
@@ -175,63 +180,25 @@ export default function Documents({ kind }) {
       )}
 
       {open && (
-        <Modal title={editingId ? `Edit ${isInvoice ? 'Invoice' : 'Quotation'}` : `New ${isInvoice ? 'Invoice' : 'Quotation'}`}
+        <InvoiceEditor
+          key={editingId ?? 'new'}
+          kind={kind}
+          isInvoice={isInvoice}
+          editingId={editingId}
+          form={form}
+          setForm={setForm}
+          company={company}
+          error={error}
+          saving={saving}
+          updateLine={updateLine}
+          addLine={addLine}
+          removeLine={removeLine}
+          subtotal={subtotal}
+          taxAmt={taxAmt}
+          total={total}
           onClose={() => { setOpen(false); setEditingId(null) }}
-          footer={<>
-            <button className="btn btn-outline" onClick={() => { setOpen(false); setEditingId(null) }}>Cancel</button>
-            <button className="btn btn-primary" onClick={save}>{editingId ? 'Save Changes' : 'Save'}</button>
-          </>}>
-          <div className="form-row"><label>Customer Name *</label>
-            <input value={form.customer_name} onChange={(e) => setForm({...form, customer_name: e.target.value})} /></div>
-          <div className="form-row"><label>Phone</label>
-            <input value={form.customer_phone} onChange={(e) => setForm({...form, customer_phone: e.target.value})} /></div>
-          <div className="form-row"><label>Address</label>
-            <input value={form.customer_address} onChange={(e) => setForm({...form, customer_address: e.target.value})} /></div>
-          {isInvoice && (
-            <>
-              <div className="form-row"><label>Customer TIN</label>
-                <input value={form.customer_tin} onChange={(e) => setForm({...form, customer_tin: e.target.value})} /></div>
-              <div className="form-row"><label>Customer VRN</label>
-                <input value={form.customer_vrn} onChange={(e) => setForm({...form, customer_vrn: e.target.value})} /></div>
-              <div className="form-row"><label>Due Date</label>
-                <input type="date" value={form.due_date} onChange={(e) => setForm({...form, due_date: e.target.value})} /></div>
-              <div className="form-row"><label>PO / DO Number</label>
-                <input value={form.po_number} onChange={(e) => setForm({...form, po_number: e.target.value})} /></div>
-            </>
-          )}
-          {!isInvoice && (
-            <div className="form-row"><label>Valid for (days)</label>
-              <input type="number" value={form.valid_days} onChange={(e) => setForm({...form, valid_days: Number(e.target.value)})} /></div>
-          )}
-
-          <div style={{ marginTop: 12, marginBottom: 6, fontWeight: 600 }}>Line Items</div>
-          {form.items.map((line, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
-              <input placeholder="Description" value={line.description} style={{ flex: 2 }}
-                onChange={(e) => updateLine(idx, 'description', e.target.value)} />
-              <input type="number" placeholder="Qty" value={line.quantity} style={{ width: 65 }}
-                onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-              <input type="number" placeholder="Unit Price" value={line.unit_price} style={{ width: 100 }}
-                onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-              <button className="btn btn-danger" onClick={() => setForm({...form, items: form.items.filter((_,i)=>i!==idx)})}>✕</button>
-            </div>
-          ))}
-          <button className="btn btn-outline" onClick={() => setForm({...form, items: [...form.items, emptyLine()]})}
-            style={{ marginBottom: 14 }}>+ Add Line</button>
-
-          <div className="form-row"><label>Tax Rate (%)</label>
-            <input type="number" value={form.tax_rate} onChange={(e) => setForm({...form, tax_rate: Number(e.target.value)})} /></div>
-          <div className="form-row"><label>Discount (TZS)</label>
-            <input type="number" value={form.discount} onChange={(e) => setForm({...form, discount: Number(e.target.value)})} /></div>
-          <div className="form-row"><label>Notes</label>
-            <input value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} /></div>
-
-          <div style={{ textAlign: 'right', fontWeight: 700, marginTop: 10, padding: '8px 0', borderTop: '1px solid #e0ddd4' }}>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginRight: 8 }}>Total:</span>
-            TZS {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </div>
-          {error && <div className="error-text">{error}</div>}
-        </Modal>
+          onSave={save}
+        />
       )}
     </div>
   )
