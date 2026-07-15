@@ -91,7 +91,20 @@ export default function Settings() {
     setAccountErr('')
     setAccountMsg('')
     try {
-      const updated = await api.put('/accounts/my-account', account)
+      // Only send the fields this form actually edits — the loaded account
+      // object also carries read-only fields (is_suspended, is_active,
+      // account_type, id, created_at...) that shouldn't be echoed back.
+      const {
+        name, tin, vrn, owner_full_name, business_type, region, district,
+        street_address, phone, email, tax_rate, invoice_prefix, payment_terms_days,
+        bank_name, bank_account_name, bank_account_number, bank_branch,
+      } = account
+      const payload = {
+        name, tin, vrn, owner_full_name, business_type, region, district,
+        street_address, phone, email, tax_rate, invoice_prefix, payment_terms_days,
+        bank_name, bank_account_name, bank_account_number, bank_branch,
+      }
+      const updated = await api.put('/accounts/my-account', payload)
       setAccount(updated)
       setAccountMsg('Account settings updated successfully!')
       setTimeout(() => setAccountMsg(''), 3000)

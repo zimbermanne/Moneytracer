@@ -53,11 +53,17 @@ def update_my_account(payload: AccountUpdate, db: Session = Depends(get_db),
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
-    # Prevent account admins from changing suspension status
-    if payload.is_suspended is not None:
+    # Prevent account admins from changing suspension status — but only block
+    # an actual attempted change. Since the frontend round-trips the account
+    # object it loaded (which includes the current is_suspended value), this
+    # field is almost always present in the payload; comparing against the
+    # current value (rather than just checking it's not None) avoids blocking
+    # every save when the value hasn't actually changed.
+    provided = payload.model_dump(exclude_unset=True)
+    if "is_suspended" in provided and provided["is_suspended"] != account.is_suspended:
         raise HTTPException(status_code=403, detail="Cannot change suspension status")
-    
-    for field, value in payload.model_dump(exclude_unset=True).items():
+
+    for field, value in provided.items():
         setattr(account, field, value)
     
     db.commit()
