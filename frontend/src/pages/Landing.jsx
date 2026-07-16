@@ -246,6 +246,55 @@ export default function Landing() {
         <h2>Ready to get your finances in order?</h2>
         <p className="landing-section-sub">Create an account in minutes. No spreadsheet required.</p>
         <Link to={`/register?track=${track}`} className="landing-btn-primary">Get started free</Link>
+
+        <div className="landing-beta-notice">
+          <div className="landing-beta-badge">Beta</div>
+          <p>
+            Moneytracer is free to use for the first <strong>90 days</strong> while we're in active
+            development. During this phase you may see day-to-day changes, occasional bugs, or brief
+            downtime as we roll out improvements. We'll announce pricing plans well in advance of the
+            beta period ending.
+          </p>
+        </div>
+      </section>
+
+      <section className="landing-section landing-disclaimer">
+        <h2>Disclaimer</h2>
+        <div className="landing-disclaimer-text">
+          <p>
+            Moneytracer is currently in active development (beta). Zimbermanne Studios, Zimbermanne
+            Company Limited, and the founders and contributors of the Moneytracer app are not
+            responsible for any data loss, data corruption, or deletion that may occur while using
+            the platform during this phase. We strongly recommend keeping your own backups or exports
+            of critical financial records (invoices, reports, inventory) using the built-in export
+            tools.
+          </p>
+          <p>
+            The service is provided "as is" and "as available," without warranties of any kind, either
+            express or implied, including but not limited to accuracy, reliability, or fitness for a
+            particular purpose. Use of Moneytracer for business, community, or personal financial
+            recordkeeping is at your own discretion and risk.
+          </p>
+          <p>
+            Moneytracer is a bookkeeping and record-tracking tool, not a licensed accounting, tax, or
+            financial advisory service. Zimbermanne Studios and its founders are not liable for any
+            business decisions, tax filings, financial losses, or disputes (including within community
+            savings groups) arising from the use or interpretation of data recorded in the app. Users
+            remain responsible for verifying their own financial and tax records with a qualified
+            professional.
+          </p>
+          <p>
+            To the maximum extent permitted by law, Zimbermanne Studios, Zimbermanne Company Limited,
+            and its founders, partners, and contributors shall not be liable for any indirect,
+            incidental, special, or consequential damages arising from your use of, or inability to
+            use, the Moneytracer app or website.
+          </p>
+          <p className="landing-disclaimer-note">
+            This is a general disclaimer and not a substitute for formal Terms of Service reviewed by
+            a lawyer. We recommend having these terms formally reviewed before relying on them for
+            legal protection.
+          </p>
+        </div>
       </section>
 
       <footer className="landing-footer">
