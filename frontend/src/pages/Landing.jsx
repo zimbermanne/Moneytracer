@@ -55,7 +55,7 @@ export default function Landing() {
           </div>
           <nav className="landing-nav">
             <a href="#features">Features</a>
-            <a href="#community">Community groups</a>
+            <Link to="/download">Download app</Link>
             <a href="#about">About us</a>
             <a href="#pricing">Pricing</a>
             <Link to="/login" className="landing-nav-login">Log in</Link>
@@ -104,10 +104,10 @@ export default function Landing() {
             <Link to="/login" className="landing-btn-secondary">I already have an account</Link>
           </div>
 
-          <a href="/downloads/moneytracer.apk" download className="landing-app-download">
+          <Link to="/download" className="landing-app-download">
             <span className="landing-app-download-icon">⬇</span>
             Download the Android app
-          </a>
+          </Link>
         </div>
       </section>
 
