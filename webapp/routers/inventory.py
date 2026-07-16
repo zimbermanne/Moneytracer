@@ -45,10 +45,22 @@ def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create inventory items")
-    
-    item = InventoryItem(**payload.model_dump(), account_id=account_id)
+
+    data = payload.model_dump()
+    # An empty/blank SKU is "no SKU", not a real value — treat it as NULL so
+    # multiple items without one don't collide on the unique constraint
+    # (a blank string '' colliding with another blank string '' was the
+    # actual bug: saving a second item with no SKU always failed).
+    if data.get("sku") is not None and not data["sku"].strip():
+        data["sku"] = None
+
+    item = InventoryItem(**data, account_id=account_id)
     db.add(item)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"An item with SKU '{data.get('sku')}' already exists.")
     db.refresh(item)
     log_activity_for_user(db, current_user, "inventory_create", f"Added item {item.name}")
     return item
@@ -242,9 +254,16 @@ def update_item(item_id: int, payload: InventoryUpdate, db: Session = Depends(ge
     item = query.first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    if "sku" in data and data["sku"] is not None and not data["sku"].strip():
+        data["sku"] = None
+    for field, value in data.items():
         setattr(item, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"An item with SKU '{data.get('sku')}' already exists.")
     db.refresh(item)
     log_activity_for_user(db, current_user, "inventory_update", f"Updated item {item.name}")
     return item

@@ -64,6 +64,33 @@ _SCHEMA_MIGRATIONS = {
 }
 
 
+def _migrate_inventory_sku_constraint(engine: Engine, inspector, is_sqlite: bool):
+    """inventory_items.sku used to be globally unique (across every tenant on
+    the platform) — a real bug, since two different businesses could never
+    both use the same SKU. Now it's scoped to (account_id, sku). SQLite has
+    no ALTER TABLE ... DROP/ADD CONSTRAINT support at all (would need a full
+    table rebuild), so this only runs under Postgres; a fresh SQLite dev
+    database already gets the correct constraint straight from create_all()."""
+    if is_sqlite:
+        return
+    schema, table = "business", "inventory_items"
+    if table not in set(inspector.get_table_names(schema=schema)):
+        return
+    constraints = inspector.get_unique_constraints(table, schema=schema)
+    if any(c["name"] == "uq_inventory_account_sku" for c in constraints):
+        return  # already migrated
+
+    with engine.begin() as conn:
+        for c in constraints:
+            if c["column_names"] == ["sku"]:
+                conn.execute(text(f'ALTER TABLE {schema}.{table} DROP CONSTRAINT IF EXISTS "{c["name"]}"'))
+                print(f"[migrate] dropped old global-unique constraint {c['name']} on {table}.sku")
+        conn.execute(text(
+            f'ALTER TABLE {schema}.{table} ADD CONSTRAINT uq_inventory_account_sku UNIQUE (account_id, sku)'
+        ))
+        print(f"[migrate] added composite unique constraint on {table}(account_id, sku)")
+
+
 def run_migrations(engine: Engine):
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
@@ -97,3 +124,5 @@ def run_migrations(engine: Engine):
                 ddl = f"ALTER TABLE {qualified_table} ADD COLUMN {col_name} {col_type}{default_clause}"
                 conn.execute(text(ddl))
                 print(f"[migrate] added missing column {qualified_table}.{col_name}")
+
+    _migrate_inventory_sku_constraint(engine, inspector, is_sqlite)

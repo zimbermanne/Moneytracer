@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, Enum
+    Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, Enum, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from database import Base, schema_args, fk_ref, SCHEMA_BUSINESS, SCHEMA_COMMUNITY, SCHEMA_PERSONAL
@@ -90,12 +90,18 @@ class User(Base):
 
 class InventoryItem(Base):
     __tablename__ = "inventory_items"
-    __table_args__ = schema_args(SCHEMA_BUSINESS)
+    __table_args__ = (
+        # Scoped per account — two different businesses on the platform must
+        # be free to both use e.g. "SKU001". Previously this was a bare
+        # column-level unique=True, which was unique across *all* tenants.
+        UniqueConstraint("account_id", "sku", name="uq_inventory_account_sku"),
+        schema_args(SCHEMA_BUSINESS),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False, index=True)
-    sku = Column(String(80), unique=True, nullable=True, index=True)
+    sku = Column(String(80), nullable=True, index=True)
     category = Column(String(80), default="General", index=True)
     quantity = Column(Float, default=0)
     unit = Column(String(30), default="pcs")
