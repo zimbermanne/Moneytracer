@@ -22,6 +22,7 @@ export default function InvoiceEditor({
   const checkValue = checkAmount === '' ? null : Number(checkAmount)
   const checkDiff = checkValue === null ? null : Math.round((checkValue - total) * 100) / 100
   const checkMatches = checkValue !== null && Math.abs(checkDiff) < 0.5
+  const itemsWithText = form.items.filter((l) => l.description.trim())
 
   return (
     <div className="invoice-editor-overlay">
@@ -157,7 +158,7 @@ export default function InvoiceEditor({
                   </tr>
                 </thead>
                 <tbody>
-                  {form.items.filter((l) => l.description.trim()).map((line, i) => (
+                  {itemsWithText.map((line, i) => (
                     <tr key={i}>
                       <td>{i + 1}</td>
                       <td>{line.description}</td>
@@ -166,7 +167,7 @@ export default function InvoiceEditor({
                       <td style={{ textAlign: 'right' }}>{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</td>
                     </tr>
                   ))}
-                  {form.items.filter((l) => l.description.trim()).length === 0 && (
+                  {itemsWithText.length === 0 && (
                     <tr><td colSpan={5} className="doc-sheet-muted" style={{ padding: '14px 10px' }}>Add a line item to see it here.</td></tr>
                   )}
                 </tbody>
@@ -185,6 +186,50 @@ export default function InvoiceEditor({
                   <div className="doc-sheet-muted">{form.notes}</div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Compact mobile-only stand-in for the desktop live preview above.
+              A phone screen can't fit the form and the full invoice sheet at
+              once, so instead of hiding the preview entirely we show a
+              condensed summary: totals up front, line items as a simple
+              stacked list (a wide 5-column table doesn't fit a phone width
+              at all) rather than trying to shrink the real sheet. */}
+          <div className="invoice-editor-preview-mobile">
+            <div className="mobile-summary-row">
+              <div>
+                <div className="doc-sheet-label">{label} for</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{form.customer_name || 'New customer'}</div>
+              </div>
+              <div className="mobile-summary-total">
+                <div className="doc-sheet-label">Total</div>
+                <div style={{ fontWeight: 700, fontSize: 18 }}>{money(total)}</div>
+              </div>
+            </div>
+
+            {itemsWithText.length > 0 ? (
+              <div className="mobile-summary-items">
+                {itemsWithText.map((line, i) => (
+                  <div key={i} className="mobile-summary-item">
+                    <div className="mobile-summary-item-desc">{line.description}</div>
+                    <div className="mobile-summary-item-meta">
+                      {line.quantity} × {money(line.unit_price)}
+                      <span className="mobile-summary-item-amount">
+                        {money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="doc-sheet-muted" style={{ padding: '10px 0' }}>Add a line item to see it here.</div>
+            )}
+
+            <div className="mobile-summary-totals">
+              <div><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              {form.tax_rate > 0 && <div><span>Tax ({form.tax_rate}%)</span><span>{money(taxAmt)}</span></div>}
+              {form.discount > 0 && <div><span>Discount</span><span>-{money(form.discount)}</span></div>}
+              <div className="mobile-summary-total-row"><span>Total</span><span>{money(total)}</span></div>
             </div>
           </div>
         </div>

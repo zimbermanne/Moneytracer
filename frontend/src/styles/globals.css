@@ -1318,11 +1318,90 @@ label {
   max-width: 100%;
 }
 
+/* Compact mobile stand-in for the live preview — hidden on desktop. */
+.invoice-editor-preview-mobile {
+  display: none;
+}
+
 @media (max-width: 960px) {
   .invoice-editor-body { flex-direction: column; overflow-y: auto; }
   .invoice-editor-form { max-width: 100%; overflow-y: visible; }
   .invoice-editor-preview { border-left: none; border-top: 1px solid var(--border); min-width: 0; }
   .invoice-editor-line { grid-template-columns: 1fr; }
+}
+
+/* Phone widths: the form and the full invoice sheet genuinely can't both
+   work on screen at once (the sheet's table needs real horizontal room).
+   Swap the full live preview for a condensed summary instead of trying to
+   shrink a wide table down to fit. */
+@media (max-width: 640px) {
+  .invoice-editor-preview { display: none; }
+  .invoice-editor-preview-mobile {
+    display: block;
+    padding: 16px;
+    background: var(--surface-sunken);
+    border-top: 1px solid var(--border);
+  }
+}
+
+.mobile-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mobile-summary-total { text-align: right; }
+
+.mobile-summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mobile-summary-item {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  box-shadow: var(--neu-raised-sm);
+}
+
+.mobile-summary-item-desc {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.mobile-summary-item-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.mobile-summary-item-amount {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.mobile-summary-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 14px;
+}
+
+.mobile-summary-totals > div { display: flex; justify-content: space-between; }
+
+.mobile-summary-total-row {
+  font-weight: 700;
+  font-size: 16px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
 }
 
 /* ==========================================================================
@@ -1768,6 +1847,16 @@ label {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* Rendered through a portal into document.body so it can't be clipped by
+   a scrolling/overflow-hidden ancestor (e.g. the table's `.card` wrapper).
+   Position comes from inline styles set in JS from the trigger's bounding
+   rect, so `top`/`right` here must not compete with that. */
+.row-actions-menu-portal {
+  top: auto;
+  right: auto;
+  z-index: 1000;
 }
 
 .row-actions-item {

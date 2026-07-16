@@ -18,6 +18,9 @@ export default function Inventory() {
   const [form, setForm] = useState(empty)
   const [importing, setImporting] = useState(false)
   const [listLoading, setListLoading] = useState(true)
+  const [redundant, setRedundant] = useState(null)
+  const [checkingRedundant, setCheckingRedundant] = useState(false)
+  const [merging, setMerging] = useState(null)
 
   const load = () => { setListLoading(true); api.get('/inventory/').then(setItems).catch((e) => setError(e.message)).finally(() => setListLoading(false)) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -76,6 +79,27 @@ export default function Inventory() {
     }
   }
 
+  const checkRedundant = async () => {
+    setCheckingRedundant(true); setError('')
+    try {
+      const data = await api.get('/inventory/redundant/check')
+      setRedundant(data)
+    } catch (e) { setError(e.message) }
+    finally { setCheckingRedundant(false) }
+  }
+
+  const mergeGroup = async (group) => {
+    const [keep, ...rest] = group.items
+    if (!confirm(`Merge ${rest.length} duplicate(s) into "${keep.name}"? Their quantities will be added to it and the duplicate rows deleted.`)) return
+    setMerging(keep.id)
+    try {
+      await api.post('/inventory/redundant/merge', { keep_id: keep.id, merge_ids: rest.map((i) => i.id) })
+      load()
+      checkRedundant()
+    } catch (e) { setError(e.message) }
+    finally { setMerging(null) }
+  }
+
   const columns = [
     { key: 'name', header: 'Name' },
     { key: 'category', header: 'Category' },
@@ -110,6 +134,9 @@ export default function Inventory() {
             {importing ? 'Importing…' : '⬆ Import'}
           </button>
           <button className="btn btn-outline" onClick={handleExport}>⬇ Export</button>
+          <button className="btn btn-outline" onClick={checkRedundant} disabled={checkingRedundant}>
+            {checkingRedundant ? 'Checking…' : '🔎 Check for Duplicates'}
+          </button>
           <button className="btn btn-primary" onClick={openNew}>+ Add Item</button>
         </div>
       </div>
@@ -121,6 +148,37 @@ export default function Inventory() {
       </div>
 
       <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading inventory…" emptyText={query ? 'No items match your search.' : 'No items yet.'} />
+
+      {redundant && (
+        <Modal
+          title="Redundant / Duplicate Items"
+          onClose={() => setRedundant(null)}
+          footer={<button className="btn btn-outline" onClick={() => setRedundant(null)}>Close</button>}
+        >
+          {redundant.flagged_item_count === 0 ? (
+            <div className="doc-sheet-muted">No likely duplicates found — inventory looks clean.</div>
+          ) : (
+            <>
+              {redundant.exact_sku_duplicates.length > 0 && (
+                <>
+                  <div className="invoice-editor-section-label">Same SKU</div>
+                  {redundant.exact_sku_duplicates.map((group, gi) => (
+                    <RedundantGroup key={`sku-${gi}`} group={group} onMerge={() => mergeGroup(group)} merging={merging} />
+                  ))}
+                </>
+              )}
+              {redundant.same_name_duplicates.length > 0 && (
+                <>
+                  <div className="invoice-editor-section-label">Same Name / Category</div>
+                  {redundant.same_name_duplicates.map((group, gi) => (
+                    <RedundantGroup key={`name-${gi}`} group={group} onMerge={() => mergeGroup(group)} merging={merging} />
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </Modal>
+      )}
 
       {editing !== null && (
         <Modal
@@ -171,6 +229,28 @@ export default function Inventory() {
           </div>
         </Modal>
       )}
+    </div>
+  )
+}
+
+function RedundantGroup({ group, onMerge, merging }) {
+  const [keep, ...rest] = group.items
+  return (
+    <div style={{ marginBottom: 14, padding: 12, background: 'var(--surface-sunken)', borderRadius: 'var(--radius)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+        {group.items.map((i) => (
+          <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
+            <span>
+              {i.id === keep.id && <span title="Item that will be kept">⭐ </span>}
+              {i.name}{i.sku ? ` (SKU: ${i.sku})` : ''} — {i.category}
+            </span>
+            <span className="doc-sheet-muted">{i.quantity} units</span>
+          </div>
+        ))}
+      </div>
+      <button className="btn btn-outline" onClick={onMerge} disabled={merging === keep.id}>
+        {merging === keep.id ? 'Merging…' : `Merge ${rest.length} into "${keep.name}"`}
+      </button>
     </div>
   )
 }
