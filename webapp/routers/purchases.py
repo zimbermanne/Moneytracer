@@ -11,6 +11,7 @@ from models import Purchase, InventoryItem, User, RoleEnum
 from schemas import PurchaseCreate, PurchaseUpdate, PurchaseMultiCreate, PurchaseOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
+from ledger import post_purchase_entry
 
 router = APIRouter(prefix="/api/purchases", tags=["purchases"])
 
@@ -87,6 +88,10 @@ def record_purchase(payload: PurchaseCreate, db: Session = Depends(get_db),
 
     db.commit()
     db.refresh(purchase)
+    try:
+        post_purchase_entry(db, account_id, purchase, created_by=current_user.username)
+    except ValueError as e:
+        log_activity_for_user(db, current_user, "ledger_post_failed", str(e))
     log_activity_for_user(db, current_user, "purchase_record", f"Purchased {payload.quantity} x {payload.item_name}")
     return purchase
 
@@ -124,6 +129,10 @@ def record_purchases_multi(payload: PurchaseMultiCreate, db: Session = Depends(g
     db.commit()
     for purchase in created:
         db.refresh(purchase)
+        try:
+            post_purchase_entry(db, account_id, purchase, created_by=current_user.username)
+        except ValueError as e:
+            log_activity_for_user(db, current_user, "ledger_post_failed", str(e))
     log_activity_for_user(db, current_user, "purchase_record_multi", f"Recorded {len(created)} purchase items")
     return created
 

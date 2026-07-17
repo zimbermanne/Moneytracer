@@ -14,6 +14,16 @@ const resources = {
   ar: { translation: ar },
 };
 
+// Languages that read right-to-left. Arabic is the only one in scope today,
+// but keeping this as a set makes adding another RTL locale a one-line change.
+const RTL_LANGUAGES = new Set(['ar']);
+
+function applyDirection(lng) {
+  const dir = RTL_LANGUAGES.has(lng) ? 'rtl' : 'ltr';
+  document.documentElement.dir = dir;
+  document.documentElement.lang = lng;
+}
+
 i18n
   .use(initReactI18next)
   .init({
@@ -24,5 +34,10 @@ i18n
       escapeValue: false, // React already escapes values
     },
   });
+
+// Set dir/lang on load and on every language change — without this, switching
+// to Arabic changes the text but leaves the layout left-to-right.
+applyDirection(i18n.language);
+i18n.on('languageChanged', applyDirection);
 
 export default i18n;

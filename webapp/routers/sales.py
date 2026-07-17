@@ -11,6 +11,7 @@ from models import Sale, InventoryItem, Debtor, User, PaymentMode, LedgerStatus,
 from schemas import SaleCreate, SaleOut, CheckoutRequest, CheckoutResponse
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
+from ledger import post_sale_entry
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 
@@ -78,6 +79,10 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
 
     db.commit()
     db.refresh(sale)
+    try:
+        post_sale_entry(db, account_id, sale, created_by=current_user.username)
+    except ValueError as e:
+        log_activity_for_user(db, current_user, "ledger_post_failed", str(e))
     log_activity_for_user(db, current_user, "sale_record", f"Sold {payload.quantity} x {item_name}")
     return sale
 
