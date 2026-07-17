@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useApi } from '../hooks/useApi.js'
+import { useI18n } from '../hooks/useI18n.jsx'
+import { getSuggestedLanguage, AVAILABLE_LANGUAGES } from '../utils/countryLanguageMapping.js'
+import { AFRICAN_COUNTRY_CURRENCIES } from '../african_currencies.js'
 
 const STEPS_BUSINESS = [
   { n: 1, label: 'Business basics' },
@@ -31,6 +34,7 @@ const GROUP_ROLES = [
 export default function Onboarding() {
   const { account, setAccount, refreshAccount, logout } = useAuth()
   const api = useApi()
+  const { t, changeLanguage, currentLanguage, availableLanguages } = useI18n()
 
   const isCommunity = account?.account_type === 'community'
   const STEPS = isCommunity ? STEPS_COMMUNITY : STEPS_BUSINESS
@@ -45,6 +49,7 @@ export default function Onboarding() {
     tin: '',
     owner_full_name: '',
     business_type: 'Retail shop',
+    country: '',
     region: '',
     district: '',
     street_address: '',
@@ -79,6 +84,7 @@ export default function Onboarding() {
         name: account.name || f.name,
         owner_full_name: account.owner_full_name || f.owner_full_name,
         business_type: account.business_type || f.business_type,
+        country: account.country || f.country,
         email: account.email || f.email,
         phone: account.phone || f.phone,
         tax_rate: account.tax_rate ?? f.tax_rate,
@@ -91,6 +97,16 @@ export default function Onboarding() {
       }))
     }
   }, [account])
+
+  // Auto-suggest language when country changes
+  useEffect(() => {
+    if (form.country) {
+      const suggestedLang = getSuggestedLanguage(form.country)
+      if (suggestedLang && suggestedLang !== currentLanguage) {
+        changeLanguage(suggestedLang)
+      }
+    }
+  }, [form.country, currentLanguage, changeLanguage])
 
   const set = (field) => (e) => {
     const val = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
@@ -409,6 +425,15 @@ export default function Onboarding() {
               <div className="form-row">
                 <label>Owner / representative full name *</label>
                 <input value={form.owner_full_name} onChange={set('owner_full_name')} />
+              </div>
+              <div className="form-row">
+                <label>Country *</label>
+                <select value={form.country} onChange={set('country')}>
+                  <option value="">Select country...</option>
+                  {AFRICAN_COUNTRY_CURRENCIES.map((c) => (
+                    <option key={c[1]} value={c[0]}>{c[0]}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-row">
                 <label>TIN {form.business_structure === 'company' ? '(required)' : '(optional)'}</label>

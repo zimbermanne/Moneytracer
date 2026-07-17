@@ -34,6 +34,9 @@ _MIGRATIONS = {
         ("bank_account_name", "VARCHAR(120)", "''"),
         ("bank_account_number", "VARCHAR(60)", "''"),
         ("bank_branch", "VARCHAR(120)", "''"),
+        # Pan-African Reference App: country and revenue authority references.
+        ("country_id", "INTEGER", None),
+        ("revenue_authority_id", "INTEGER", None),
     ],
 }
 

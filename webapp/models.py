@@ -37,6 +37,7 @@ class Account(Base):
     vrn = Column(String(50), nullable=True)  # VAT Registration Number, shown on tax invoices
     owner_full_name = Column(String(150), nullable=False)
     business_type = Column(String(80), default="retail")
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=True, index=True)  # African country reference
     region = Column(String(80), default="")
     district = Column(String(80), default="")
     street_address = Column(String(255), default="")
@@ -44,6 +45,7 @@ class Account(Base):
     email = Column(String(120), default="")
     logo_url = Column(String(255), default="")
     tax_rate = Column(Float, default=0)
+    revenue_authority_id = Column(Integer, ForeignKey("revenue_authorities.id"), nullable=True)  # Reference to country's tax authority
     invoice_prefix = Column(String(20), default="INV")
     payment_terms_days = Column(Integer, default=7)
     # Bank details for invoice footers — optional; left blank until the owner fills them in.
@@ -57,6 +59,8 @@ class Account(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="account")
+    country = relationship("Country")
+    revenue_authority = relationship("RevenueAuthority")
 
 
 class PaymentMode(str, enum.Enum):
@@ -312,6 +316,88 @@ class ActivityLog(Base):
     details = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+
+# ---------- Pan-African Reference Data ----------
+
+
+class AfricanRegion(str, enum.Enum):
+    north = "North Africa"
+    west = "West Africa"
+    central = "Central Africa"
+    east = "East Africa"
+    southern = "Southern Africa"
+
+
+class LanguageStatus(str, enum.Enum):
+    official = "official"
+    national = "national"
+    regional = "regional"
+    widely_spoken = "widely_spoken"
+
+
+class Country(Base):
+    """African countries with ISO codes and regional classification."""
+    __tablename__ = "countries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False, unique=True, index=True)
+    iso_code = Column(String(2), nullable=False, unique=True)  # ISO 3166-1 alpha-2
+    region = Column(Enum(AfricanRegion), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    languages = relationship("Language", back_populates="country")
+    revenue_authority = relationship("RevenueAuthority", back_populates="country", uselist=False)
+
+
+class Language(Base):
+    """Languages spoken in African countries with status classification."""
+    __tablename__ = "languages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False, index=True)
+    iso_639_code = Column(String(3), nullable=True)  # ISO 639-2/3 code where available
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False, index=True)
+    status = Column(Enum(LanguageStatus), default=LanguageStatus.official)
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    country = relationship("Country", back_populates="languages")
+
+
+class RevenueAuthority(Base):
+    """Revenue/tax authorities for African countries with default tax rates."""
+    __tablename__ = "revenue_authorities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False, unique=True, index=True)
+    name = Column(String(255), nullable=False)
+    acronym = Column(String(50), nullable=True)
+    website_url = Column(String(255), nullable=True)
+    default_vat_rate = Column(Float, nullable=True)  # Default VAT rate as percentage
+    effective_year = Column(Integer, nullable=True)  # Year the rate became effective
+    source_url = Column(String(255), nullable=True)  # Official source URL for verification
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    country = relationship("Country", back_populates="revenue_authority")
+    tax_rate_history = relationship("TaxRateHistory", back_populates="revenue_authority", cascade="all, delete-orphan")
+
+
+class TaxRateHistory(Base):
+    """Historical tax rate changes for revenue authorities."""
+    __tablename__ = "tax_rate_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    revenue_authority_id = Column(Integer, ForeignKey("revenue_authorities.id"), nullable=False, index=True)
+    tax_type = Column(String(50), nullable=False)  # VAT, PAYE, Corporate, Excise, etc.
+    rate = Column(Float, nullable=False)  # Rate as percentage
+    effective_year = Column(Integer, nullable=False)
+    source_url = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    revenue_authority = relationship("RevenueAuthority", back_populates="tax_rate_history")
+
+
 # ---------- Community-based informal finance (VICOBA / Vibati / Chama / etc.) ----------
 # One Account (account_type == community) has exactly one SavingsGroup. Ordinary
 # members are just name+phone records (GroupMember) with no login by default;
@@ -526,4 +612,66 @@ class SpendingGroupContribution(Base):
     contributed_at = Column(DateTime, default=datetime.utcnow)
 
     group = relationship("SpendingGroup", back_populates="contributions")
+
+
+# ---------- Double-Entry Accounting Ledger ----------
+
+
+class LedgerAccountType(str, enum.Enum):
+    """Standard account types for double-entry accounting."""
+    asset = "asset"
+    liability = "liability"
+    equity = "equity"
+    revenue = "revenue"
+    expense = "expense"
+
+
+class ChartOfAccount(Base):
+    """Chart of accounts - the foundation for double-entry accounting."""
+    __tablename__ = "chart_of_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    code = Column(String(20), nullable=False, index=True)  # e.g., "1000" for Assets
+    name = Column(String(150), nullable=False)
+    account_type = Column(Enum(LedgerAccountType), nullable=False)  # Asset/Liability/Equity/Revenue/Expense
+    parent_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=True)  # For sub-accounts
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Self-referential relationship for hierarchical accounts
+    parent = relationship("ChartOfAccount", remote_side=[id], backref="children")
+    # Journal lines that reference this account
+    journal_lines = relationship("JournalLine", back_populates="account")
+
+
+class JournalEntry(Base):
+    """Journal entry header - groups related debits/credits as a single transaction."""
+    __tablename__ = "journal_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    date = Column(DateTime, nullable=False, index=True)
+    description = Column(String(255), nullable=False)
+    reference = Column(String(100), nullable=True)  # e.g., invoice number, receipt number
+    created_by = Column(String(80), nullable=True)
+    is_locked = Column(Boolean, default=False)  # Prevents edits once posted/closed period
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    lines = relationship("JournalLine", back_populates="journal_entry", cascade="all, delete-orphan")
+
+
+class JournalLine(Base):
+    """Individual debit or credit line within a journal entry."""
+    __tablename__ = "journal_lines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    journal_entry_id = Column(Integer, ForeignKey("journal_entries.id"), nullable=False, index=True)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    debit = Column(Float, default=0)
+    credit = Column(Float, default=0)
+    description = Column(String(255), nullable=True)
+
+    journal_entry = relationship("JournalEntry", back_populates="lines")
+    account = relationship("ChartOfAccount", back_populates="journal_lines")
 
