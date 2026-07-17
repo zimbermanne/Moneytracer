@@ -9,6 +9,7 @@ import PageLoader from './components/PageLoader.jsx'
 import Clock from './Clock.jsx'
 import Landing from './pages/Landing.jsx'
 import Download from './pages/Download.jsx'
+import Legal from './pages/Legal.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Onboarding from './pages/Onboarding.jsx'
@@ -142,6 +143,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/download" element={<Download />} />
+          <Route path="/legal" element={<Legal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify/invoice/:id" element={<VerifyDocument kind="invoice" />} />
