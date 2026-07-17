@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -9,12 +10,13 @@ function money(n) {
 }
 
 function CashflowChart({ series }) {
+  const { t } = useTranslation()
   if (!series || series.length === 0) return null
   return (
     <div className="card" style={{ marginBottom: 20 }}>
-      <h3 style={{ marginTop: 0, marginBottom: 4 }}>Cash Flow</h3>
+      <h3 style={{ marginTop: 0, marginBottom: 4 }}>{t('dashboard.cashFlowTitle')}</h3>
       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-        Money in vs. money out, last {series.length} months
+        {t('dashboard.cashFlowSubtitle', { count: series.length })}
       </div>
       <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={series} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}>
@@ -50,6 +52,7 @@ function CashflowChart({ series }) {
 
 function CommunityDashboard() {
   const api = useApi()
+  const { t } = useTranslation()
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState('')
 
@@ -63,36 +66,36 @@ function CommunityDashboard() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Home</h1>
+        <h1>{t('nav.home')}</h1>
       </div>
 
       {error && <div className="error-text">{error}</div>}
 
       <div className="card-grid">
         <div className="card metric-card">
-          <div className="label">Members</div>
+          <div className="label">{t('dashboard.members')}</div>
           <div className="value">{summary ? summary.member_count : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Total Contributions (All-time)</div>
+          <div className="label">{t('dashboard.totalContributionsAllTime')}</div>
           <div className="value">{summary ? money(summary.total_contributions) : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Total Payouts (All-time)</div>
+          <div className="label">{t('dashboard.totalPayoutsAllTime')}</div>
           <div className="value">{summary ? money(summary.total_payouts) : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Loans Outstanding</div>
+          <div className="label">{t('dashboard.loansOutstanding')}</div>
           <div className="value">{summary ? money(summary.total_loans_outstanding) : '—'}</div>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 20 }}>
-        <h3 style={{ marginTop: 0, marginBottom: 4 }}>Group features</h3>
+        <h3 style={{ marginTop: 0, marginBottom: 4 }}>{t('dashboard.groupFeatures')}</h3>
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          {summary?.rotation_enabled ? 'Merry-go-round payouts: enabled' : 'Merry-go-round payouts: not enabled'}
+          {summary?.rotation_enabled ? t('dashboard.rotationEnabled') : t('dashboard.rotationDisabled')}
           {' · '}
-          {summary?.lending_enabled ? 'Internal lending: enabled' : 'Internal lending: not enabled'}
+          {summary?.lending_enabled ? t('dashboard.lendingEnabled') : t('dashboard.lendingDisabled')}
         </div>
       </div>
     </div>
@@ -102,6 +105,7 @@ function CommunityDashboard() {
 function BusinessDashboard() {
   const api = useApi()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [daily, setDaily] = useState(null)
   const [inv, setInv] = useState(null)
   const [fin, setFin] = useState(null)
@@ -134,7 +138,7 @@ function BusinessDashboard() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Home</h1>
+        <h1>{t('nav.home')}</h1>
       </div>
 
       {error && <div className="error-text">{error}</div>}
@@ -150,61 +154,61 @@ function BusinessDashboard() {
         >
           <span style={{ fontSize: 18 }}>⚠️</span>
           <span>
-            <strong>{lowStock.length} item{lowStock.length > 1 ? 's' : ''}</strong> at or below reorder point
-            {lowStock.length <= 3 ? `: ${lowStock.map((i) => i.name).join(', ')}` : ''} — tap to review inventory.
+            <strong>{lowStock.length} item{lowStock.length > 1 ? 's' : ''}</strong> {t('dashboard.lowStockAlert')}
+            {lowStock.length <= 3 ? `: ${lowStock.map((i) => i.name).join(', ')}` : ''} — {t('dashboard.tapToReview')}.
           </span>
         </div>
       )}
 
       <div className="card-grid">
         <div className="card metric-card">
-          <div className="label">Today's Earnings</div>
+          <div className="label">{t('dashboard.todaysEarnings')}</div>
           <div className="value">TZS {daily ? daily.earnings.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Items Sold Today</div>
+          <div className="label">{t('dashboard.itemsSoldToday')}</div>
           <div className="value">{daily ? daily.items_sold : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Top Product Today</div>
-          <div className="value" style={{ fontSize: 16 }}>{daily?.top_product || 'No sales yet'}</div>
+          <div className="label">{t('dashboard.topProductToday')}</div>
+          <div className="value" style={{ fontSize: 16 }}>{daily?.top_product || t('dashboard.noSalesYet')}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Low Stock Items</div>
+          <div className="label">{t('dashboard.lowStockItems')}</div>
           <div className="value">{daily ? daily.low_stock_count : '—'}</div>
         </div>
       </div>
 
       <div className="card-grid">
         <div className="card metric-card">
-          <div className="label">Inventory Value</div>
+          <div className="label">{t('dashboard.inventoryValue')}</div>
           <div className="value">TZS {inv ? inv.total_value.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Total Stock Units</div>
+          <div className="label">{t('dashboard.totalStockUnits')}</div>
           <div className="value">{inv ? inv.total_units : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Net Profit (All-time)</div>
+          <div className="label">{t('dashboard.netProfitAllTime')}</div>
           <div className="value">TZS {fin ? fin.net_profit.toLocaleString() : '—'}</div>
         </div>
         <div className="card metric-card">
-          <div className="label">Total Revenue (All-time)</div>
+          <div className="label">{t('dashboard.totalRevenueAllTime')}</div>
           <div className="value">TZS {fin ? fin.revenue.toLocaleString() : '—'}</div>
         </div>
       </div>
 
       <div className="card-grid">
         <div className="card metric-card">
-          <div className="label">Most Sold Item (All-time)</div>
+          <div className="label">{t('dashboard.mostSoldItemAllTime')}</div>
           <div className="value" style={{ fontSize: 16 }}>
-            {salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : 'No sales yet'}
+            {salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet')}
           </div>
         </div>
         <div className="card metric-card">
-          <div className="label">Top Revenue Item (All-time)</div>
+          <div className="label">{t('dashboard.topRevenueItemAllTime')}</div>
           <div className="value" style={{ fontSize: 16 }}>
-            {salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : 'No sales yet'}
+            {salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
           </div>
         </div>
       </div>

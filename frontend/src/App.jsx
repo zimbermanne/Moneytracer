@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
 import { NavigationGuardProvider } from './hooks/useNavigationGuard.jsx'
 import { useApi } from './hooks/useApi.js'
-import Sidebar, { NAV } from './components/Sidebar.jsx'
+import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
 import MobileTopBar from './components/MobileTopBar.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import Clock from './Clock.jsx'
@@ -28,15 +29,9 @@ import Settings from './pages/Settings.jsx'
 import ActivityLogs from './pages/ActivityLogs.jsx'
 import VerifyDocument from './pages/VerifyDocument.jsx'
 
-function pageTitle(pathname) {
-  for (const entry of NAV) {
-    if (entry.type === 'item' && entry.path === pathname) return entry.label
-    if (entry.type === 'group') {
-      const child = entry.children.find((c) => c.path === pathname)
-      if (child) return child.label
-    }
-  }
-  return 'Moneytracer'
+function pageTitle(pathname, t) {
+  const key = PAGE_TITLE_KEYS[pathname]
+  return key ? t(key) : 'Moneytracer'
 }
 
 function Layout({ children }) {
@@ -44,6 +39,7 @@ function Layout({ children }) {
   const location = useLocation()
   const { user } = useAuth()
   const api = useApi()
+  const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   const [reminders, setReminders] = useState([])
 
@@ -69,7 +65,7 @@ function Layout({ children }) {
   return (
     <div className="app-shell">
       <MobileTopBar
-        title={pageTitle(location.pathname)}
+        title={pageTitle(location.pathname, t)}
         open={mobileOpen}
         onToggle={() => setMobileOpen((o) => !o)}
         accountName={company?.name}

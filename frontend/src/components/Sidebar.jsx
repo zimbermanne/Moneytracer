@@ -1,60 +1,91 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
-const NAV = [
-  { type: 'item', label: 'Home', icon: '🏠', path: '/app' },
-  { type: 'item', label: 'Point of Sale', icon: '🧾', path: '/app/pos' },
-  {
-    type: 'group', label: 'Sales', key: 'sales',
-    children: [
-      { label: 'Sales History', icon: '📜', path: '/app/sales' },
-      { label: 'Customers', icon: '👥', path: '/app/customers' },
-      { label: 'Clients / Debtors', icon: '📒', path: '/app/debtors' },
-    ],
-  },
-  {
-    type: 'group', label: 'Purchases', key: 'purchases',
-    children: [
-      { label: 'Purchases Ledger', icon: '📦', path: '/app/purchases' },
-      { label: 'Creditors Ledger', icon: '🏦', path: '/app/creditors' },
-    ],
-  },
-  {
-    type: 'group', label: 'Proforma / Quotations', key: 'proforma',
-    children: [
-      { label: 'Invoices', icon: '🧾', path: '/app/invoices' },
-      { label: 'Quotations / Estimates', icon: '📑', path: '/app/quotations' },
-    ],
-  },
-  {
-    type: 'group', label: 'Inventory', key: 'inventory',
-    children: [
-      { label: 'Inventory Ledger', icon: '📋', path: '/app/inventory' },
-    ],
-  },
-  {
-    type: 'group', label: 'Reports', key: 'reports',
-    children: [
-      { label: 'Profit & Loss', icon: '📈', path: '/app/reports/profit-loss' },
-      { label: 'Financial Summary', icon: '💰', path: '/app/reports/financial-summary' },
-      { label: 'Cash Flow', icon: '💵', path: '/app/reports/cashflow' },
-      { label: 'Debtors Report', icon: '📒', path: '/app/reports/debtors' },
-      { label: 'Creditors Report', icon: '🏦', path: '/app/reports/creditors' },
-      { label: 'Inventory Valuation', icon: '📦', path: '/app/reports/inventory-valuation' },
-    ],
-  },
-  { type: 'item', label: 'Expenses', icon: '💸', path: '/app/expenses' },
-  { type: 'item', label: 'Activity Logs', icon: '🕵️', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
-  { type: 'item', label: 'Settings', icon: '⚙️', path: '/app/settings' },
-]
+// NAV is built from a function so labels re-translate whenever the
+// active language changes (t comes from the component, not module scope).
+function buildNav(t) {
+  return [
+    { type: 'item', label: t('nav.home'), icon: '🏠', path: '/app' },
+    { type: 'item', label: t('nav.pos'), icon: '🧾', path: '/app/pos' },
+    {
+      type: 'group', label: t('nav.salesGroup'), key: 'sales',
+      children: [
+        { label: t('nav.salesHistory'), icon: '📜', path: '/app/sales' },
+        { label: t('nav.customers'), icon: '👥', path: '/app/customers' },
+        { label: t('nav.clientsDebtors'), icon: '📒', path: '/app/debtors' },
+      ],
+    },
+    {
+      type: 'group', label: t('nav.purchasesGroup'), key: 'purchases',
+      children: [
+        { label: t('nav.purchasesLedger'), icon: '📦', path: '/app/purchases' },
+        { label: t('nav.creditorsLedger'), icon: '🏦', path: '/app/creditors' },
+      ],
+    },
+    {
+      type: 'group', label: t('nav.proformaGroup'), key: 'proforma',
+      children: [
+        { label: t('nav.invoices'), icon: '🧾', path: '/app/invoices' },
+        { label: t('nav.quotations'), icon: '📑', path: '/app/quotations' },
+      ],
+    },
+    {
+      type: 'group', label: t('nav.inventoryGroup'), key: 'inventory',
+      children: [
+        { label: t('nav.inventoryLedger'), icon: '📋', path: '/app/inventory' },
+      ],
+    },
+    {
+      type: 'group', label: t('nav.reportsGroup'), key: 'reports',
+      children: [
+        { label: t('nav.profitLoss'), icon: '📈', path: '/app/reports/profit-loss' },
+        { label: t('nav.financialSummary'), icon: '💰', path: '/app/reports/financial-summary' },
+        { label: t('nav.cashFlow'), icon: '💵', path: '/app/reports/cashflow' },
+        { label: t('nav.debtorsReport'), icon: '📒', path: '/app/reports/debtors' },
+        { label: t('nav.creditorsReport'), icon: '🏦', path: '/app/reports/creditors' },
+        { label: t('nav.inventoryValuation'), icon: '📦', path: '/app/reports/inventory-valuation' },
+      ],
+    },
+    { type: 'item', label: t('nav.expensesItem'), icon: '💸', path: '/app/expenses' },
+    { type: 'item', label: t('nav.activityLogsItem'), icon: '🕵️', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
+    { type: 'item', label: t('nav.settingsItem'), icon: '⚙️', path: '/app/settings' },
+  ]
+}
+
+// Static path -> translation key map, used by App.jsx to resolve page titles
+// without needing the fully-built (and thus language-dependent) NAV array.
+export const PAGE_TITLE_KEYS = {
+  '/app': 'nav.home',
+  '/app/pos': 'nav.pos',
+  '/app/sales': 'nav.salesHistory',
+  '/app/customers': 'nav.customers',
+  '/app/debtors': 'nav.clientsDebtors',
+  '/app/purchases': 'nav.purchasesLedger',
+  '/app/creditors': 'nav.creditorsLedger',
+  '/app/invoices': 'nav.invoices',
+  '/app/quotations': 'nav.quotations',
+  '/app/inventory': 'nav.inventoryLedger',
+  '/app/reports/profit-loss': 'nav.profitLoss',
+  '/app/reports/financial-summary': 'nav.financialSummary',
+  '/app/reports/cashflow': 'nav.cashFlow',
+  '/app/reports/debtors': 'nav.debtorsReport',
+  '/app/reports/creditors': 'nav.creditorsReport',
+  '/app/reports/inventory-valuation': 'nav.inventoryValuation',
+  '/app/expenses': 'nav.expensesItem',
+  '/app/activity': 'nav.activityLogsItem',
+  '/app/settings': 'nav.settingsItem',
+}
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const location = useLocation()
   const { guardedNavigate } = useNavigationGuard()
   const { user, logout } = useAuth()
   const [openGroups, setOpenGroups] = useState({})
+  const { t } = useTranslation()
+  const NAV = buildNav(t)
 
   useEffect(() => {
     NAV.forEach((entry) => {
@@ -63,7 +94,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
         if (isActive) setOpenGroups((prev) => ({ ...prev, [entry.key]: true }))
       }
     })
-  }, [location.pathname])
+  }, [location.pathname]) // eslint-disable-line
 
   const go = (path) => {
     guardedNavigate(path)
@@ -137,7 +168,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
         </div>
         <button
           onClick={logout}
-          title="Log out"
+          title={t('nav.logOut')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '4px 6px',
                    color: 'var(--text-muted)', borderRadius: 6 }}
           onMouseEnter={(e) => e.currentTarget.style.color='var(--danger)'}
@@ -148,4 +179,3 @@ export default function Sidebar({ mobileOpen, onClose }) {
   )
 }
 
-export { NAV }
