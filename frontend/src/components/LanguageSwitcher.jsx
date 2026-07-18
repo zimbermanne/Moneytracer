@@ -18,6 +18,9 @@ export default function LanguageSwitcher({ className = '' }) {
       value={i18n.language}
       onChange={(e) => i18n.changeLanguage(e.target.value)}
       aria-label="Choose language"
+      spellCheck="false"
+      autoCorrect="off"
+      autoCapitalize="off"
     >
       {SUPPORTED_LANGUAGE_LIST.map((lang) => (
         <option key={lang.code} value={lang.code}>

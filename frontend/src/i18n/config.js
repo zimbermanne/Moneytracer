@@ -89,12 +89,12 @@ applyDirection(i18n.language);
 
 export const SUPPORTED_LANGUAGE_LIST = [
   { code: 'en', label: 'English' },
-  { code: 'fr', label: 'Français' },
-  { code: 'pt', label: 'Português' },
-  { code: 'sw', label: 'Kiswahili' },
-  { code: 'ha', label: 'Hausa' },
-  { code: 'am', label: 'አማርኛ' },
   { code: 'ar', label: 'العربية' },
+  { code: 'am', label: 'አማርኛ' },
+  { code: 'fr', label: 'Français' },
+  { code: 'ha', label: 'Hausa' },
+  { code: 'sw', label: 'Kiswahili' },
+  { code: 'pt', label: 'Português' },
 ];
 
 export default i18n;

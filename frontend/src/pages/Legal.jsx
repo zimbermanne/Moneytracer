@@ -305,6 +305,234 @@ const CONTENT = {
     ],
     footerNote: 'Hati hii ni kielelezo cha jumla cha Masharti ya Matumizi. Inapaswa kupitiwa na wakili aliyehitimu katika kila eneo husika kabla ya kutumika rasmi.',
   },
+
+  ha: {
+    label: 'Hausa',
+    title: 'Sharuɗɗan Amfani da Sanarwar Ƙin Alhaki',
+    updated: 'An sabunta na ƙarshe: Yuli 2026',
+    sections: [
+      {
+        h: '1. Amincewa da Sharuɗɗa',
+        p: [
+          'Waɗannan Sharuɗɗan Amfani da Sanarwar Ƙin Alhaki ("Sharuɗɗa") suna gudanar da samun dama da amfani da manhajar Moneytracer, gidan yanar gizo, da ayyukan da suka danganta (tare, "Sabis"), wanda Zimbermanne Company Limited ke gudanarwa, mai suna kasuwanci Zimbermanne Studios ("Kamfani", "mu"). Ta hanyar ƙirƙirar asusu, sauke manhajar, ko samun damar Sabis ta wata hanya, mutum ko ƙungiyar da ke yin haka ("Mai amfani", "kai") ya amince ya kasance ƙarƙashin waɗannan Sharuɗɗa gaba ɗaya.',
+        ],
+      },
+      {
+        h: '2. Matsayin Beta / Ci Gaban Haɓakawa',
+        p: [
+          'Ana bayar da Sabis a halin yanzu a wani lokaci na ci gaban haɓakawa mai aiki kafin cikakken samuwa ga jama\'a ("Lokacin Beta"). A cikin wannan lokaci, Kamfani na iya canzawa, dakatarwa, ko dakatar da wani sashe na Sabis a kowane lokaci ba tare da sanarwa ba, kuma ana bayar da Sabis kyauta na tsawon kwanaki tasa\'in (90) daga ranar da Mai amfani ya fara ƙirƙirar asusu, wanda zai iya canzawa bisa ga zaɓin Kamfani kaɗai.',
+          'Mai amfani ya amince cewa manhajar da ke cikin ci gaban haɓakawa mai aiki na iya samun matsaloli, tsaikuwa, da canje-canje na hali, kuma ci gaba da amfani da Sabis a lokacin Beta ana yin shi da cikakken sanin wannan matsayi.',
+        ],
+      },
+      {
+        h: '3. Babu Garanti',
+        p: [
+          'ANA BAYAR DA SABIS KAMAR YADDA YAKE DA "KAMAR YADDA AKE SAMU", BA TARE DA GARANTI NA WANI IRI BA, KO BAYYANANNE, TA HANYAR ZATO, TA DOKA, KO WATA HANYAR, HAR DA GANANTI NA DACEWAR KASUWANCI, DACEWA GA WANI MANUFA NA MUSAMMAN, MALLAKA, RASHIN KETARE HAKKI, KO DAIDAITON BAYANAI.',
+        ],
+      },
+      {
+        h: '4. Asarar Bayanai da Amincin Bayanai',
+        p: [
+          'Kamfani ba zai ɗauki alhakin ba, ƙarƙashin kowace ka\'idar alhaki, kowace asara, lalacewa, share, ko canjin bayanai da ba a yarda da shi ba — har da bayanan kuɗi, tarihin ma\'amaloli, bayanan kaya, ko bayanan asusu — sakamakon amfani da Sabis a lokacin Beta ko ta wata hanya. Mai amfani ne kaɗai ke da alhakin ajiye kwafin madadin ko fitar da duk wani bayani da yake ganin muhimmi.',
+        ],
+      },
+      {
+        h: '5. Ba Shawarar Ƙwararru Ba',
+        p: [
+          'Sabis kayan aiki ne na ajiye bayanai da tsari kuma bai ƙunshi, kuma bai kamata a fassara shi a matsayin ba, hidimar shawarar lissafin kuɗi, haraji, doka, ko kuɗi. Masu amfani da ke shiga cikin tsare-tsaren kuɗi na ƙungiya (har da ƙungiyoyin ajiya ko tsarin nau\'in "Vikoba") sun kasance kaɗai ke da alhakin tabbatar da bayanansu daban da Sabis.',
+        ],
+      },
+      {
+        h: '6. Iyakar Alhaki',
+        p: [
+          'ZUWA IYAKAR DA DOKA TA YARDA, BABU LOKACIN DA KAMFANI, WADANDA SUKA KAFA SHI, DARAKTOCI, MA\'AIKATA, KO ABOKAN HULƊA ZASU DAUKI ALHAKIN KOWACCE ASARA TA KAI TSAYE, TA HATSARI, TA MUSAMMAN, KO TA SAKAMAKO, KO ASARAR RIBA, KUDADEN SHIGA, BAYANAI, KO SUNAN KASUWANCI. ALHAKIN KAMFANI GABA ĎAYA BA ZAI WUCE MAFI YAWAN TSAKANIN (A) JIMLAR DA MAI AMFANI YA BIYA A CIKIN WATANNI GOMA SHA BIYU (12) DA SUKA GABATA, KO (B) SIFILI, TUN DA ANA BAYAR DA SABIS KYAUTA A HALIN YANZU.',
+        ],
+      },
+      {
+        h: '7. Diyya',
+        p: [
+          'Mai amfani ya amince ya biya diyya, ya kāre, kuma ya kāre Kamfani da waɗanda suka kafa shi, jami\'ai, da abokan hulɗa daga duk wata da\'awa, alhaki, asara, da kashe kuɗi, har da kuɗin lauya masu ma\'ana, sakamakon amfanin Mai amfani da Sabis, ko keta waɗannan Sharuɗɗa.',
+        ],
+      },
+      {
+        h: '8. Dokar da ke Gudanarwa da Warware Rikici',
+        p: [
+          'Dokokin Jamhuriyar Haɗaɗɗiyar Tanzaniya ne ke gudanar da waɗannan Sharuɗɗa. Duk wani rikici da ya taso zai fara zuwa tattaunawa cikin nagarta; idan ba a warware shi cikin kwanaki talatin (30) ba, kowace bangare na iya kai batun gaban kotu mai iko ta Tanzaniya, ko, bisa zaɓin Kamfani, ta hanyar sasantawa.',
+        ],
+      },
+      {
+        h: '9. Dalilan Da Ba A Iya Sarrafawa Ba',
+        p: [
+          'Kamfani ba zai ɗauki alhakin kowace gazawa ko jinkiri a aikin da ya samo asali daga dalilan da ke wajen ikonsa ba, har da gazawar wutar lantarki ko intanet, ayyukan gwamnati, bala\'o\'in yanayi, ko tsaikuwa daga masu bayar da hidimar ɗaukar bayanai na ɓangare na uku.',
+        ],
+      },
+      {
+        h: '10. Rabuwa da Gyara',
+        p: [
+          'Idan wani sashe na waɗannan Sharuɗɗa ya zama ba za a iya aiwatar da shi ba, za a iyakance shi zuwa iyakar da ake buƙata, sauran Sharuɗɗan kuma za su ci gaba da aiki. Kamfani na riƙe da haƙƙin gyara waɗannan Sharuɗɗa a kowane lokaci.',
+        ],
+      },
+      {
+        h: '11. Harshe',
+        p: [
+          'Ana samar da waɗannan Sharuɗɗa cikin harsuna daban-daban don sauƙin Masu amfani. Idan aka sami sabani tsakanin fassarorin harshe, fassarar Turanci za ta fi rinjaye don manufar fassara, sai dai idan doka ta gida ta buƙaci akasin haka.',
+        ],
+      },
+    ],
+    footerNote: 'Wannan takarda misali ne na gaba ɗaya na Sharuɗɗan Amfani. Ya kamata lauya mai cancanta a kowace ƙasa ya duba ta kafin a dogara da ita bisa hukuma.',
+  },
+
+  am: {
+    label: 'አማርኛ',
+    title: 'የአጠቃቀም ውሎች እና የኃላፊነት ማስተባበያ',
+    updated: 'መጨረሻ የተዘመነው፦ ሐምሌ 2026',
+    sections: [
+      {
+        h: '1. ውሎችን መቀበል',
+        p: [
+          'እነዚህ የአጠቃቀም ውሎች እና የኃላፊነት ማስተባበያ ("ውሎች") በዚምበርማን ካምፓኒ ሊሚትድ፣ በንግድ ስም ዚምበርማን ስቱዲዮስ ("ኩባንያው"፣ "እኛ") የሚተዳደረውን የMoneytracer መተግበሪያ፣ ድረ-ገጽ እና ተያያዥ አገልግሎቶችን (በጋራ፣ "አገልግሎቱ") አጠቃቀም ይመራሉ። መለያ በመፍጠር፣ መተግበሪያውን በማውረድ፣ ወይም በሌላ መንገድ አገልግሎቱን በመድረስ፣ ይህን የሚያደርገው ሰው ወይም አካል ("ተጠቃሚ"፣ "እርስዎ") በእነዚህ ውሎች ሙሉ በሙሉ ለመገዛት ይስማማል።',
+        ],
+      },
+      {
+        h: '2. የቤታ / የልማት ደረጃ',
+        p: [
+          'አገልግሎቱ በአሁኑ ጊዜ ከአጠቃላይ ተደራሽነት በፊት ንቁ የልማት ደረጃ ላይ ("የቤታ ደረጃ") ይገኛል። በዚህ ወቅት ኩባንያው ማንኛውንም የአገልግሎት ገጽታ ያለቅድሚያ ማሳወቂያ በማንኛውም ጊዜ ሊቀይር፣ ሊያቋርጥ ወይም ሊያቆም ይችላል፣ አገልግሎቱም ተጠቃሚው መለያ ከፈጠረበት ቀን ጀምሮ ለዘጠና (90) ቀናት የመግቢያ ጊዜ በነጻ ይሰጣል፣ ይህም በኩባንያው ብቸኛ ውሳኔ ሊለወጥ ይችላል።',
+          'ተጠቃሚው ንቁ በሆነ የልማት ሂደት ውስጥ ያለ ሶፍትዌር በተፈጥሮው ለጉድለቶች፣ ለማቋረጦች እና ለባህሪ ለውጦች ተጋላጭ መሆኑን፣ በቤታ ወቅትም አገልግሎቱን መጠቀም በዚህ ሁኔታ ሙሉ ግንዛቤ የሚደረግ መሆኑን ይቀበላል።',
+        ],
+      },
+      {
+        h: '3. ምንም ዋስትና የለም',
+        p: [
+          'አገልግሎቱ "እንዳለ" እና "እንደተገኘ" ብቻ የሚቀርብ ሲሆን ግልጽ፣ ենթադրելի፣ ህጋዊ ወይም ሌላ ዓይነት ዋስትና የለውም፣ ይህም ለንግድ ተስማሚነት፣ ለተለየ ዓላማ ተስማሚነት፣ ለባለቤትነት፣ መብት ያለመድፈር ወይም የመረጃ ትክክለኛነት ዋስትናዎችን ያካትታል።',
+        ],
+      },
+      {
+        h: '4. የመረጃ መጥፋት እና ትክክለኛነት',
+        p: [
+          'ኩባንያው በማንኛውም የኃላፊነት ንድፈ ሐሳብ ስር፣ በቤታ ወቅት ወይም በሌላ ጊዜ አገልግሎቱን በመጠቀም ምክንያት ለሚደርስ የፋይናንስ መዝገቦች፣ የግብይት ታሪኮች፣ የዕቃ መረጃ ወይም የመለያ መረጃን ጨምሮ ለማንኛውም መረጃ መጥፋት፣ መበላሸት፣ መሰረዝ ወይም ያልተፈቀደ ለውጥ ኃላፊነት አይወስድም። ተጠቃሚው ወሳኝ ናቸው ብሎ የሚያስባቸውን መረጃዎች ገለልተኛ ምትክ ወይም ወደ ውጭ የመላክ ኃላፊነት ብቸኛ ባለቤት ነው።',
+        ],
+      },
+      {
+        h: '5. ሙያዊ ምክር አይደለም',
+        p: [
+          'አገልግሎቱ የመዝገብ አያያዝ እና የአደረጃጀት መሳሪያ ሲሆን የሂሳብ አያያዝ፣ የግብር፣ የህግ ወይም የፋይናንስ አማካሪ አገልግሎት አይደለም፣ እንደዚያም መተርጎም የለበትም። በቡድን ወይም በማህበረሰብ የፋይናንስ ዝግጅቶች (ቁጠባ ቡድኖችን ወይም "ቪኮባ" ዓይነት አወቃቀሮችን ጨምሮ) የሚሳተፉ ተጠቃሚዎች መዝገቦቻቸውን ከአገልግሎቱ ነጻ ሆነው የማረጋገጥ ብቸኛ ኃላፊነት አለባቸው።',
+        ],
+      },
+      {
+        h: '6. የኃላፊነት ገደብ',
+        p: [
+          'በተፈጻሚው ህግ በሚፈቀደው መጠን፣ ኩባንያው፣ መስራቾቹ፣ ዳይሬክተሮቹ፣ ሠራተኞቹ ወይም አጋሮቹ ለማንኛውም ቀጥተኛ ላልሆነ፣ አጋጣሚ፣ ልዩ ወይም ውጤታዊ ጉዳት፣ ወይም ለትርፍ፣ ገቢ፣ መረጃ ወይም መልካም ስም ኪሳራ ተጠያቂ አይሆኑም። የኩባንያው አጠቃላይ ኃላፊነት ከ(ሀ) ተጠቃሚው ባለፉት አስራ ሁለት (12) ወራት ውስጥ ከከፈለው አጠቃላይ መጠን ወይም ከ(ለ) ዜሮ መካከል ከሚበልጠው አይበልጥም፣ አገልግሎቱ በአሁኑ ጊዜ በነጻ ስለሚቀርብ።',
+        ],
+      },
+      {
+        h: '7. ካሳ',
+        p: [
+          'ተጠቃሚው ኩባንያውን እና መስራቾቹን፣ ኃላፊዎቹን እና አጋሮቹን ከማንኛውም የይገባኛል ጥያቄ፣ ኃላፊነት፣ ጉዳት፣ ኪሳራ እና ወጪ፣ ምክንያታዊ የህግ ክፍያዎችን ጨምሮ፣ ተጠቃሚው አገልግሎቱን በመድረስ ወይም በመጠቀም ወይም እነዚህን ውሎች በመጣስ ምክንያት ከሚነሱ ነገሮች ካሳ የመክፈል፣ የመከላከል እና ጉዳት እንዳይደርስባቸው የማድረግ ግዴታ ተቀብሏል።',
+        ],
+      },
+      {
+        h: '8. ተፈጻሚ ህግ እና የክርክር አፈታት',
+        p: [
+          'እነዚህ ውሎች በታንዛኒያ ውህድ ሪፐብሊክ ህጎች ይተዳደራሉ። ማንኛውም ክርክር በመጀመሪያ በቅን ልቦና ድርድር ይቀርባል፤ በሰላሳ (30) ቀናት ውስጥ መፍትሄ ካልተገኘ፣ ማንኛውም ወገን ጉዳዩን በታንዛኒያ ብቁ ፍርድ ቤት ወይም በኩባንያው ምርጫ በግልግል ሊያቀርብ ይችላል።',
+        ],
+      },
+      {
+        h: '9. ከቁጥጥር ውጪ የሆኑ ምክንያቶች',
+        p: [
+          'ኩባንያው ከምክንያታዊ ቁጥጥሩ ውጪ በሆኑ ምክንያቶች፣ የኃይል ወይም የኢንተርኔት መሠረተ ልማት መስተጓጎልን፣ የመንግስት እርምጃዎችን፣ የተፈጥሮ አደጋዎችን ወይም የሶስተኛ ወገን አገልግሎት መቆራረጦችን ጨምሮ፣ ለሚደርስ የአፈጻጸም ውድቀት ወይም መዘግየት ኃላፊነት አይወስድም።',
+        ],
+      },
+      {
+        h: '10. መለያየት እና ማሻሻያ',
+        p: [
+          'የእነዚህ ውሎች ማንኛውም ድንጋጌ ተፈጻሚ ሊሆን የማይችል ሆኖ ከተገኘ፣ አስፈላጊ በሆነው መጠን ብቻ ይገደባል፣ የቀሩት ውሎች ግን ሙሉ ኃይላቸውን ይይዛሉ። ኩባንያው እነዚህን ውሎች በማንኛውም ጊዜ የማሻሻል መብት አለው።',
+        ],
+      },
+      {
+        h: '11. ቋንቋ',
+        p: [
+          'እነዚህ ውሎች ለተጠቃሚዎች አመቺነት በተለያዩ ቋንቋዎች ይቀርባሉ። በቋንቋ ስሪቶች መካከል ግጭት ወይም አለመጣጣም ካለ፣ የአካባቢው ተፈጻሚ ህግ በሌላ መልኩ ካልጠየቀ በስተቀር፣ የእንግሊዝኛው ስሪት ለትርጓሜ ዓላማ የበላይነት ይኖረዋል።',
+        ],
+      },
+    ],
+    footerNote: 'ይህ ሰነድ የአጠቃላይ ዓላማ የአጠቃቀም ውሎች እና ማስተባበያ አብነት ነው። መደበኛ ጥቅም ላይ ከመዋሉ በፊት በእያንዳንዱ የስራ ክልል ብቁ በሆነ ጠበቃ መገምገም አለበት።',
+  },
+
+  ar: {
+    label: 'العربية',
+    title: 'شروط الاستخدام وإخلاء المسؤولية',
+    updated: 'آخر تحديث: يوليو 2026',
+    sections: [
+      {
+        h: '١. قبول الشروط',
+        p: [
+          'تحكم شروط الاستخدام وإخلاء المسؤولية هذه ("الشروط") الوصول إلى واستخدام تطبيق Moneytracer وموقعه الإلكتروني وخدماته ذات الصلة (يُشار إليها مجتمعة باسم "الخدمة")، التي تديرها شركة Zimbermanne Company Limited، والتي تعمل تحت اسم Zimbermanne Studios ("الشركة"، "نحن"). من خلال إنشاء حساب أو تنزيل التطبيق أو الوصول إلى الخدمة بأي شكل آخر، يوافق الشخص أو الكيان القائم بذلك ("المستخدم"، "أنت") على الالتزام بهذه الشروط بالكامل.',
+        ],
+      },
+      {
+        h: '٢. مرحلة التجربة (Beta) / التطوير',
+        p: [
+          'تُقدَّم الخدمة حاليًا في مرحلة تطوير نشطة سابقة للإتاحة العامة ("مرحلة التجربة"). خلال هذه المرحلة، يجوز للشركة تعديل أو تعليق أو إيقاف أي ميزة من ميزات الخدمة في أي وقت دون إشعار مسبق، وتُقدَّم الخدمة مجانًا لفترة تمهيدية مدتها تسعون (90) يومًا من تاريخ إنشاء المستخدم لحسابه لأول مرة، وقد تتغير هذه الفترة وفقًا للتقدير المطلق للشركة.',
+          'يقر المستخدم بأن البرمجيات قيد التطوير النشط عرضة بطبيعتها للأعطال والانقطاعات والتغيرات في السلوك، وأن الاستمرار في استخدام الخدمة خلال مرحلة التجربة يتم مع العلم الكامل بهذا الوضع.',
+        ],
+      },
+      {
+        h: '٣. عدم وجود ضمان',
+        p: [
+          'تُقدَّم الخدمة "كما هي" و"حسب توفرها"، دون أي ضمانات من أي نوع، سواء كانت صريحة أو ضمنية أو قانونية أو غير ذلك، بما في ذلك على سبيل المثال لا الحصر ضمانات الصلاحية للتسويق أو الملاءمة لغرض معين أو الملكية أو عدم انتهاك حقوق الغير أو دقة البيانات.',
+        ],
+      },
+      {
+        h: '٤. فقدان البيانات وسلامتها',
+        p: [
+          'لا تتحمل الشركة، بموجب أي نظرية مسؤولية، أي مسؤولية عن أي فقدان أو تلف أو حذف أو تعديل غير مصرح به للبيانات — بما في ذلك على سبيل المثال لا الحصر السجلات المالية وتاريخ المعاملات وبيانات المخزون أو معلومات الحساب — الناشئ عن استخدام الخدمة خلال مرحلة التجربة أو غير ذلك. يتحمل المستخدم وحده مسؤولية الاحتفاظ بنسخ احتياطية أو تصديرات مستقلة لأي معلومات يعتبرها بالغة الأهمية.',
+        ],
+      },
+      {
+        h: '٥. ليست استشارة مهنية',
+        p: [
+          'الخدمة أداة لحفظ السجلات والتنظيم ولا تشكل، ولا ينبغي تفسيرها على أنها، خدمات استشارية محاسبية أو ضريبية أو قانونية أو مالية. يظل المستخدمون المشاركون في ترتيبات مالية جماعية أو مجتمعية (بما في ذلك على سبيل المثال لا الحصر جمعيات الادخار أو التعاونيات أو هياكل من نوع "فيكوبا") المسؤولين الوحيدين عن التحقق من سجلاتهم بشكل مستقل عن الخدمة.',
+        ],
+      },
+      {
+        h: '٦. حدود المسؤولية',
+        p: [
+          'إلى أقصى حد يسمح به القانون المعمول به، لا تتحمل الشركة أو مؤسسوها أو مديروها أو موظفوها أو المتعاقدون معها أو الشركات التابعة لها بأي حال من الأحوال المسؤولية عن أي أضرار غير مباشرة أو عرضية أو خاصة أو تبعية أو نموذجية أو تأديبية، أو أي خسارة في الأرباح أو الإيرادات أو البيانات أو السمعة التجارية. وفي جميع الأحوال، لا تتجاوز المسؤولية الإجمالية للشركة القيمة الأكبر بين (أ) إجمالي المبلغ الذي دفعه المستخدم للشركة خلال الاثني عشر (12) شهرًا السابقة للحدث الذي نشأت عنه المطالبة، أو (ب) صفر، نظرًا لأن الخدمة تُقدَّم حاليًا مجانًا.',
+        ],
+      },
+      {
+        h: '٧. التعويض',
+        p: [
+          'يوافق المستخدم على تعويض الشركة ومؤسسيها ومسؤوليها والشركات التابعة لها والدفاع عنهم وحمايتهم من أي مطالبات أو التزامات أو أضرار أو خسائر أو نفقات، بما في ذلك أتعاب المحاماة المعقولة، الناشئة عن وصول المستخدم إلى الخدمة أو استخدامه لها، أو مخالفته لهذه الشروط، أو انتهاكه لأي حقوق لطرف ثالث.',
+        ],
+      },
+      {
+        h: '٨. القانون الحاكم وتسوية النزاعات',
+        p: [
+          'تخضع هذه الشروط وتُفسَّر وفقًا لقوانين جمهورية تنزانيا المتحدة. يجب أولاً تقديم أي نزاع ينشأ عن هذه الشروط أو الخدمة للتفاوض بحسن نية بين الطرفين؛ وفي حال عدم التوصل إلى حل خلال ثلاثين (30) يومًا، يجوز لأي من الطرفين رفع الأمر أمام محكمة مختصة في تنزانيا، أو، وفقًا لاختيار الشركة، عن طريق التحكيم.',
+        ],
+      },
+      {
+        h: '٩. القوة القاهرة',
+        p: [
+          'لا تتحمل الشركة المسؤولية عن أي فشل أو تأخير في الأداء ناتج عن أسباب خارجة عن سيطرتها المعقولة، بما في ذلك على سبيل المثال لا الحصر أعطال البنية التحتية للكهرباء أو الإنترنت، أو الإجراءات الحكومية، أو الكوارث الطبيعية، أو انقطاع خدمات الاستضافة من طرف ثالث.',
+        ],
+      },
+      {
+        h: '١٠. قابلية الفصل والتعديل',
+        p: [
+          'إذا تبين أن أي حكم من أحكام هذه الشروط غير قابل للتنفيذ، يُقيَّد أو يُلغى ذلك الحكم إلى الحد الأدنى اللازم بحيث تظل بقية الشروط سارية المفعول بالكامل. تحتفظ الشركة بالحق في تعديل هذه الشروط في أي وقت.',
+        ],
+      },
+      {
+        h: '١١. اللغة',
+        p: [
+          'تُتاح هذه الشروط بلغات متعددة تسهيلًا على المستخدمين في مختلف المناطق. في حال وجود أي تعارض أو تناقض بين النسخ اللغوية، تسود النسخة الإنجليزية وتحكم لأغراض التفسير، ما لم يقتضِ القانون المحلي المعمول به خلاف ذلك.',
+        ],
+      },
+    ],
+    footerNote: 'هذا المستند نموذج عام لشروط الاستخدام وإخلاء المسؤولية، وهو مُقدَّم لأغراض التنظيم المعلوماتي، وينبغي مراجعته من قبل محامٍ مؤهل ومرخّص في كل نطاق قضائي للتشغيل قبل الاعتماد عليه رسميًا.',
+  },
 }
 
 export default function Legal() {
@@ -312,7 +540,7 @@ export default function Legal() {
   const c = CONTENT[lang]
 
   return (
-    <div className="landing-page">
+    <div className="landing-page" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="landing-header">
         <div className="landing-header-inner">
           <Link to="/" className="landing-brand">
