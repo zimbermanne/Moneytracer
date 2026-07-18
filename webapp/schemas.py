@@ -327,6 +327,9 @@ class DocumentLineIn(BaseModel):
     description: str
     quantity: float = 1
     unit_price: float = 0
+    # Set when this line was picked from the inventory dropdown; left null
+    # for a freehand line (a service, a one-off item not tracked in stock).
+    item_id: Optional[int] = None
 
 
 class DocumentLineOut(BaseModel):
@@ -336,6 +339,7 @@ class DocumentLineOut(BaseModel):
     quantity: float
     unit_price: float
     total: float
+    item_id: Optional[int] = None
 
 
 class InvoiceCreate(BaseModel):
@@ -371,6 +375,7 @@ class InvoiceOut(BaseModel):
     total: float
     notes: str
     status: DocumentStatus
+    converted_to_sale: bool = False
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []

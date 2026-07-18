@@ -10,11 +10,12 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account
+from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode
 from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
+from ledger import post_sale_entry
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
@@ -121,6 +122,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
         db.add(InvoiceItem(
             account_id=account_id,
             invoice_id=invoice.id, 
+            item_id=line.item_id,
             description=line.description,
             quantity=line.quantity, 
             unit_price=line.unit_price,
@@ -166,6 +168,7 @@ def update_invoice(invoice_id: int, payload: InvoiceUpdate, db: Session = Depend
         for line in payload.items:
             db.add(InvoiceItem(
                 account_id=invoice.account_id, invoice_id=invoice.id,
+                item_id=line.item_id,
                 description=line.description, quantity=line.quantity, unit_price=line.unit_price,
                 total=round(line.quantity * line.unit_price, 2),
             ))
@@ -215,6 +218,62 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db),
     return inv
 
 
+def _convert_invoice_to_sales(db: Session, invoice: Invoice, current_user: User) -> list:
+    """Turn every line on a paid invoice into a real Sale record — this is
+    the moment the invoice actually affects stock, revenue, and the ledger.
+    Before this point (draft/sent), an invoice is just a document; nothing
+    about it has been recorded as a transaction yet.
+
+    Lines linked to a tracked inventory item (item_id set) decrement stock
+    like any other sale. Lines typed in freehand (item_id is None — a
+    service fee, a one-off item not carried in inventory) still become a
+    Sale for revenue/reporting purposes, just without touching stock.
+
+    Runs inside the caller's existing db session/transaction — if anything
+    here raises, the whole status update (including the paid status itself)
+    rolls back, so an invoice can never end up "paid" with only some of its
+    lines converted.
+    """
+    created_sales = []
+    receipt_no = f"RCT-{uuid.uuid4().hex[:8].upper()}"
+
+    for line in invoice.items:
+        item = None
+        if line.item_id:
+            item = db.query(InventoryItem).filter(InventoryItem.id == line.item_id).first()
+            if item and item.account_id == invoice.account_id:
+                if item.quantity < line.quantity:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot mark as paid: insufficient stock for '{item.name}' "
+                               f"(have {item.quantity}, invoice needs {line.quantity})",
+                    )
+                item.quantity -= line.quantity
+            else:
+                item = None  # stale/foreign item_id — fall back to a freehand line
+
+        sale = Sale(
+            account_id=invoice.account_id,
+            item_id=item.id if item else None,
+            item_name=item.name if item else line.description,
+            quantity=line.quantity,
+            unit_price=line.unit_price,
+            cost_price_at_sale=item.cost_price if item else None,
+            total=round(line.quantity * line.unit_price, 2),
+            payment_mode=PaymentMode.cash,  # invoice is being marked paid, i.e. payment already received
+            customer_name=invoice.customer_name or "Walk-in",
+            sold_by=current_user.username,
+            receipt_no=receipt_no,
+        )
+        db.add(sale)
+        db.flush()
+        post_sale_entry(db, invoice.account_id, sale, created_by=current_user.username)
+        created_sales.append(sale)
+
+    invoice.converted_to_sale = True
+    return created_sales
+
+
 @router.patch("/{invoice_id}/status", response_model=InvoiceOut)
 def update_status(invoice_id: int, status: DocumentStatus,
                   db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -224,7 +283,16 @@ def update_status(invoice_id: int, status: DocumentStatus,
         q = q.filter(Invoice.account_id == account_id)
     inv = q.first()
     if not inv: raise HTTPException(404, "Invoice not found")
-    inv.status = status; db.commit(); db.refresh(inv)
+
+    inv.status = status
+    if status == DocumentStatus.paid and not inv.converted_to_sale:
+        sales = _convert_invoice_to_sales(db, inv, current_user)
+        log_activity_for_user(
+            db, current_user, "invoice_paid",
+            f"{inv.invoice_no} marked paid — recorded {len(sales)} sale line(s)",
+        )
+
+    db.commit(); db.refresh(inv)
     log_activity_for_user(db, current_user, "invoice_status", f"{inv.invoice_no} → {status.value}")
     return inv
 
