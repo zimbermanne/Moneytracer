@@ -233,6 +233,10 @@ class Invoice(Base):
     total = Column(Float, default=0)
     notes = Column(String(500), default="")
     status = Column(Enum(DocumentStatus), default=DocumentStatus.sent)
+    # True once this invoice has generated Sale records (happens exactly once,
+    # the moment it's marked paid — see routers/invoices.py update_status).
+    # Prevents double-booking sales if the status is toggled paid more than once.
+    converted_to_sale = Column(Boolean, default=False)
     created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
@@ -246,12 +250,17 @@ class InvoiceItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     invoice_id = Column(Integer, ForeignKey(fk_ref("invoices.id", SCHEMA_BUSINESS)), nullable=False)
+    # Optional link to a tracked inventory item. Null means this line was
+    # typed in freehand for something not carried in inventory (a service
+    # fee, a one-off item, etc.) — those lines never touch stock levels.
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
     description = Column(String(255), default="")
     quantity = Column(Float, default=1)
     unit_price = Column(Float, default=0)
     total = Column(Float, default=0)
 
     invoice = relationship("Invoice", back_populates="items")
+    item = relationship("InventoryItem")
 
 
 class Quotation(Base):

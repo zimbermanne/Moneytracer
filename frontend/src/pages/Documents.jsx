@@ -8,7 +8,7 @@ import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
-const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0 })
+const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0, item_id: null })
 const emptyForm = () => ({
   customer_name: '', customer_phone: '', customer_address: '',
   customer_tin: '', customer_vrn: '', due_date: '', po_number: '',
@@ -31,6 +31,7 @@ export default function Documents({ kind }) {
   const [company, setCompany] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [inventoryItems, setInventoryItems] = useState([])
 
   const lockedStatuses = isInvoice ? ['paid'] : ['accepted', 'rejected', 'expired']
   const isLocked = (doc) => lockedStatuses.includes(doc.status)
@@ -41,6 +42,29 @@ export default function Documents({ kind }) {
   }
   useEffect(() => { load() }, [kind]) // eslint-disable-line
   useEffect(() => { api.get('/accounts/company-info').then(setCompany).catch(() => {}) }, []) // eslint-disable-line
+  useEffect(() => { api.get('/inventory/').then(setInventoryItems).catch(() => {}) }, []) // eslint-disable-line
+
+  // Selecting an inventory item pre-fills description + price from stock;
+  // choosing "Custom item" (itemId === '') clears item_id so the line is
+  // typed in freehand instead and never touches inventory when the
+  // invoice is paid.
+  const selectInventoryItem = (idx, itemId) => {
+    if (!itemId) {
+      setForm((f) => ({
+        ...f,
+        items: f.items.map((l, i) => i === idx ? { ...l, item_id: null } : l),
+      }))
+      return
+    }
+    const inv = inventoryItems.find((it) => String(it.id) === String(itemId))
+    if (!inv) return
+    setForm((f) => ({
+      ...f,
+      items: f.items.map((l, i) => i === idx
+        ? { ...l, item_id: inv.id, description: inv.name, unit_price: inv.selling_price }
+        : l),
+    }))
+  }
 
   const updateLine = (idx, field, value) => {
     const items = form.items.map((l, i) => i === idx ? { ...l, [field]: value } : l)
@@ -63,7 +87,7 @@ export default function Documents({ kind }) {
       discount: doc.discount,
       notes: doc.notes || '',
       valid_days: 14,
-      items: doc.items.map((l) => ({ description: l.description, quantity: l.quantity, unit_price: l.unit_price })),
+      items: doc.items.map((l) => ({ description: l.description, quantity: l.quantity, unit_price: l.unit_price, item_id: l.item_id ?? null })),
     })
     setError('')
     setOpen(true)
@@ -103,6 +127,14 @@ export default function Documents({ kind }) {
     catch (e) { setError(e.message) }
   }
 
+  const markPaid = async (doc) => {
+    if (!confirm(`Mark ${doc[numberKey]} as paid? This records it as a sale and updates inventory — it can't be undone.`)) return
+    try {
+      await api.patch(`/${kind}/${doc.id}/status?status=paid`)
+      load()
+    } catch (e) { setError(e.message) }
+  }
+
   const downloadPdf = async (doc, variant = 'pdf', filenamePrefix = isInvoice ? 'Invoice' : 'Quotation') => {
     setPdfLoading(`${doc.id}:${variant}`)
     try {
@@ -139,6 +171,7 @@ export default function Documents({ kind }) {
           )}
           <RowActionsMenu items={[
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
+            { label: 'Mark as Paid', icon: '✓', onClick: () => markPaid(r), hidden: !isInvoice || r.status === 'paid' },
             { label: pdfLoading === `${r.id}:pdf` ? 'Downloading…' : 'PDF', icon: '⬇', onClick: () => downloadPdf(r), disabled: pdfLoading === `${r.id}:pdf` },
             { label: pdfLoading === `${r.id}:packing-list` ? 'Downloading…' : 'Packing List', icon: '📦', onClick: () => downloadPdf(r, 'packing-list', 'PackingList'), disabled: pdfLoading === `${r.id}:packing-list`, hidden: !isInvoice },
             { label: pdfLoading === `${r.id}:delivery-note` ? 'Downloading…' : 'Delivery Note', icon: '🚚', onClick: () => downloadPdf(r, 'delivery-note', 'DeliveryNote'), disabled: pdfLoading === `${r.id}:delivery-note`, hidden: !isInvoice },
@@ -193,6 +226,8 @@ export default function Documents({ kind }) {
           updateLine={updateLine}
           addLine={addLine}
           removeLine={removeLine}
+          inventoryItems={inventoryItems}
+          selectInventoryItem={selectInventoryItem}
           subtotal={subtotal}
           taxAmt={taxAmt}
           total={total}

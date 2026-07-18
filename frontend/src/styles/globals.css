@@ -1256,6 +1256,21 @@ label {
   margin-bottom: 8px;
 }
 
+.invoice-line-item-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invoice-line-item-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
 .invoice-editor-line-total {
   font-size: 13px;
   color: var(--text-muted);
