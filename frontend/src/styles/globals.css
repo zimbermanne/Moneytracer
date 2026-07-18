@@ -1460,10 +1460,10 @@ label {
 .landing-nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
   font-size: var(--text-sm);
   flex-wrap: wrap;
-  row-gap: 12px;
+  row-gap: 14px;
 }
 
 .landing-nav a {
@@ -1479,10 +1479,11 @@ label {
 .landing-nav-login {
   color: var(--text-dark) !important;
   font-weight: 600;
+  margin-left: 8px;
 }
 
 .landing-nav .language-switcher {
-  margin-left: 8px;
+  margin-left: 16px;
 }
 
 .landing-nav-cta {

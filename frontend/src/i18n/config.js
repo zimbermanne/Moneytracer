@@ -7,6 +7,8 @@ import sw from './locales/sw.json';
 import fr from './locales/fr.json';
 import pt from './locales/pt.json';
 import ar from './locales/ar.json';
+import ha from './locales/ha.json';
+import am from './locales/am.json';
 
 const resources = {
   en: { translation: en },
@@ -14,6 +16,8 @@ const resources = {
   fr: { translation: fr },
   pt: { translation: pt },
   ar: { translation: ar },
+  ha: { translation: ha },
+  am: { translation: am },
 };
 
 const SUPPORTED_LANGUAGES = Object.keys(resources);
@@ -88,6 +92,8 @@ export const SUPPORTED_LANGUAGE_LIST = [
   { code: 'fr', label: 'Français' },
   { code: 'pt', label: 'Português' },
   { code: 'sw', label: 'Kiswahili' },
+  { code: 'ha', label: 'Hausa' },
+  { code: 'am', label: 'አማርኛ' },
   { code: 'ar', label: 'العربية' },
 ];
 

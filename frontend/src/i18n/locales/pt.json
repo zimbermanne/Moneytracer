@@ -254,6 +254,149 @@
     "getStarted": "Começar",
     "alreadyHaveAccount": "Já tenho uma conta",
     "logInLink": "Entrar",
-    "signUpLink": "Registar"
+    "signUpLink": "Registar",
+    "heroTitle": "Dinheiro que entra, dinheiro que sai — sempre à vista.",
+    "heroSub": "Moneytracer é a ferramenta de contabilidade e finanças para pequenas empresas, grupos de poupança comunitários e despesas pessoais. Acompanhe vendas e stock, geste as contribuições do seu chama, ou faça a gestão do seu próprio orçamento — tudo a partir de um painel simples.",
+    "trackBusiness": "Tenho um negócio",
+    "trackCommunity": "Giro um grupo de poupança",
+    "trackPersonal": "Controlo as minhas próprias despesas",
+    "ctaBusiness": "Configurar o meu negócio",
+    "ctaCommunity": "Configurar o meu grupo de poupança",
+    "ctaPersonal": "Começar a controlar as minhas despesas",
+    "downloadAndroid": "Descarregar a aplicação Android",
+    "businessFeaturesTitle": "Tudo o que uma pequena empresa precisa para controlar o seu dinheiro",
+    "businessFeaturesSub": "Da caixa ao balanço, o Moneytracer organiza as suas vendas, stock e fluxo de caixa sem folhas de cálculo.",
+    "communityFeaturesTitle": "Feito para chamas, bancos comunitários e grupos rotativos de poupança",
+    "communityFeaturesSub": "Deixe de registar contribuições num caderno. O Moneytracer dá ao seu grupo um registo partilhado e fiável em que todos os membros podem confiar.",
+    "personalFeaturesTitle": "Gaste com sabedoria, sem folhas de cálculo",
+    "personalFeaturesSub": "Registe uma despesa em segundos, saiba o que é seguro gastar hoje, e melhore os seus hábitos ao longo do tempo — à sua maneira, seja com orçamentos, hábitos, ou poupança com amigos.",
+    "businessFeatures": [
+      {
+        "icon": "🧾",
+        "title": "Ponto de Venda",
+        "text": "Checkout rápido de múltiplos artigos com validação de stock em tempo real, feito para o balcão."
+      },
+      {
+        "icon": "📦",
+        "title": "Inventário",
+        "text": "Acompanhe os níveis de stock, importe produtos em lote, e receba alertas de stock baixo antes de esgotar."
+      },
+      {
+        "icon": "📑",
+        "title": "Faturas e Orçamentos",
+        "text": "Envie faturas e orçamentos profissionais, e transforme orçamentos aceites em vendas."
+      },
+      {
+        "icon": "📒",
+        "title": "Devedores e Credores",
+        "text": "Saiba quem lhe deve e a quem deve, num relance."
+      },
+      {
+        "icon": "📈",
+        "title": "Relatórios",
+        "text": "Lucros e perdas, resumos financeiros, e valorização de inventário — sempre atualizados."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Registos de Atividade",
+        "text": "Registo completo de auditoria de quem fez o quê, para que nada passe despercebido."
+      }
+    ],
+    "communityFeatures": [
+      {
+        "icon": "👥",
+        "title": "Gestão de Membros",
+        "text": "Adicione membros, atribua co-registadores, e dê aos membros o seu próprio acesso apenas de leitura."
+      },
+      {
+        "icon": "💰",
+        "title": "Contribuições",
+        "text": "Registe a contribuição de poupança de cada membro e veja o total do grupo atualizar-se instantaneamente."
+      },
+      {
+        "icon": "🤝",
+        "title": "Pagamentos",
+        "text": "Acompanhe pagamentos rotativos ou dividendos de forma justa, com um histórico completo por membro."
+      },
+      {
+        "icon": "🏦",
+        "title": "Empréstimos de Grupo",
+        "text": "Conceda empréstimos aos membros a partir da poupança do grupo e acompanhe os reembolsos ao cêntimo."
+      },
+      {
+        "icon": "📊",
+        "title": "Resumo do Grupo",
+        "text": "Uma visão clara da poupança total, empréstimos em curso, e saúde do grupo — para cada reunião."
+      },
+      {
+        "icon": "🔐",
+        "title": "Acesso Baseado em Funções",
+        "text": "Administradores e registadores gerem os lançamentos; os membros podem sempre ver os seus próprios registos."
+      }
+    ],
+    "personalFeatures": [
+      {
+        "icon": "💸",
+        "title": "Registo Rápido de Despesas",
+        "text": "Adicione uma despesa em segundos — valor, categoria, pronto. Sem folhas de cálculo, sem fricção."
+      },
+      {
+        "icon": "🧮",
+        "title": "Orçamentos por Categoria",
+        "text": "Defina um orçamento mensal por categoria e saiba sempre o que é seguro gastar hoje."
+      },
+      {
+        "icon": "🔁",
+        "title": "Hábitos de Gasto",
+        "text": "Marque despesas como necessárias ou por impulso e veja os seus hábitos melhorar semana após semana."
+      },
+      {
+        "icon": "🎯",
+        "title": "Metas de Poupança",
+        "text": "Defina uma meta, acompanhe o progresso, e mantenha-se motivado com uma linha de chegada visual clara."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Desafios em Grupo",
+        "text": "Poupe junto com amigos rumo a uma meta comum, com o progresso de todos à vista."
+      },
+      {
+        "icon": "📉",
+        "title": "Insights Pessoais",
+        "text": "Veja para onde vai realmente o seu dinheiro, e que semanas ou categorias se descontrolam."
+      }
+    ],
+    "oneAccountTitle": "Uma conta, da forma que precisar",
+    "oneAccountSub": "Escolha uma conta de negócio, comunitária ou pessoal ao registar-se — o painel, funções e relatórios adaptam-se.",
+    "accountBusinessTitle": "Contas de negócio",
+    "accountBusinessText": "POS, inventário, faturação e relatórios para lojas, comerciantes e prestadores de serviços de qualquer dimensão.",
+    "accountCommunityTitle": "Contas comunitárias",
+    "accountCommunityText": "Contribuições, pagamentos e empréstimos de grupo para grupos de poupança e círculos de finanças comunitárias.",
+    "accountPersonalTitle": "Contas pessoais",
+    "accountPersonalText": "Orçamentos, hábitos e metas de poupança para quem quer gastar com mais sabedoria, sozinho ou com amigos.",
+    "aboutTitle": "Feito para a forma como o dinheiro realmente se move",
+    "aboutP1": "O Moneytracer começou como uma ideia simples: as ferramentas que ajudam um lojista, um tesoureiro de grupo de poupança, ou alguém a gerir o seu próprio salário não deveriam exigir um diploma de contabilidade ou uma folha de cálculo. Quer esteja a gerir uma loja de ferragens, as contribuições mensais de um chama, ou apenas a tentar ver para onde vai o seu dinheiro, o Moneytracer dá-lhe um registo claro e fiável em que pode confiar.",
+    "aboutP2": "Construímo-lo primeiro para empresas e comunidades africanas — com suporte multi-moeda em todo o continente, fluxos de trabalho adequados a ligações limitadas, e preços que fazem sentido para uma pequena empresa, não uma multinacional. Sem jargão, sem funcionalidades inúteis — apenas os números que importam, sempre atualizados.",
+    "statCountries": "Países africanos suportados",
+    "statAccountTypes": "Tipos de conta — negócio, comunidade, pessoal",
+    "statDashboard": "Um painel para tudo o que acompanha",
+    "valueSimpleTitle": "Feito para ser simples",
+    "valueSimpleText": "Não é necessária formação. Se sabe usar um telemóvel, pode gerir as suas contas no Moneytracer desde o primeiro dia.",
+    "valueDataTitle": "Os seus dados, protegidos",
+    "valueDataText": "Cada conta é isolada e segura, com um registo de atividade completo para saber sempre quem alterou o quê.",
+    "valueAfricaTitle": "Feito para África",
+    "valueAfricaText": "Moedas locais, realidades locais — concebido em torno da forma como as empresas e comunidades daqui realmente funcionam.",
+    "pricingTitle": "Pronto para pôr as suas finanças em ordem?",
+    "pricingSub": "Crie uma conta em minutos. Sem necessidade de folhas de cálculo.",
+    "getStartedFree": "Começar gratuitamente",
+    "betaBadge": "Beta",
+    "betaNoticeP1": "O Moneytracer é gratuito durante os primeiros",
+    "betaNoticeDays": "90 dias",
+    "betaNoticeP2": "enquanto estamos em desenvolvimento ativo. Durante esta fase, poderá ver alterações dia a dia, falhas ocasionais, ou breves interrupções à medida que lançamos melhorias. Anunciaremos os planos de preços com bastante antecedência antes do fim da fase beta.",
+    "disclaimerTitle": "Isenção de Responsabilidade",
+    "disclaimerText": "O Moneytracer encontra-se atualmente em desenvolvimento ativo (beta). A utilização do Serviço está sujeita aos nossos Termos de Uso e Isenção de Responsabilidade completos, que cobrem perda de dados, limitações de garantia, responsabilidade e resolução de litígios. Leia os termos completos antes de confiar no Serviço para registos financeiros de negócio, comunitários ou pessoais.",
+    "readFullTerms": "Ler os Termos de Uso e Isenção de Responsabilidade completos →",
+    "availableInLanguages": "Disponível em inglês, francês, português e suaíli.",
+    "copyright": "Moneytracer."
   }
 }

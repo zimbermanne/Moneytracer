@@ -254,6 +254,149 @@
     "getStarted": "Get started",
     "alreadyHaveAccount": "I already have an account",
     "logInLink": "Log in",
-    "signUpLink": "Sign up"
+    "signUpLink": "Sign up",
+    "heroTitle": "Money in, money out — always in view.",
+    "heroSub": "Moneytracer is the bookkeeping and finance tool for small businesses, community savings groups, and personal spending. Track sales and stock, run your chama's contributions, or manage your own budget — all from one simple dashboard.",
+    "trackBusiness": "I run a business",
+    "trackCommunity": "I run a savings group",
+    "trackPersonal": "I track my own spending",
+    "ctaBusiness": "Set up my business",
+    "ctaCommunity": "Set up my savings group",
+    "ctaPersonal": "Start tracking my spending",
+    "downloadAndroid": "Download the Android app",
+    "businessFeaturesTitle": "Everything a small business needs to track its money",
+    "businessFeaturesSub": "From the till to the balance sheet, Moneytracer keeps your sales, stock, and cash flow organized without spreadsheets.",
+    "communityFeaturesTitle": "Built for chamas, table banking, and merry-go-rounds",
+    "communityFeaturesSub": "Stop tracking contributions in a notebook. Moneytracer gives your group a shared, accurate record every member can trust.",
+    "personalFeaturesTitle": "Spend wisely, without the spreadsheets",
+    "personalFeaturesSub": "Log a spend in seconds, see what's safe to spend today, and build better habits over time — your way, whether that's budgets, habits, or saving with friends.",
+    "businessFeatures": [
+      {
+        "icon": "🧾",
+        "title": "Point of Sale",
+        "text": "Fast multi-item checkout with live stock validation, built for the counter."
+      },
+      {
+        "icon": "📦",
+        "title": "Inventory",
+        "text": "Track stock levels, batch import products, and get low-stock alerts before you run out."
+      },
+      {
+        "icon": "📑",
+        "title": "Invoices & Quotations",
+        "text": "Send professional invoices and quotes, and turn accepted quotes into sales."
+      },
+      {
+        "icon": "📒",
+        "title": "Debtors & Creditors",
+        "text": "Know who owes you and who you owe, at a glance."
+      },
+      {
+        "icon": "📈",
+        "title": "Reports",
+        "text": "Profit & loss, financial summaries, and inventory valuation — always current."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Activity Logs",
+        "text": "Full audit trail of who did what, so nothing slips through unnoticed."
+      }
+    ],
+    "communityFeatures": [
+      {
+        "icon": "👥",
+        "title": "Member Management",
+        "text": "Add members, assign co-recorders, and give members their own read-only login."
+      },
+      {
+        "icon": "💰",
+        "title": "Contributions",
+        "text": "Record every member's savings contribution and see the group total update instantly."
+      },
+      {
+        "icon": "🤝",
+        "title": "Payouts",
+        "text": "Track merry-go-round or dividend payouts fairly, with a full history per member."
+      },
+      {
+        "icon": "🏦",
+        "title": "Group Loans",
+        "text": "Issue loans to members from group savings and track repayments to the shilling."
+      },
+      {
+        "icon": "📊",
+        "title": "Group Summary",
+        "text": "One clear view of total savings, loans out, and group health — for every meeting."
+      },
+      {
+        "icon": "🔐",
+        "title": "Role-based Access",
+        "text": "Admins and recorders manage entries; members can always see their own records."
+      }
+    ],
+    "personalFeatures": [
+      {
+        "icon": "💸",
+        "title": "Quick Expense Log",
+        "text": "Add a spend in seconds — amount, category, done. No spreadsheets, no friction."
+      },
+      {
+        "icon": "🧮",
+        "title": "Envelope Budgets",
+        "text": "Set a monthly budget per category and always know what's safe to spend today."
+      },
+      {
+        "icon": "🔁",
+        "title": "Spending Habits",
+        "text": "Tag spends as necessary or impulse and watch your habits improve week over week."
+      },
+      {
+        "icon": "🎯",
+        "title": "Savings Goals",
+        "text": "Set a goal, track progress, and stay motivated with a clear visual finish line."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Group Challenges",
+        "text": "Save together with friends toward a shared goal, with everyone's progress in view."
+      },
+      {
+        "icon": "📉",
+        "title": "Personal Insights",
+        "text": "See where your money actually goes, and which weeks or categories creep up."
+      }
+    ],
+    "oneAccountTitle": "One account, any way you need it",
+    "oneAccountSub": "Choose a business, community, or personal account when you sign up — the dashboard, roles, and reports adapt to fit.",
+    "accountBusinessTitle": "Business accounts",
+    "accountBusinessText": "POS, inventory, invoicing, and reports for shops, traders, and service businesses of any size.",
+    "accountCommunityTitle": "Community accounts",
+    "accountCommunityText": "Contributions, payouts, and group loans for savings groups and community finance circles.",
+    "accountPersonalTitle": "Personal accounts",
+    "accountPersonalText": "Budgets, habits, and savings goals for anyone who wants to spend more wisely, on their own or with friends.",
+    "aboutTitle": "Built for the way money actually moves",
+    "aboutP1": "Moneytracer started as a simple idea: the tools that help a shop owner, a savings group treasurer, or someone budgeting their own salary shouldn't require an accounting degree or a spreadsheet. Whether you're running a hardware store, managing a chama's monthly contributions, or just trying to see where your money goes, Moneytracer gives you one clear, honest record you can trust.",
+    "aboutP2": "We built it for African businesses and communities first — with multi-currency support across the continent, offline-friendly workflows, and pricing that makes sense for a small business, not a global enterprise. No jargon, no bloated features you'll never use — just the numbers that matter, always up to date.",
+    "statCountries": "African countries supported",
+    "statAccountTypes": "Account types — business, community, personal",
+    "statDashboard": "Dashboard for everything you track",
+    "valueSimpleTitle": "Built to be simple",
+    "valueSimpleText": "No training required. If you can use a phone, you can run your books on Moneytracer from day one.",
+    "valueDataTitle": "Your data, protected",
+    "valueDataText": "Every account is isolated and secured, with a full activity log so you always know who changed what.",
+    "valueAfricaTitle": "Made for Africa",
+    "valueAfricaText": "Local currencies, local realities — designed around how businesses and communities here actually operate.",
+    "pricingTitle": "Ready to get your finances in order?",
+    "pricingSub": "Create an account in minutes. No spreadsheet required.",
+    "getStartedFree": "Get started free",
+    "betaBadge": "Beta",
+    "betaNoticeP1": "Moneytracer is free to use for the first",
+    "betaNoticeDays": "90 days",
+    "betaNoticeP2": "while we're in active development. During this phase you may see day-to-day changes, occasional bugs, or brief downtime as we roll out improvements. We'll announce pricing plans well in advance of the beta period ending.",
+    "disclaimerTitle": "Disclaimer",
+    "disclaimerText": "Moneytracer is currently in active development (beta). Use of the Service is subject to our full Terms of Use and Disclaimer, which cover data loss, warranty limitations, liability, and dispute resolution. Please read the complete terms before relying on the Service for business, community, or personal financial records.",
+    "readFullTerms": "Read the full Terms of Use & Disclaimer →",
+    "availableInLanguages": "Available in English, Français, Português, and Kiswahili.",
+    "copyright": "Moneytracer."
   }
 }

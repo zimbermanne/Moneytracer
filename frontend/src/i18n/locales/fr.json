@@ -254,6 +254,149 @@
     "getStarted": "Commencer",
     "alreadyHaveAccount": "J'ai déjà un compte",
     "logInLink": "Connexion",
-    "signUpLink": "S'inscrire"
+    "signUpLink": "S'inscrire",
+    "heroTitle": "Argent qui entre, argent qui sort — toujours sous contrôle.",
+    "heroSub": "Moneytracer est l'outil de comptabilité et de finance pour les petites entreprises, les groupes d'épargne communautaires et les dépenses personnelles. Suivez vos ventes et votre stock, gérez les cotisations de votre chama, ou gérez votre propre budget — le tout depuis un tableau de bord simple.",
+    "trackBusiness": "Je gère une entreprise",
+    "trackCommunity": "Je gère un groupe d'épargne",
+    "trackPersonal": "Je suis mes propres dépenses",
+    "ctaBusiness": "Configurer mon entreprise",
+    "ctaCommunity": "Configurer mon groupe d'épargne",
+    "ctaPersonal": "Commencer à suivre mes dépenses",
+    "downloadAndroid": "Télécharger l'application Android",
+    "businessFeaturesTitle": "Tout ce dont une petite entreprise a besoin pour suivre son argent",
+    "businessFeaturesSub": "De la caisse au bilan, Moneytracer organise vos ventes, votre stock et votre trésorerie sans tableurs.",
+    "communityFeaturesTitle": "Conçu pour les chamas, la banque communautaire et les tontines",
+    "communityFeaturesSub": "Arrêtez de suivre les cotisations dans un cahier. Moneytracer donne à votre groupe un registre partagé et fiable en qui chaque membre peut avoir confiance.",
+    "personalFeaturesTitle": "Dépensez intelligemment, sans tableurs",
+    "personalFeaturesSub": "Enregistrez une dépense en quelques secondes, sachez ce que vous pouvez dépenser aujourd'hui, et améliorez vos habitudes avec le temps — à votre façon, que ce soit par budgets, habitudes, ou épargne entre amis.",
+    "businessFeatures": [
+      {
+        "icon": "🧾",
+        "title": "Point de vente",
+        "text": "Encaissement rapide multi-articles avec validation du stock en direct, conçu pour le comptoir."
+      },
+      {
+        "icon": "📦",
+        "title": "Inventaire",
+        "text": "Suivez les niveaux de stock, importez des produits en lot, et recevez des alertes de stock bas avant la rupture."
+      },
+      {
+        "icon": "📑",
+        "title": "Factures et devis",
+        "text": "Envoyez des factures et devis professionnels, et transformez les devis acceptés en ventes."
+      },
+      {
+        "icon": "📒",
+        "title": "Débiteurs et créanciers",
+        "text": "Sachez qui vous doit et à qui vous devez, d'un coup d'œil."
+      },
+      {
+        "icon": "📈",
+        "title": "Rapports",
+        "text": "Pertes et profits, résumés financiers, et valorisation des stocks — toujours à jour."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Journaux d'activité",
+        "text": "Piste d'audit complète de qui a fait quoi, pour que rien ne passe inaperçu."
+      }
+    ],
+    "communityFeatures": [
+      {
+        "icon": "👥",
+        "title": "Gestion des membres",
+        "text": "Ajoutez des membres, désignez des co-registraires, et donnez aux membres leur propre accès en lecture seule."
+      },
+      {
+        "icon": "💰",
+        "title": "Cotisations",
+        "text": "Enregistrez la cotisation d'épargne de chaque membre et voyez le total du groupe se mettre à jour instantanément."
+      },
+      {
+        "icon": "🤝",
+        "title": "Versements",
+        "text": "Suivez équitablement les versements de tontine ou de dividendes, avec un historique complet par membre."
+      },
+      {
+        "icon": "🏦",
+        "title": "Prêts de groupe",
+        "text": "Accordez des prêts aux membres à partir de l'épargne du groupe et suivez les remboursements au shilling près."
+      },
+      {
+        "icon": "📊",
+        "title": "Résumé du groupe",
+        "text": "Une vue claire de l'épargne totale, des prêts en cours, et de la santé du groupe — pour chaque réunion."
+      },
+      {
+        "icon": "🔐",
+        "title": "Accès basé sur les rôles",
+        "text": "Les administrateurs et registraires gèrent les entrées ; les membres peuvent toujours voir leurs propres registres."
+      }
+    ],
+    "personalFeatures": [
+      {
+        "icon": "💸",
+        "title": "Journal de dépenses rapide",
+        "text": "Ajoutez une dépense en quelques secondes — montant, catégorie, terminé. Pas de tableurs, pas de friction."
+      },
+      {
+        "icon": "🧮",
+        "title": "Budgets par enveloppe",
+        "text": "Fixez un budget mensuel par catégorie et sachez toujours ce qu'il est prudent de dépenser aujourd'hui."
+      },
+      {
+        "icon": "🔁",
+        "title": "Habitudes de dépense",
+        "text": "Étiquetez les dépenses comme nécessaires ou impulsives et regardez vos habitudes s'améliorer semaine après semaine."
+      },
+      {
+        "icon": "🎯",
+        "title": "Objectifs d'épargne",
+        "text": "Fixez un objectif, suivez la progression, et restez motivé avec une ligne d'arrivée visuelle claire."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Défis de groupe",
+        "text": "Épargnez ensemble avec des amis vers un objectif commun, avec la progression de chacun visible."
+      },
+      {
+        "icon": "📉",
+        "title": "Aperçus personnels",
+        "text": "Voyez où va réellement votre argent, et quelles semaines ou catégories dérapent."
+      }
+    ],
+    "oneAccountTitle": "Un seul compte, comme vous le voulez",
+    "oneAccountSub": "Choisissez un compte entreprise, communautaire ou personnel lors de l'inscription — le tableau de bord, les rôles et les rapports s'adaptent.",
+    "accountBusinessTitle": "Comptes entreprise",
+    "accountBusinessText": "Point de vente, inventaire, facturation et rapports pour boutiques, commerçants et prestataires de services de toute taille.",
+    "accountCommunityTitle": "Comptes communautaires",
+    "accountCommunityText": "Cotisations, versements et prêts de groupe pour les groupes d'épargne et les cercles de finance communautaire.",
+    "accountPersonalTitle": "Comptes personnels",
+    "accountPersonalText": "Budgets, habitudes et objectifs d'épargne pour quiconque veut dépenser plus intelligemment, seul ou entre amis.",
+    "aboutTitle": "Conçu selon la façon dont l'argent circule réellement",
+    "aboutP1": "Moneytracer est né d'une idée simple : les outils qui aident un commerçant, un trésorier de groupe d'épargne, ou une personne qui gère son propre salaire ne devraient pas exiger un diplôme de comptabilité ou un tableur. Que vous gériez une quincaillerie, les cotisations mensuelles d'un chama, ou que vous cherchiez simplement à voir où va votre argent, Moneytracer vous donne un registre clair et fiable.",
+    "aboutP2": "Nous l'avons conçu d'abord pour les entreprises et communautés africaines — avec un support multi-devises sur tout le continent, des flux adaptés aux connexions limitées, et une tarification pensée pour une petite entreprise, pas une multinationale. Pas de jargon, pas de fonctionnalités superflues — juste les chiffres qui comptent, toujours à jour.",
+    "statCountries": "Pays africains pris en charge",
+    "statAccountTypes": "Types de comptes — entreprise, communauté, personnel",
+    "statDashboard": "Un tableau de bord pour tout ce que vous suivez",
+    "valueSimpleTitle": "Conçu pour être simple",
+    "valueSimpleText": "Aucune formation requise. Si vous savez utiliser un téléphone, vous pouvez tenir vos comptes sur Moneytracer dès le premier jour.",
+    "valueDataTitle": "Vos données, protégées",
+    "valueDataText": "Chaque compte est isolé et sécurisé, avec un journal d'activité complet pour toujours savoir qui a changé quoi.",
+    "valueAfricaTitle": "Conçu pour l'Afrique",
+    "valueAfricaText": "Devises locales, réalités locales — conçu selon la façon dont les entreprises et communautés d'ici fonctionnent réellement.",
+    "pricingTitle": "Prêt à mettre de l'ordre dans vos finances ?",
+    "pricingSub": "Créez un compte en quelques minutes. Aucun tableur requis.",
+    "getStartedFree": "Commencer gratuitement",
+    "betaBadge": "Bêta",
+    "betaNoticeP1": "Moneytracer est gratuit pendant les",
+    "betaNoticeDays": "90 premiers jours",
+    "betaNoticeP2": "pendant que nous sommes en développement actif. Durant cette phase, vous pourriez voir des changements au jour le jour, des bugs occasionnels, ou de brèves interruptions pendant que nous déployons des améliorations. Nous annoncerons les plans tarifaires bien avant la fin de la phase bêta.",
+    "disclaimerTitle": "Clause de non-responsabilité",
+    "disclaimerText": "Moneytracer est actuellement en développement actif (bêta). L'utilisation du Service est soumise à nos Conditions d'utilisation et clause de non-responsabilité complètes, qui couvrent la perte de données, les limitations de garantie, la responsabilité et le règlement des différends. Veuillez lire les conditions complètes avant de vous fier au Service pour des registres financiers professionnels, communautaires ou personnels.",
+    "readFullTerms": "Lire les Conditions d'utilisation complètes →",
+    "availableInLanguages": "Disponible en anglais, français, portugais et kiswahili.",
+    "copyright": "Moneytracer."
   }
 }
