@@ -90,4 +90,6 @@ export const AVAILABLE_LANGUAGES = [
   { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
   { code: 'pt', name: 'Portuguese', nativeName: 'Português' },
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'ha', name: 'Hausa', nativeName: 'Hausa' },
+  { code: 'am', name: 'Amharic', nativeName: 'አማርኛ' },
 ];
