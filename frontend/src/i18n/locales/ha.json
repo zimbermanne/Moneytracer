@@ -1,338 +1,179 @@
 {
-  "common": {
-    "save": "Ajiye",
-    "cancel": "Soke",
-    "delete": "Goge",
-    "edit": "Gyara",
-    "add": "Ƙara",
-    "search": "Nema",
-    "loading": "Ana lodi...",
-    "noResults": "Babu sakamako",
-    "confirm": "Tabbatar",
-    "back": "Koma baya",
-    "next": "Gaba",
-    "submit": "Tura",
-    "close": "Rufe",
-    "yes": "Eh",
-    "no": "A'a",
-    "or": "ko",
-    "and": "da"
-  },
-  "nav": {
-    "dashboard": "Dashboard",
-    "sales": "Tallace-tallace",
-    "purchases": "Sayayya",
-    "inventory": "Kayayyaki",
-    "expenses": "Kashe kuɗi",
-    "documents": "Takardu",
-    "reports": "Rahotanni",
-    "customers": "Abokan ciniki",
-    "debtors": "Masu bin bashi",
-    "creditors": "Masu bashi",
-    "settings": "Saitunan",
-    "activity": "Rijistar Ayyuka",
-    "pos": "Wurin Sayarwa",
-    "logout": "Fita",
-    "home": "Gida",
-    "salesGroup": "Tallace-tallace",
-    "salesHistory": "Tarihin Tallace-tallace",
-    "clientsDebtors": "Abokan ciniki / Masu bin bashi",
-    "purchasesGroup": "Sayayya",
-    "purchasesLedger": "Littafin Sayayya",
-    "creditorsLedger": "Littafin Masu Bashi",
-    "proformaGroup": "Bayanan Farashi",
-    "invoices": "Kudirin biya",
-    "quotations": "Bayanan Farashi",
-    "inventoryGroup": "Kayayyaki",
-    "inventoryLedger": "Littafin Kayayyaki",
-    "reportsGroup": "Rahotanni",
-    "profitLoss": "Riba da Hasara",
-    "financialSummary": "Taƙaitaccen Kuɗi",
-    "cashFlow": "Kwararar Kuɗi",
-    "debtorsReport": "Rahoton Masu Bin Bashi",
-    "creditorsReport": "Rahoton Masu Bashi",
-    "inventoryValuation": "Ƙimar Kayayyaki",
-    "expensesItem": "Kashe kuɗi",
-    "activityLogsItem": "Rijistar Ayyuka",
-    "settingsItem": "Saitunan",
-    "logOut": "Fita"
-  },
-  "auth": {
-    "login": "Shiga",
-    "register": "Yi Rijista",
-    "email": "Imel",
-    "password": "Kalmar sirri",
-    "fullName": "Cikakken Suna",
-    "businessName": "Sunan Kasuwanci",
-    "username": "Sunan mai amfani",
-    "loginTitle": "Barka da Dawowa",
-    "loginSubtitle": "Shiga cikin asusun ku",
-    "registerTitle": "Ƙirƙiri Asusu",
-    "registerSubtitle": "Fara sarrafa kasuwancin ku",
-    "forgotPassword": "An manta da kalmar sirri?",
-    "noAccount": "Ba ku da asusu?",
-    "hasAccount": "Kuna da asusu?",
-    "signUp": "Yi Rijista",
-    "signIn": "Shiga",
-    "welcomeBack": "Barka da Dawowa",
-    "signInSubtitle": "Shiga cikin asusun ku",
-    "tagline": "Kuɗin da ke shiga, kuɗin da ke fita — koyaushe a bayyane.",
-    "username_field": "Sunan mai amfani",
-    "signingIn": "Ana shiga...",
-    "continueAsDemo": "Ci gaba a matsayin Demo",
-    "loadingDemo": "Ana loda Demo...",
-    "dontHaveAccount": "Ba ku da asusu?",
-    "createOne": "Ƙirƙiri ɗaya"
-  },
-  "onboarding": {
-    "title": "Saita Kasuwancin Ku",
-    "subtitle": "Bari mu saita asusun ku",
-    "step1": "Bayanan Kasuwanci",
-    "step2": "Bayanan Tuntuɓa",
-    "step3": "Haraji da Kuɗi",
-    "businessType": "Nau'in Kasuwanci",
-    "businessStructure": "Tsarin Kasuwanci",
-    "solo": "Mai Kasuwanci Ɗaya",
-    "company": "Kamfani",
-    "retail": "Sayarwa",
-    "service": "Sabis",
-    "manufacturing": "Masana'antu",
-    "country": "Ƙasa",
-    "currency": "Kuɗi",
-    "taxRate": "Adadin Haraji (%)",
-    "tin": "Lambar Shaidar Haraji",
-    "vrn": "Lambar Rijistar VAT",
-    "phone": "Lambar Waya",
-    "address": "Adireshi",
-    "region": "Yanki",
-    "district": "Gunduma",
-    "complete": "Kammala Saiti",
-    "skip": "Tsallake Yanzu"
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "overview": "Bayyani",
-    "totalSales": "Jimillar Tallace-tallace",
-    "totalPurchases": "Jimillar Sayayya",
-    "totalExpenses": "Jimillar Kashe Kuɗi",
-    "netProfit": "Ribar Bayan Cirewa",
-    "recentActivity": "Ayyukan Kwanan Nan",
-    "quickActions": "Ayyuka Masu Sauri",
-    "newSale": "Sabon Ciniki",
-    "newPurchase": "Sabuwar Sayayya",
-    "newExpense": "Sabon Kashe Kuɗi",
-    "newInvoice": "Sabon Kudirin Biya",
-    "cashFlowTitle": "Kwararar Kuɗi",
-    "groupFeatures": "Fasalolin Ƙungiya",
-    "inventoryValue": "Ƙimar Kayayyaki",
-    "itemsSoldToday": "Kayayyakin da aka Sayar Yau",
-    "lendingDisabled": "An kashe Bada Bashi",
-    "lendingEnabled": "An kunna Bada Bashi",
-    "loansOutstanding": "Bashin da ke Fitowa",
-    "lowStockAlert": "Faɗakarwar Ƙarancin Kaya",
-    "lowStockItems": "Kayayyakin da suka Ragu",
-    "members": "Mambobi",
-    "mostSoldItemAllTime": "Kayan da Aka Fi Sayarwa",
-    "netProfitAllTime": "Ribar Bayan Cirewa Duk Lokaci",
-    "noSalesYet": "Babu tallace-tallace tukuna",
-    "rotationDisabled": "An kashe Jujjuyawa",
-    "rotationEnabled": "An kunna Jujjuyawa",
-    "tapToReview": "Danna don Bitar",
-    "todaysEarnings": "Kudin Shigar Yau",
-    "topProductToday": "Babban Kaya Yau",
-    "topRevenueItemAllTime": "Babban Kayan Kuɗin Shiga",
-    "totalContributionsAllTime": "Jimillar Gudummawa",
-    "totalPayoutsAllTime": "Jimillar Biyan Kuɗi",
-    "totalRevenueAllTime": "Jimillar Kudin Shiga",
-    "totalStockUnits": "Jimillar Sashin Kaya"
-  },
-  "sales": {
-    "title": "Tallace-tallace",
-    "newSale": "Sabon Ciniki",
-    "editSale": "Gyara Ciniki",
-    "customerName": "Sunan Abokin Ciniki",
-    "item": "Kaya",
-    "quantity": "Adadi",
-    "unitPrice": "Farashin Kashi",
-    "total": "Jimla",
-    "paymentMode": "Hanyar Biya",
-    "cash": "Kuɗi a Hannu",
-    "credit": "Bashi",
-    "mobileMoney": "Kuɗin Waya",
-    "date": "Kwanan Wata",
-    "receiptNo": "Lambar Rasit",
-    "soldBy": "An Sayar Da"
-  },
-  "purchases": {
-    "title": "Sayayya",
-    "newPurchase": "Sabuwar Sayayya",
-    "supplier": "Mai Kaya",
-    "unitCost": "Farashin Kashi"
-  },
-  "inventory": {
-    "title": "Kayayyaki",
-    "addItem": "Ƙara Kaya",
-    "itemName": "Sunan Kaya",
-    "sku": "SKU",
-    "category": "Rukuni",
-    "quantity": "Adadi",
-    "unit": "Sashi",
-    "costPrice": "Farashin Sayowa",
-    "sellingPrice": "Farashin Sayarwa",
-    "reorderPoint": "Matakin Sake Oda",
-    "lowStock": "Faɗakarwar Ƙarancin Kaya"
-  },
-  "expenses": {
-    "title": "Kashe Kuɗi",
-    "newExpense": "Sabon Kashe Kuɗi",
-    "category": "Rukuni",
-    "description": "Bayani",
-    "amount": "Adadi"
-  },
-  "documents": {
-    "title": "Takardu",
-    "invoices": "Kudirorin Biya",
-    "quotations": "Bayanan Farashi",
-    "newInvoice": "Sabon Kudirin Biya",
-    "newQuotation": "Sabon Bayanin Farashi",
-    "invoiceNo": "Lambar Kudirin Biya",
-    "quoteNo": "Lambar Bayanin Farashi",
-    "customer": "Abokin Ciniki",
-    "dueDate": "Ranar Biya",
-    "status": "Matsayi",
-    "draft": "Zane",
-    "sent": "An Aika",
-    "paid": "An Biya",
-    "expired": "Ya Ƙare"
-  },
-  "reports": {
-    "title": "Rahotanni",
-    "salesReport": "Rahoton Tallace-tallace",
-    "purchasesReport": "Rahoton Sayayya",
-    "expensesReport": "Rahoton Kashe Kuɗi",
-    "profitLoss": "Riba da Hasara",
-    "dateRange": "Kewayon Kwanan Wata",
-    "fromDate": "Daga",
-    "toDate": "Zuwa",
-    "generate": "Ƙirƙiri Rahoto",
-    "export": "Fitarwa"
+  "landing": {
+    "brand": {
+      "name": "Moneytracer"
+    },
+    "nav": {
+      "features": "Abubuwan da za a iya yi",
+      "download": "Sauke manhajar",
+      "about": "Game da mu",
+      "pricing": "Farashi",
+      "login": "Shiga",
+      "getStarted": "Fara yanzu"
+    },
+    "hero": {
+      "title": "Kudin da aka samu, kudin da aka kashe — koyaushe a bayyane.",
+      "subtitle": "Moneytracer ita ce manhajar kiyaye lissafi da kudi don kananan kasuwanci, kungiyoyin ajiyar kudi na al'umma, da kuma kashe kudi na kashin kai. Kula da tallace-tallace da kayayyaki, gudanar da kudaden kungiyarku, ko sarrafa kasafin kudinku — duk daga wani dashboard mai sauki.",
+      "trackBusiness": "Ina gudanar da kasuwanci",
+      "trackCommunity": "Ina gudanar da kungiyar ajiyar kudi",
+      "trackPersonal": "Ina lura da kashe kudi na",
+      "setupBusiness": "Kafa kasuwancina",
+      "setupCommunity": "Kafa kungiyar ajiyar kudina",
+      "setupPersonal": "Fara lura da kashe kudi na",
+      "haveAccount": "Ina da asusu tun da",
+      "downloadApp": "Sauke manhajar Android"
+    },
+    "features": {
+      "business": {
+        "title": "Duk abin da karamin kasuwanci ke bukata don lura da kudinsa",
+        "subtitle": "Daga inda ake tallace-tallace zuwa jadawalin kudi, Moneytracer tana tsara tallace-tallacenka, kayayyaki, da kudaden shiga ba tare da takardun lissafi ba."
+      },
+      "community": {
+        "title": "An tsara shi don kungiyoyin al'umma da hadin gwiwa",
+        "subtitle": "Daina lura da kudaden gudunmawa a cikin littafi. Moneytracer tana ba kungiyarku bayanan da kowane memba zai iya amincewa da su."
+      },
+      "personal": {
+        "title": "Kashe kudi cikin hikima, ba tare da takardun lissafi ba",
+        "subtitle": "Yi rijistar kudi cikin dakika, ga abin da ya kamata ka kashe yau, kuma inganta dabi'unka — ta yadda kake so, ko ta kasafin kudi, ko adana kudi tare da abokai."
+      },
+      "pos": {
+        "title": "Wajen Sayarwa (POS)",
+        "text": "Sayarwa da sauri tare da tabbatar da kayayyaki a lokacin da ake sayarwa."
+      },
+      "inventory": {
+        "title": "Kayan Kasuwanci",
+        "text": "Lura da kayan da kake da su, shigo da kayayyaki da yawa, da samun sanarwa kafin kayan su kare."
+      },
+      "invoices": {
+        "title": "Takardun Sayarwa & Farashi",
+        "text": "Aika takardun sayarwa da farashi na kwararru, kuma maida su tallace-tallace."
+      },
+      "debtors": {
+        "title": "Masu Bashinka & Masu Bashi",
+        "text": "Sanin wanda yake binka da kuma wanda kake bi."
+      },
+      "reports": {
+        "title": "Rahotanni",
+        "text": "Riba da asara, taƙaitaccen bayani kan kudi, da ƙimar kayayyaki — koyaushe a sabunta."
+      },
+      "activity": {
+        "title": "Bayanan Ayyuka",
+        "text": "Cikakken bayani kan wanda ya yi wane aiki, don komai ya kasance a fili."
+      },
+      "members": {
+        "title": "Gudanar da Membobi",
+        "text": "Kara membobi, sanya masu taimako, da ba membobi damar gani kawai."
+      },
+      "contributions": {
+        "title": "Gudunmawa",
+        "text": "Yi rijistar gudunmawar kowane memba da ganin yadda kudaden kungiyar suke karuwa."
+      },
+      "payouts": {
+        "title": "Fitarda Kudi",
+        "text": "Lura da raba kudi ko ribar kungiya cikin adalci, tare da cikakken tarihin kowane memba."
+      },
+      "loans": {
+        "title": "Bashin Kungiya",
+        "text": "Ba membobi bashi daga ajiyar kungiya da lura da yadda ake maida bashin har kobo na karshe."
+      },
+      "groupSummary": {
+        "title": "Takaitaccen Bayanin Kungiya",
+        "text": "Gani daya na jimillar ajiyar kudi, bashin da aka bayar, da yanayin kungiya — ga kowane taro."
+      },
+      "roles": {
+        "title": "Damar Amfani",
+        "text": "Masu gudanarwa suke sarrafa bayanan; membobi za su iya ganin bayanan nasu kawai."
+      },
+      "expenseLog": {
+        "title": "Rijistar Kudi cikin Sauri",
+        "text": "Ƙara kashe kudi cikin dakika — adadi, kashi, shikenan. Babu takardun lissafi, babu wahala."
+      },
+      "budgets": {
+        "title": "Kasafin Kudi",
+        "text": "Saita kasafin kudi na kowane wata kuma ka san abin da ya dace ka kashe a yau."
+      },
+      "habits": {
+        "title": "Dabi'un Kashe Kudi",
+        "text": "Sanya alama kan abubuwan da ka kashe don ganin yadda dabi'unka suke inganta."
+      },
+      "goals": {
+        "title": "Manufar Adana Kudi",
+        "text": "Saita manufa, lura da yadda kake ci gaba, kuma kasance cikin kwarin gwiwa."
+      },
+      "challenges": {
+        "title": "Kalubalen Kungiya",
+        "text": "Adana kudi tare da abokai don manufa guda, tare da ganin ci gaban kowa."
+      },
+      "insights": {
+        "title": "Fahimtar Kanka",
+        "text": "Gani inda kudi yake tafiya da kuma wadanne lokuta ne kake kashe kudi sosai."
+      }
+    },
+    "accounts": {
+      "title": "Asusu guda, kowace hanya da kake bukata",
+      "subtitle": "Zabi asusun kasuwanci, na al'umma, ko na kashin kai lokacin yin rajista — dashboard din zai daidaita bisa ga bukatar ka.",
+      "business": "Asusun Kasuwanci",
+      "businessText": "POS, kayayyaki, takardun sayarwa, da rahotanni don shaguna da masu kasuwanci.",
+      "community": "Asusun Al'umma",
+      "communityText": "Gudunmawa, fitarda kudi, da bashin kungiya don kungiyoyin ajiyar kudi.",
+      "personal": "Asusun Kashin Kai",
+      "personalText": "Kasafin kudi, dabi'u, da manufofin adana kudi ga duk wanda yake son kashe kudi cikin hikima."
+    },
+    "about": {
+      "title": "An gina shi don yadda kudi yake tafiya a zahiri",
+      "description1": "Moneytracer ya fara ne a matsayin wani ra'ayi mai sauki: kayan aikin da suke taimaka wa mai shago ko mai kula da kudaden kungiya bai kamata su kasance masu wahalar amfani ba. Ko kana gudanar da babban shago ko kungiyar adashe, Moneytracer tana ba ka bayanan da za ka iya amincewa da su.",
+      "description2": "Mun gina shi ne musamman don kasuwanci da al'ummomin Afirka — tare da goyon bayan kudaden kasashen Afirka, aiki ba tare da intanet ba, da farashin da ya dace da kananan kasuwanci.",
+      "countries": "Kasashen Afirka da ake amfani da su",
+      "accountTypes": "Nau'ukan asusu — kasuwanci, al'umma, kashin kai",
+      "dashboard": "Dashboard don komai da kake lura da shi",
+      "simple": "An gina shi don ya zama mai sauki",
+      "simpleText": "Babu bukatar kwarewa ta musamman. Idan ka iya amfani da waya, za ka iya amfani da Moneytracer.",
+      "protected": "Bayananka, sun kariya",
+      "protectedText": "Kowane asusu a rabe yake kuma yana da tsaro, tare da tarihin ayyuka don ka san kowa me ya yi.",
+      "africa": "An yi shi don Afirka",
+      "africaText": "Kudaden gida, hakikanin rayuwar gida — an tsara shi bisa yadda kasuwanci yake tafiya a nan."
+    },
+    "cta": {
+      "title": "Kuna shirin tsara kudadenku?",
+      "subtitle": "Bude asusu cikin mintuna. Babu bukatan takardun lissafi.",
+      "button": "Fara kyauta",
+      "beta": "Beta",
+      "betaText": "Moneytracer kyauta ne don amfani a kwanaki 90 na farko yayin da muke ci gaba da inganta manhajar. A wannan lokacin za ka iya ganin sauye-sauye ko dan matsala kadan yayin da muke kawo sabuntawa."
+    },
+    "disclaimer": {
+      "title": "Gargadi",
+      "text": "Moneytracer a halin yanzu yana cikin matakin gwaji (beta). Amfani da wannan hidimar yana karkashin Dokokin Amfani da Gargadi namu. Da fatan za a karanta cikakkun dokokin kafin amfani da hidimar don muhimman bayanan kudinku.",
+      "legalLink": "Karanta cikakkun Dokokin Amfani & Gargadi →",
+      "languages": "Akwai cikin Turanci, Faransanci, Fotigal, da Swahili."
+    },
+    "footer": {
+      "copyright": "© {{year}} Moneytracer.",
+      "login": "Shiga",
+      "signup": "Rajista"
+    },
+    "language": {
+      "select": "Harshe",
+      "en": "Turanci",
+      "fr": "Faransanci",
+      "pt": "Fotigal",
+      "sw": "Swahili"
+    }
   },
   "settings": {
-    "title": "Saitunan",
-    "profile": "Bayanan Martaba",
-    "business": "Kasuwanci",
-    "users": "Masu Amfani",
-    "preferences": "Zaɓuɓɓuka",
-    "language": "Harshe",
-    "theme": "Jigo",
-    "light": "Haske",
-    "dark": "Duhu",
-    "updateProfile": "Sabunta Bayanan Martaba",
-    "changePassword": "Canja Kalmar Sirri"
-  },
-  "errors": {
-    "required": "Wannan filin ana buƙata",
-    "invalidEmail": "Adireshin imel bai inganta ba",
-    "passwordMismatch": "Kalmomin sirri ba su dace ba",
-    "networkError": "Kuskuren hanyar sadarwa. Sake gwadawa.",
-    "unauthorized": "Ba a ba da izini ba",
-    "notFound": "Ba a sami abin da ake nema ba",
-    "serverError": "Kuskuren uwar garke. Sake gwadawa daga baya."
-  },
-  "success": {
-    "saved": "An ajiye cikin nasara",
-    "deleted": "An goge cikin nasara",
-    "updated": "An sabunta cikin nasara",
-    "created": "An ƙirƙira cikin nasara"
-  },
-  "landing": {
-    "navFeatures": "Fasaloli",
-    "navDownload": "Sauke aikace-aikacen",
-    "navAbout": "Game da mu",
-    "navPricing": "Farashi",
-    "login": "Shiga",
-    "getStarted": "Fara",
-    "alreadyHaveAccount": "Ina da asusu tuni",
-    "logInLink": "Shiga",
-    "signUpLink": "Yi Rijista",
-
-    "heroTitle": "Kuɗin da ke shiga, kuɗin da ke fita — koyaushe a bayyane.",
-    "heroSub": "Moneytracer kayan aiki ne na lissafin kuɗi ga ƙananan kasuwanci, ƙungiyoyin ajiyar kuɗi na al'umma, da kashe kuɗin kai. Bi diddigin tallace-tallace da kaya, gudanar da gudummawar ƙungiyar ku, ko sarrafa kasafin kuɗin ku — duka daga wuri ɗaya mai sauƙi.",
-    "trackBusiness": "Ina gudanar da kasuwanci",
-    "trackCommunity": "Ina gudanar da ƙungiyar ajiya",
-    "trackPersonal": "Ina bin diddigin kashe kuɗina",
-    "ctaBusiness": "Saita kasuwancina",
-    "ctaCommunity": "Saita ƙungiyar ajiyata",
-    "ctaPersonal": "Fara bin diddigin kashe kuɗina",
-    "downloadAndroid": "Sauke aikace-aikacen Android",
-
-    "businessFeaturesTitle": "Duk abin da ƙaramin kasuwanci ke buƙata don bin diddigin kuɗinsa",
-    "businessFeaturesSub": "Daga kanti zuwa ma'auni, Moneytracer yana tsara tallace-tallace, kaya, da kwararar kuɗin ku ba tare da takardun lissafi ba.",
-    "communityFeaturesTitle": "An yi shi don ƙungiyoyin ajiya da bankin al'umma",
-    "communityFeaturesSub": "Daina rubuta gudummawa a littafi. Moneytracer yana ba ƙungiyar ku bayanan da duk mambobi za su iya amincewa da su.",
-    "personalFeaturesTitle": "Kashe kuɗi cikin hikima, ba tare da takardun lissafi ba",
-    "personalFeaturesSub": "Rubuta kashe kuɗi cikin daƙiƙu, ka san abin da ya kamata a kashe yau, kuma inganta halayenka na kashe kuɗi.",
-
-    "businessFeatures": [
-      { "icon": "🧾", "title": "Wurin Sayarwa", "text": "Sauri da inganci wajen sayar da kaya masu yawa tare da tabbatar da kaya kai tsaye." },
-      { "icon": "📦", "title": "Kayayyaki", "text": "Bi diddigin matakan kaya, shigo da kaya da yawa, da samun faɗakarwa kafin kaya su ƙare." },
-      { "icon": "📑", "title": "Kudirorin Biya da Bayanan Farashi", "text": "Aika kudirorin biya da bayanan farashi na ƙwararru, kuma juya bayanan farashin da aka karɓa zuwa tallace-tallace." },
-      { "icon": "📒", "title": "Masu Bin Bashi da Masu Bashi", "text": "San wanda ke bin ka bashi da wanda kake bin bashi, cikin dubawa ɗaya." },
-      { "icon": "📈", "title": "Rahotanni", "text": "Riba da hasara, taƙaitaccen kuɗi, da ƙimar kayayyaki — koyaushe na yanzu." },
-      { "icon": "🕵️", "title": "Rijistar Ayyuka", "text": "Cikakkiyar rijistar wanda ya yi me, don kada wani abu ya wuce ba a lura da shi ba." }
-    ],
-    "communityFeatures": [
-      { "icon": "👥", "title": "Sarrafa Mambobi", "text": "Ƙara mambobi, ba da izinin masu rubutu tare, da ba mambobi shigarsu ta karantawa kawai." },
-      { "icon": "💰", "title": "Gudummawa", "text": "Rubuta gudummawar ajiya na kowane mamba kuma ka ga jimillar ƙungiya na sabuntawa nan take." },
-      { "icon": "🤝", "title": "Biyan Kuɗi", "text": "Bi diddigin biyan kuɗi na juyawa ko rabon riba daidai, tare da cikakken tarihi ga kowane mamba." },
-      { "icon": "🏦", "title": "Bashin Ƙungiya", "text": "Bada bashi ga mambobi daga ajiyar ƙungiya kuma bi diddigin biyan bashin daidai." },
-      { "icon": "📊", "title": "Taƙaitaccen Ƙungiya", "text": "Dubawa mai bayyanan jimillar ajiya, bashin da ke fitowa, da lafiyar ƙungiya — ga kowane taro." },
-      { "icon": "🔐", "title": "Izinin Bisa Matsayi", "text": "Manaja da masu rubutu suna sarrafa shigarwa; mambobi za su iya ganin bayanansu koyaushe." }
-    ],
-    "personalFeatures": [
-      { "icon": "💸", "title": "Rubutun Kashe Kuɗi Mai Sauri", "text": "Ƙara kashe kuɗi cikin daƙiƙu — adadi, rukuni, an gama. Babu takardun lissafi." },
-      { "icon": "🧮", "title": "Kasafin Kuɗi na Rukuni", "text": "Saita kasafin kuɗi na wata-wata ga kowane rukuni kuma koyaushe san abin da ya kamata a kashe yau." },
-      { "icon": "🔁", "title": "Halayen Kashe Kuɗi", "text": "Yi wa kashe kuɗi alama a matsayin muhimmanci ko na son rai kuma ka ga halayenka suna inganta." },
-      { "icon": "🎯", "title": "Manufofin Ajiya", "text": "Saita manufa, bi diddigin ci gaba, kuma ka kasance mai himma da bayyanannen layin ƙarshe." },
-      { "icon": "🧑‍🤝‍🧑", "title": "Ƙalubalen Ƙungiya", "text": "Ajiye tare da abokai zuwa manufa ɗaya, tare da ci gaban kowa a bayyane." },
-      { "icon": "📉", "title": "Bayanan Kai", "text": "Ka ga inda kuɗinka ke zuwa da gaske, da kuma waɗanne makonni ko rukunoni suke ƙaruwa." }
-    ],
-
-    "oneAccountTitle": "Asusu ɗaya, ta kowace hanyar da kake buƙata",
-    "oneAccountSub": "Zaɓi asusun kasuwanci, al'umma, ko na kai lokacin yin rijista — dashboard, matsayi, da rahotanni suna daidaitawa.",
-    "accountBusinessTitle": "Asusun Kasuwanci",
-    "accountBusinessText": "POS, kayayyaki, kudirorin biya, da rahotanni ga shaguna, 'yan kasuwa, da masu bayar da sabis na kowane girma.",
-    "accountCommunityTitle": "Asusun Al'umma",
-    "accountCommunityText": "Gudummawa, biyan kuɗi, da bashin ƙungiya ga ƙungiyoyin ajiya da da'irorin kuɗi na al'umma.",
-    "accountPersonalTitle": "Asusun Kai",
-    "accountPersonalText": "Kasafin kuɗi, halaye, da manufofin ajiya ga duk wanda yake son kashe kuɗi cikin hikima, shi kaɗai ko tare da abokai.",
-
-    "aboutTitle": "An yi shi bisa yadda kuɗi ke motsawa da gaske",
-    "aboutP1": "Moneytracer ya fara a matsayin sauƙaƙan ra'ayi: kayan aikin da ke taimaka wa mai shago, ma'ajin ƙungiyar ajiya, ko wanda ke tsara albashinsa bai kamata su buƙaci digiri na lissafin kuɗi ko takardar lissafi ba. Ko kana gudanar da shagon kayan aiki, ko kana sarrafa gudummawar wata-wata ta ƙungiya, ko kana ƙoƙarin ganin inda kuɗinka ke zuwa, Moneytracer yana ba ka bayanan da za ka iya amincewa da su.",
-    "aboutP2": "Mun gina shi don kasuwancin Afirka da al'umma tukuna — tare da tallafin kuɗi da yawa a fadin nahiyar, hanyoyin aiki masu dacewa da yanayin intanet mara ƙarfi, da farashi da ya dace da ƙaramin kasuwanci, ba na duniya baki ɗaya ba.",
-    "statCountries": "Ƙasashen Afirka da ake tallafawa",
-    "statAccountTypes": "Nau'ukan asusu — kasuwanci, al'umma, na kai",
-    "statDashboard": "Dashboard ɗaya ga duk abin da kake bin diddigi",
-    "valueSimpleTitle": "An yi shi don ya zama mai sauƙi",
-    "valueSimpleText": "Babu buƙatar horo. Idan za ka iya amfani da waya, za ka iya gudanar da littattafanka a kan Moneytracer daga rana ta farko.",
-    "valueDataTitle": "Bayananka, an kiyaye su",
-    "valueDataText": "Kowane asusu keɓe ne kuma an kiyaye shi, tare da cikakkiyar rijistar ayyuka don koyaushe ka san wanda ya canja me.",
-    "valueAfricaTitle": "An yi shi don Afirka",
-    "valueAfricaText": "Kuɗaɗe na gida, gaskiyar gida — an tsara shi bisa yadda kasuwanci da al'umma a nan ke aiki da gaske.",
-
-    "pricingTitle": "A shirye kake don tsara kuɗinka?",
-    "pricingSub": "Ƙirƙiri asusu cikin mintuna. Babu buƙatar takardar lissafi.",
-    "getStartedFree": "Fara kyauta",
-    "betaBadge": "Gwaji",
-    "betaNoticeP1": "Moneytracer kyauta ne don amfani na",
-    "betaNoticeDays": "kwanaki 90",
-    "betaNoticeP2": "na farko yayin da muke ci gaba da haɓakawa. A wannan lokacin za ka iya ganin canje-canje na yau da kullum, kurakurai na lokaci-lokaci, ko ɗan katsewa yayin da muke fitar da ingantawa. Za mu sanar da tsare-tsaren farashi kafin ƙarshen lokacin gwaji.",
-
-    "disclaimerTitle": "Sanarwa",
-    "disclaimerText": "Moneytracer a halin yanzu yana cikin ci gaba mai aiki (gwaji). Amfani da Sabis ɗin yana ƙarƙashin cikakkun Sharuɗɗan Amfani da Sanarwa, waɗanda suka haɗa da asarar bayanai, iyakokin garanti, alhaki, da warware rikice-rikice.",
-    "readFullTerms": "Karanta cikakkun Sharuɗɗan Amfani da Sanarwa →",
-    "availableInLanguages": "Ana samun sa a Turanci, Faransanci, Fotugal, da Swahili.",
-
-    "copyright": "Moneytracer."
+    "title": "Saituna",
+    "profile": "Bayanan Kai",
+    "username": "Sunan Mai Amfani",
+    "fullName": "Cikakken Sunan",
+    "role": "Matsayi",
+    "logout": "Fita",
+    "changePassword": "Canza Kalmar Sirri",
+    "currentPassword": "Kalmar Sirri ta Yanzu",
+    "newPassword": "Sabon Kalmar Sirri",
+    "updatePassword": "Sabunta Kalmar Sirri",
+    "demoPassword": "Ba za a iya canza kalmar sirri ta asusun gwaji ba.",
+    "businessSettings": "Saitunan Kasuwanci",
+    "saveBusinessSettings": "Adana Saitunan Kasuwanci",
+    "languagePreference": "Harshen da aka fi so",
+    "selectLanguage": "Zabi harshen da kake so"
   }
 }
