@@ -55,7 +55,8 @@
     "expensesItem": "Despesas",
     "activityLogsItem": "Registo de Atividade",
     "settingsItem": "Configurações",
-    "logOut": "Sair"
+    "logOut": "Sair",
+    "purchaseOrders": "Ordens de Compra"
   },
   "auth": {
     "login": "Entrar",

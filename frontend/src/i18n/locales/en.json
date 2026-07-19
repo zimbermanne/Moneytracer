@@ -55,7 +55,8 @@
     "expensesItem": "Expenses",
     "activityLogsItem": "Activity Logs",
     "settingsItem": "Settings",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "purchaseOrders": "Purchase Orders"
   },
   "auth": {
     "login": "Login",

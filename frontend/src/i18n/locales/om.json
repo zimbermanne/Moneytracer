@@ -55,7 +55,8 @@
     "expensesItem": "Baasii",
     "activityLogsItem": "Galmee Hojii",
     "settingsItem": "Qindaa'ina",
-    "logOut": "Bahi"
+    "logOut": "Bahi",
+    "purchaseOrders": "Ajaja Bittaa"
   },
   "auth": {
     "login": "Seeni",
@@ -271,28 +272,100 @@
     "personalFeaturesTitle": "Ogummaan baasi, spreadsheet malee",
     "personalFeaturesSub": "Baasii sekondii keessatti galmeessi, waan har'a baasuuf nagaa ta'e ilaali, yeroo keessattis amala gaarii ijaari — akkuma barbaadde, baajata, amala, ykn michoota waliin kuusuu ta'us.",
     "businessFeatures": [
-      { "icon": "🧾", "title": "Iddoo Gurgurtaa", "text": "Kanfaltii ariifataa meeshaa hedduu, mirkaneessa meeshaa yeroo isaatti of keessaa qaba, kaaunterii irratti hojjetuuf ijaarame." },
-      { "icon": "📦", "title": "Meeshaa Kuusaa", "text": "Sadarkaa meeshaa hordofi, oomishaalee tuutaan galchi, akeekkachiisas meeshaan hin dhumin dura argadhu." },
-      { "icon": "📑", "title": "Waraqaa Gatii fi Gaaffii Gatii", "text": "Waraqaa gatii fi gaaffii gatii ogummaa qabu ergi, gaaffii gatii fudhatames gurgurtaatti geeddari." },
-      { "icon": "📒", "title": "Liqeeffatoota fi Liqeessitoota", "text": "Nama sirraa liqii qabuu fi nama ati liqii qabdu tokko ilaaltee beeki." },
-      { "icon": "📈", "title": "Gabaasa", "text": "Bu'aa fi gatii, cuunfaa maallaqaa, fi gatii meeshaa — yeroo hunda haaraa dha." },
-      { "icon": "🕵️", "title": "Galmee Hojii", "text": "Seenaa guutuu nama waan hojjete, wanti tokkoyyuu utuu hin beekamin akka hin darbine." }
+      {
+        "icon": "🧾",
+        "title": "Iddoo Gurgurtaa",
+        "text": "Kanfaltii ariifataa meeshaa hedduu, mirkaneessa meeshaa yeroo isaatti of keessaa qaba, kaaunterii irratti hojjetuuf ijaarame."
+      },
+      {
+        "icon": "📦",
+        "title": "Meeshaa Kuusaa",
+        "text": "Sadarkaa meeshaa hordofi, oomishaalee tuutaan galchi, akeekkachiisas meeshaan hin dhumin dura argadhu."
+      },
+      {
+        "icon": "📑",
+        "title": "Waraqaa Gatii fi Gaaffii Gatii",
+        "text": "Waraqaa gatii fi gaaffii gatii ogummaa qabu ergi, gaaffii gatii fudhatames gurgurtaatti geeddari."
+      },
+      {
+        "icon": "📒",
+        "title": "Liqeeffatoota fi Liqeessitoota",
+        "text": "Nama sirraa liqii qabuu fi nama ati liqii qabdu tokko ilaaltee beeki."
+      },
+      {
+        "icon": "📈",
+        "title": "Gabaasa",
+        "text": "Bu'aa fi gatii, cuunfaa maallaqaa, fi gatii meeshaa — yeroo hunda haaraa dha."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Galmee Hojii",
+        "text": "Seenaa guutuu nama waan hojjete, wanti tokkoyyuu utuu hin beekamin akka hin darbine."
+      }
     ],
     "communityFeatures": [
-      { "icon": "👥", "title": "Bulchiinsa Miseensotaa", "text": "Miseensota itti dabali, galmeessitoota gargaartota ramadi, miseensotaafis seensa dubbisuu qofa kenniif." },
-      { "icon": "💰", "title": "Gumaacha", "text": "Gumaacha kuusaa miseensa hundaa galmeessi, waliigala gareen yeroo sanatti akka jijjiiramu ilaali." },
-      { "icon": "🤝", "title": "Kanfaltii", "text": "Kanfaltii naanna'aa ykn qooda haqa qabeessaan hordofi, seenaa guutuu miseensa tokkoon tokkoon isaa waliin." },
-      { "icon": "🏦", "title": "Liqii Garee", "text": "Miseensotaaf liqii kuusaa garee irraa kenni, deebii isaas hanga sentiitti hordofi." },
-      { "icon": "📊", "title": "Cuunfaa Garee", "text": "Ilaalcha ifa ta'e tokko kan waliigala kuusaa, liqii hafe, fi fayyaa garee — walga'ii hundaaf." },
-      { "icon": "🔐", "title": "Seensa Gahee Irratti Hundaa'e", "text": "To'attoonni fi galmeessitoonni galmee bulchan; miseensonni yeroo hunda galmee isaanii ilaaluu danda'u." }
+      {
+        "icon": "👥",
+        "title": "Bulchiinsa Miseensotaa",
+        "text": "Miseensota itti dabali, galmeessitoota gargaartota ramadi, miseensotaafis seensa dubbisuu qofa kenniif."
+      },
+      {
+        "icon": "💰",
+        "title": "Gumaacha",
+        "text": "Gumaacha kuusaa miseensa hundaa galmeessi, waliigala gareen yeroo sanatti akka jijjiiramu ilaali."
+      },
+      {
+        "icon": "🤝",
+        "title": "Kanfaltii",
+        "text": "Kanfaltii naanna'aa ykn qooda haqa qabeessaan hordofi, seenaa guutuu miseensa tokkoon tokkoon isaa waliin."
+      },
+      {
+        "icon": "🏦",
+        "title": "Liqii Garee",
+        "text": "Miseensotaaf liqii kuusaa garee irraa kenni, deebii isaas hanga sentiitti hordofi."
+      },
+      {
+        "icon": "📊",
+        "title": "Cuunfaa Garee",
+        "text": "Ilaalcha ifa ta'e tokko kan waliigala kuusaa, liqii hafe, fi fayyaa garee — walga'ii hundaaf."
+      },
+      {
+        "icon": "🔐",
+        "title": "Seensa Gahee Irratti Hundaa'e",
+        "text": "To'attoonni fi galmeessitoonni galmee bulchan; miseensonni yeroo hunda galmee isaanii ilaaluu danda'u."
+      }
     ],
     "personalFeatures": [
-      { "icon": "💸", "title": "Galmee Baasii Ariifataa", "text": "Baasii sekondii keessatti itti dabali — baayʼina, gosa, xumurame. Spreadsheet hin jiru, rakkoo hin jiru." },
-      { "icon": "🧮", "title": "Baajata Xuqaa", "text": "Baajata ji'aa gosa tokkoon tokkoon isaatiif qindeessi, yeroo hunda waan har'a baasuuf nagaa ta'e beeki." },
-      { "icon": "🔁", "title": "Amala Baasii", "text": "Baasii akka barbaachisaa ykn fedha tasaa ta'etti mallatteessi, amalli kee torbanoota keessatti akka fooyya'aa deemu ilaali." },
-      { "icon": "🎯", "title": "Kaayyoo Kuusaa", "text": "Kaayyoo qindeessi, adeemsa hordofi, daangaa ifa mul'atu waliinis onnee guuti." },
-      { "icon": "🧑‍🤝‍🧑", "title": "Morkii Garee", "text": "Michoota waliin kaayyoo wal-qooddatan tokko irratti kuusi, adeemsa nama hundaas ilaaluun ni danda'ama." },
-      { "icon": "📉", "title": "Hubannoo Dhuunfaa", "text": "Maallaqni kee dhugumaan eessa akka deemu, torbanoota ykn gosoota ol ka'aa jiran ilaali." }
+      {
+        "icon": "💸",
+        "title": "Galmee Baasii Ariifataa",
+        "text": "Baasii sekondii keessatti itti dabali — baayʼina, gosa, xumurame. Spreadsheet hin jiru, rakkoo hin jiru."
+      },
+      {
+        "icon": "🧮",
+        "title": "Baajata Xuqaa",
+        "text": "Baajata ji'aa gosa tokkoon tokkoon isaatiif qindeessi, yeroo hunda waan har'a baasuuf nagaa ta'e beeki."
+      },
+      {
+        "icon": "🔁",
+        "title": "Amala Baasii",
+        "text": "Baasii akka barbaachisaa ykn fedha tasaa ta'etti mallatteessi, amalli kee torbanoota keessatti akka fooyya'aa deemu ilaali."
+      },
+      {
+        "icon": "🎯",
+        "title": "Kaayyoo Kuusaa",
+        "text": "Kaayyoo qindeessi, adeemsa hordofi, daangaa ifa mul'atu waliinis onnee guuti."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Morkii Garee",
+        "text": "Michoota waliin kaayyoo wal-qooddatan tokko irratti kuusi, adeemsa nama hundaas ilaaluun ni danda'ama."
+      },
+      {
+        "icon": "📉",
+        "title": "Hubannoo Dhuunfaa",
+        "text": "Maallaqni kee dhugumaan eessa akka deemu, torbanoota ykn gosoota ol ka'aa jiran ilaali."
+      }
     ],
     "oneAccountTitle": "Akkaawuntii tokko, karaa ati barbaaddu kamiyyuu",
     "oneAccountSub": "Yeroo galmooftu akkaawuntii daldalaa, hawaasaa, ykn dhuunfaa filadhu — gabateen to'annoo, gaheen, fi gabaasni ni deemu.",

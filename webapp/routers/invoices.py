@@ -422,7 +422,7 @@ def email_invoice(invoice_id: int, payload: EmailDocRequest, db: Session = Depen
 
 
 def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: bool = True,
-                 signature_block: bool = False, verify_url: str = None) -> io.BytesIO:
+                 signature_block: bool = False, verify_url: str = None, party_label: str = "Bill To") -> io.BytesIO:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -477,7 +477,7 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: boo
     if getattr(doc, "customer_vrn", ""): client_id_bits.append(f"VRN: {doc.customer_vrn}")
     if client_id_bits: bt_lines.append("  ".join(client_id_bits))
     if doc.customer_phone: bt_lines.append(f"Contact: {doc.customer_phone}")
-    bt_block = [Paragraph("Bill To", section), Paragraph("<br/>".join(bt_lines), normal)]
+    bt_block = [Paragraph(party_label, section), Paragraph("<br/>".join(bt_lines), normal)]
 
     meta_rows = [[f"{label.title()} No.", doc.invoice_no],
                  [f"{label.title()} Date", doc.created_at.strftime("%d/%m/%Y")]]

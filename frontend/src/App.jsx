@@ -19,6 +19,7 @@ import POS from './pages/POS.jsx'
 import Inventory from './pages/Inventory.jsx'
 import Sales from './pages/Sales.jsx'
 import Purchases from './pages/Purchases.jsx'
+import PurchaseOrders from './pages/PurchaseOrders.jsx'
 import Expenses from './pages/Expenses.jsx'
 import Debtors from './pages/Debtors.jsx'
 import Creditors from './pages/Creditors.jsx'
@@ -112,6 +113,7 @@ function PrivateRoutes() {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/sales" element={<Sales />} />
         <Route path="/purchases" element={<Purchases />} />
+        <Route path="/purchase-orders" element={<PurchaseOrders />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
         <Route path="/creditors" element={<Creditors />} />

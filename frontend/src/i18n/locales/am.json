@@ -55,7 +55,8 @@
     "expensesItem": "ወጪዎች",
     "activityLogsItem": "የእንቅስቃሴ መዝገቦች",
     "settingsItem": "ቅንብሮች",
-    "logOut": "ውጣ"
+    "logOut": "ውጣ",
+    "purchaseOrders": "የግዢ ትዕዛዞች"
   },
   "auth": {
     "login": "ግባ",

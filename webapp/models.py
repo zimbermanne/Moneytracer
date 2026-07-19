@@ -69,6 +69,19 @@ class PaymentMode(str, enum.Enum):
     mobile_money = "mobile_money"
 
 
+class PurchaseOrderStatus(str, enum.Enum):
+    # Deliberately not reusing DocumentStatus.paid — a PO's meaningful event
+    # is goods arriving (which is what should move stock and post the
+    # ledger), not payment, since many purchases are made on credit and
+    # settled separately later. Defined here (rather than next to
+    # DocumentStatus further down) because PurchaseOrder itself is defined
+    # right after Purchase, well before DocumentStatus's usual spot.
+    draft = "draft"
+    sent = "sent"
+    received = "received"
+    cancelled = "cancelled"
+
+
 class LedgerStatus(str, enum.Enum):
     unpaid = "unpaid"
     partial = "partial"
@@ -157,6 +170,63 @@ class Purchase(Base):
     total = Column(Float, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+    item = relationship("InventoryItem")
+
+
+class PurchaseOrder(Base):
+    """A document sent to a supplier requesting goods — distinct from
+    Purchase (an actual received/paid transaction). A PurchaseOrder only
+    turns into real Purchase rows (and only then affects stock and the
+    ledger) once it's marked 'received' — mirrors how Invoice only becomes
+    a Sale once marked 'paid'."""
+    __tablename__ = "purchase_orders"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    po_no = Column(String(30), default="")
+    supplier_name = Column(String(150), default="")
+    supplier_phone = Column(String(50), default="")
+    supplier_address = Column(String(255), default="")
+    supplier_tin = Column(String(50), default="")
+    supplier_vrn = Column(String(50), default="")
+    expected_date = Column(DateTime, nullable=True)
+    subtotal = Column(Float, default=0)
+    tax_rate = Column(Float, default=0)
+    tax_amount = Column(Float, default=0)
+    discount = Column(Float, default=0)
+    total = Column(Float, default=0)
+    notes = Column(String(500), default="")
+    status = Column(Enum(PurchaseOrderStatus), default=PurchaseOrderStatus.draft)
+    # Set once this PO has generated its Purchase rows (on first transition
+    # to "received"). Prevents double-booking stock if received is set twice.
+    converted_to_purchase = Column(Boolean, default=False)
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    items = relationship("PurchaseOrderItem", back_populates="po", cascade="all, delete-orphan")
+
+
+class PurchaseOrderItem(Base):
+    __tablename__ = "purchase_order_items"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    po_id = Column(Integer, ForeignKey(fk_ref("purchase_orders.id", SCHEMA_BUSINESS)), nullable=False)
+    # Optional link to an existing inventory item, picked from the dropdown.
+    # Null means a freehand line — something new you're stocking for the
+    # first time, or a non-inventory line (freight, customs, etc.).
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    description = Column(String(255), default="")
+    quantity = Column(Float, default=1)
+    # Named unit_price (not unit_cost) so this row is interchangeable with
+    # InvoiceItem/DocumentLineOut for the shared PDF renderer — semantically
+    # this is what you're paying the supplier per unit, i.e. your cost.
+    unit_price = Column(Float, default=0)
+    total = Column(Float, default=0)
+
+    po = relationship("PurchaseOrder", back_populates="items")
     item = relationship("InventoryItem")
 
 

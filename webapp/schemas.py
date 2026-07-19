@@ -3,7 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
-    AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus,
+    AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
 )
 
 
@@ -414,7 +414,53 @@ class InvoiceUpdate(BaseModel):
     items: Optional[List[DocumentLineIn]] = None
 
 
-class QuotationCreate(BaseModel):
+class PurchaseOrderCreate(BaseModel):
+    supplier_name: str = ""
+    supplier_phone: Optional[str] = ""
+    supplier_address: Optional[str] = ""
+    supplier_tin: Optional[str] = ""
+    supplier_vrn: Optional[str] = ""
+    expected_date: Optional[datetime] = None
+    tax_rate: float = 0
+    discount: float = 0
+    notes: Optional[str] = ""
+    items: List[DocumentLineIn]
+
+
+class PurchaseOrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    po_no: str
+    supplier_name: str
+    supplier_phone: str
+    supplier_address: str
+    supplier_tin: Optional[str] = ""
+    supplier_vrn: Optional[str] = ""
+    expected_date: Optional[datetime] = None
+    subtotal: float
+    tax_rate: float
+    tax_amount: float
+    discount: float
+    total: float
+    notes: str
+    status: PurchaseOrderStatus
+    converted_to_purchase: bool = False
+    created_by: str
+    created_at: datetime
+    items: List[DocumentLineOut] = []
+
+
+class PurchaseOrderUpdate(BaseModel):
+    supplier_name: Optional[str] = None
+    supplier_phone: Optional[str] = None
+    supplier_address: Optional[str] = None
+    supplier_tin: Optional[str] = None
+    supplier_vrn: Optional[str] = None
+    expected_date: Optional[datetime] = None
+    tax_rate: Optional[float] = None
+    discount: Optional[float] = None
+    notes: Optional[str] = None
+    items: Optional[List[DocumentLineIn]] = None
     customer_name: str = "Walk-in"
     customer_phone: Optional[str] = ""
     customer_address: Optional[str] = ""
