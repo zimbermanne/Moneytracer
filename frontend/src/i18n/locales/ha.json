@@ -176,5 +176,8 @@
     "saveBusinessSettings": "Adana Saitunan Kasuwanci",
     "languagePreference": "Harshen da aka fi so",
     "selectLanguage": "Zabi harshen da kake so"
+  },
+  "nav": {
+    "purchaseOrders": "Umarnin Sayayya"
   }
 }

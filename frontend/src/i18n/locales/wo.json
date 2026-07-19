@@ -55,7 +55,8 @@
     "expensesItem": "Dëpans",
     "activityLogsItem": "Jarnal Liggéey",
     "settingsItem": "Paramet",
-    "logOut": "Genn"
+    "logOut": "Genn",
+    "purchaseOrders": "Yebbi jaay"
   },
   "auth": {
     "login": "Dugg",
@@ -271,28 +272,100 @@
     "personalFeaturesTitle": "Jëfandikoo xaalis ci xam-xam, te du la wara tabalo",
     "personalFeaturesSub": "Bind sa dëpans ci sekond, gis li war a jëfandikoo tey, te defar jëf yu gëna baax ak jamono — ci sa anam, muy bujet, jëf, walla denc ak say xarit.",
     "businessFeatures": [
-      { "icon": "🧾", "title": "Barab Jaay", "text": "Fey bu gaaw ngir marchandiz yu bare ak wóoral marchandiz ci saa si, defar ngir kaawtar." },
-      { "icon": "📦", "title": "Marchandiz", "text": "Toppatoo tolluwaayu marchandiz, dugal marchandiz ci mbootaay, te am yëgle bi dul mujj." },
-      { "icon": "📑", "title": "Faktiir ak Devi", "text": "Yónnee faktiir ak devi yu am solo, te soppi devi yu ñu nangu ci jaay." },
-      { "icon": "📒", "title": "Ñi Am Dëkkeel Ak Ñi Ñu Dëkkeel", "text": "Xam ku la war ak ku nga war, ci benn xool." },
-      { "icon": "📈", "title": "Rapoor", "text": "Njariñ ak perte, ndajem xaalis, ak njëgu marchandiz — bees la ba tey." },
-      { "icon": "🕵️", "title": "Jarnal Liggéey", "text": "Jaar-jaari mat bu ku def lan, ngir lu nekk du réer bu ñu ko xamul." }
+      {
+        "icon": "🧾",
+        "title": "Barab Jaay",
+        "text": "Fey bu gaaw ngir marchandiz yu bare ak wóoral marchandiz ci saa si, defar ngir kaawtar."
+      },
+      {
+        "icon": "📦",
+        "title": "Marchandiz",
+        "text": "Toppatoo tolluwaayu marchandiz, dugal marchandiz ci mbootaay, te am yëgle bi dul mujj."
+      },
+      {
+        "icon": "📑",
+        "title": "Faktiir ak Devi",
+        "text": "Yónnee faktiir ak devi yu am solo, te soppi devi yu ñu nangu ci jaay."
+      },
+      {
+        "icon": "📒",
+        "title": "Ñi Am Dëkkeel Ak Ñi Ñu Dëkkeel",
+        "text": "Xam ku la war ak ku nga war, ci benn xool."
+      },
+      {
+        "icon": "📈",
+        "title": "Rapoor",
+        "text": "Njariñ ak perte, ndajem xaalis, ak njëgu marchandiz — bees la ba tey."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Jarnal Liggéey",
+        "text": "Jaar-jaari mat bu ku def lan, ngir lu nekk du réer bu ñu ko xamul."
+      }
     ],
     "communityFeatures": [
-      { "icon": "👥", "title": "Sàmm Ndaw Yi", "text": "Yokk ndaw, tàyal ku bindaat, te jox ndaw yi sañ-sañu seen bopp ngir jàng rekk." },
-      { "icon": "💰", "title": "Ndimbal", "text": "Bind ndimbal denc gu ndaw gu nekk te gis limu mbootaay biy soppiku ci saa si." },
-      { "icon": "🤝", "title": "Xaalis Bu Génn", "text": "Toppatoo xaalis bu wër walla partaas bu jub, ak jaar-jaari mat ndaw gu nekk." },
-      { "icon": "🏦", "title": "Njël Mbootaay", "text": "Jox ndaw njël bu jóge ci denc mbootaay te toppatoo fey ba ci mujjug santim." },
-      { "icon": "📊", "title": "Ndajem Mbootaay", "text": "Benn xool bu leer ci limu denc, njël yu des, ak wérgi-yaramu mbootaay — ngir mbootaay bu nekk." },
-      { "icon": "🔐", "title": "Duggoo Ci Ronof Nekkin", "text": "Kiy sàmm ak ku bindaat dañuy sàmm dugg yi; ndaw yi mën nañu gis seen kayit ci jamono yépp." }
+      {
+        "icon": "👥",
+        "title": "Sàmm Ndaw Yi",
+        "text": "Yokk ndaw, tàyal ku bindaat, te jox ndaw yi sañ-sañu seen bopp ngir jàng rekk."
+      },
+      {
+        "icon": "💰",
+        "title": "Ndimbal",
+        "text": "Bind ndimbal denc gu ndaw gu nekk te gis limu mbootaay biy soppiku ci saa si."
+      },
+      {
+        "icon": "🤝",
+        "title": "Xaalis Bu Génn",
+        "text": "Toppatoo xaalis bu wër walla partaas bu jub, ak jaar-jaari mat ndaw gu nekk."
+      },
+      {
+        "icon": "🏦",
+        "title": "Njël Mbootaay",
+        "text": "Jox ndaw njël bu jóge ci denc mbootaay te toppatoo fey ba ci mujjug santim."
+      },
+      {
+        "icon": "📊",
+        "title": "Ndajem Mbootaay",
+        "text": "Benn xool bu leer ci limu denc, njël yu des, ak wérgi-yaramu mbootaay — ngir mbootaay bu nekk."
+      },
+      {
+        "icon": "🔐",
+        "title": "Duggoo Ci Ronof Nekkin",
+        "text": "Kiy sàmm ak ku bindaat dañuy sàmm dugg yi; ndaw yi mën nañu gis seen kayit ci jamono yépp."
+      }
     ],
     "personalFeatures": [
-      { "icon": "💸", "title": "Bindaal Dëpans Bu Gaaw", "text": "Yokk dëpans ci sekond — limu xaalis, kategori, matna. Amul tabalo, amul jafe-jafe." },
-      { "icon": "🧮", "title": "Bujet Envelope", "text": "Aajal bujet buy weer ci kategori bu nekk te xam waxtu wu ne li war a jëfandikoo tey." },
-      { "icon": "🔁", "title": "Jëfu Dëpans", "text": "Marké dëpans ni war walla mbëggeel ci saa si te seetlu ni say jëf di gëna baax ci ayubés." },
-      { "icon": "🎯", "title": "Jubluwaayu Denc", "text": "Aajal jubluwaay, toppatoo lu jëm kanam, te sax ci coobare ak dénd bu leer." },
-      { "icon": "🧑‍🤝‍🧑", "title": "Ndaje Mbootaay", "text": "Denc ak say xarit ngir jubluwaay bu ñu bokk, te gis lu jëm kanam ku nekk." },
-      { "icon": "📉", "title": "Xam-xamu Boroom", "text": "Gis fu sa xaalis di jëm ci dëgg-dëgg, ak ayubés walla kategori yuy yokku." }
+      {
+        "icon": "💸",
+        "title": "Bindaal Dëpans Bu Gaaw",
+        "text": "Yokk dëpans ci sekond — limu xaalis, kategori, matna. Amul tabalo, amul jafe-jafe."
+      },
+      {
+        "icon": "🧮",
+        "title": "Bujet Envelope",
+        "text": "Aajal bujet buy weer ci kategori bu nekk te xam waxtu wu ne li war a jëfandikoo tey."
+      },
+      {
+        "icon": "🔁",
+        "title": "Jëfu Dëpans",
+        "text": "Marké dëpans ni war walla mbëggeel ci saa si te seetlu ni say jëf di gëna baax ci ayubés."
+      },
+      {
+        "icon": "🎯",
+        "title": "Jubluwaayu Denc",
+        "text": "Aajal jubluwaay, toppatoo lu jëm kanam, te sax ci coobare ak dénd bu leer."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Ndaje Mbootaay",
+        "text": "Denc ak say xarit ngir jubluwaay bu ñu bokk, te gis lu jëm kanam ku nekk."
+      },
+      {
+        "icon": "📉",
+        "title": "Xam-xamu Boroom",
+        "text": "Gis fu sa xaalis di jëm ci dëgg-dëgg, ak ayubés walla kategori yuy yokku."
+      }
     ],
     "oneAccountTitle": "Benn kont, ci anam bu la soxla",
     "oneAccountSub": "Tànn kont bu kompaañi, mbootaay, walla boroom bo bind sa bopp — tabloo, ronof, ak rapoor dinañu wéyal.",

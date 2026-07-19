@@ -55,7 +55,8 @@
     "expensesItem": "Dépenses",
     "activityLogsItem": "Journal d'Activité",
     "settingsItem": "Paramètres",
-    "logOut": "Se déconnecter"
+    "logOut": "Se déconnecter",
+    "purchaseOrders": "Bons de commande"
   },
   "auth": {
     "login": "Connexion",

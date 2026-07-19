@@ -55,7 +55,8 @@
     "expensesItem": "Matumizi",
     "activityLogsItem": "Kumbukumbu za Shughuli",
     "settingsItem": "Mipangilio",
-    "logOut": "Toka"
+    "logOut": "Toka",
+    "purchaseOrders": "Maagizo ya Ununuzi"
   },
   "auth": {
     "login": "Ingia",
