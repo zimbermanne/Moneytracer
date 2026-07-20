@@ -37,9 +37,6 @@ _MIGRATIONS = {
         # Pan-African Reference App: country and revenue authority references.
         ("country_id", "INTEGER", None),
         ("revenue_authority_id", "INTEGER", None),
-        # Yearly SaaS subscription (M-Pesa STK Push) — see routers/payments.py.
-        ("plan", "VARCHAR(20)", "'free'"),
-        ("subscription_expires_at", "TIMESTAMP", None),
     ],
 }
 

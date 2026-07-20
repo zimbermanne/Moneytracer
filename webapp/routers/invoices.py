@@ -10,12 +10,12 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account
+from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode
 from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
-from ledger import get_locked_period
+from ledger import post_sale_entry
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
@@ -122,6 +122,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
         db.add(InvoiceItem(
             account_id=account_id,
             invoice_id=invoice.id, 
+            item_id=line.item_id,
             description=line.description,
             quantity=line.quantity, 
             unit_price=line.unit_price,
@@ -148,14 +149,6 @@ def update_invoice(invoice_id: int, payload: InvoiceUpdate, db: Session = Depend
     if invoice.status == DocumentStatus.paid:
         raise HTTPException(status_code=400, detail="Paid invoices cannot be edited")
 
-    locked = get_locked_period(db, invoice.account_id, invoice.created_at)
-    if locked is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invoice falls in closed fiscal period '{locked.name}' and cannot be edited. "
-                   f"Issue a correction/credit note instead.",
-        )
-
     if payload.customer_name is not None: invoice.customer_name = payload.customer_name
     if payload.customer_phone is not None: invoice.customer_phone = payload.customer_phone
     if payload.customer_address is not None: invoice.customer_address = payload.customer_address
@@ -175,6 +168,7 @@ def update_invoice(invoice_id: int, payload: InvoiceUpdate, db: Session = Depend
         for line in payload.items:
             db.add(InvoiceItem(
                 account_id=invoice.account_id, invoice_id=invoice.id,
+                item_id=line.item_id,
                 description=line.description, quantity=line.quantity, unit_price=line.unit_price,
                 total=round(line.quantity * line.unit_price, 2),
             ))
@@ -224,6 +218,62 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db),
     return inv
 
 
+def _convert_invoice_to_sales(db: Session, invoice: Invoice, current_user: User) -> list:
+    """Turn every line on a paid invoice into a real Sale record — this is
+    the moment the invoice actually affects stock, revenue, and the ledger.
+    Before this point (draft/sent), an invoice is just a document; nothing
+    about it has been recorded as a transaction yet.
+
+    Lines linked to a tracked inventory item (item_id set) decrement stock
+    like any other sale. Lines typed in freehand (item_id is None — a
+    service fee, a one-off item not carried in inventory) still become a
+    Sale for revenue/reporting purposes, just without touching stock.
+
+    Runs inside the caller's existing db session/transaction — if anything
+    here raises, the whole status update (including the paid status itself)
+    rolls back, so an invoice can never end up "paid" with only some of its
+    lines converted.
+    """
+    created_sales = []
+    receipt_no = f"RCT-{uuid.uuid4().hex[:8].upper()}"
+
+    for line in invoice.items:
+        item = None
+        if line.item_id:
+            item = db.query(InventoryItem).filter(InventoryItem.id == line.item_id).first()
+            if item and item.account_id == invoice.account_id:
+                if item.quantity < line.quantity:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot mark as paid: insufficient stock for '{item.name}' "
+                               f"(have {item.quantity}, invoice needs {line.quantity})",
+                    )
+                item.quantity -= line.quantity
+            else:
+                item = None  # stale/foreign item_id — fall back to a freehand line
+
+        sale = Sale(
+            account_id=invoice.account_id,
+            item_id=item.id if item else None,
+            item_name=item.name if item else line.description,
+            quantity=line.quantity,
+            unit_price=line.unit_price,
+            cost_price_at_sale=item.cost_price if item else None,
+            total=round(line.quantity * line.unit_price, 2),
+            payment_mode=PaymentMode.cash,  # invoice is being marked paid, i.e. payment already received
+            customer_name=invoice.customer_name or "Walk-in",
+            sold_by=current_user.username,
+            receipt_no=receipt_no,
+        )
+        db.add(sale)
+        db.flush()
+        post_sale_entry(db, invoice.account_id, sale, created_by=current_user.username)
+        created_sales.append(sale)
+
+    invoice.converted_to_sale = True
+    return created_sales
+
+
 @router.patch("/{invoice_id}/status", response_model=InvoiceOut)
 def update_status(invoice_id: int, status: DocumentStatus,
                   db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -233,7 +283,16 @@ def update_status(invoice_id: int, status: DocumentStatus,
         q = q.filter(Invoice.account_id == account_id)
     inv = q.first()
     if not inv: raise HTTPException(404, "Invoice not found")
-    inv.status = status; db.commit(); db.refresh(inv)
+
+    inv.status = status
+    if status == DocumentStatus.paid and not inv.converted_to_sale:
+        sales = _convert_invoice_to_sales(db, inv, current_user)
+        log_activity_for_user(
+            db, current_user, "invoice_paid",
+            f"{inv.invoice_no} marked paid — recorded {len(sales)} sale line(s)",
+        )
+
+    db.commit(); db.refresh(inv)
     log_activity_for_user(db, current_user, "invoice_status", f"{inv.invoice_no} → {status.value}")
     return inv
 
@@ -247,15 +306,6 @@ def delete_invoice(invoice_id: int, db: Session = Depends(get_db),
         q = q.filter(Invoice.account_id == account_id)
     inv = q.first()
     if not inv: raise HTTPException(404, "Invoice not found")
-
-    locked = get_locked_period(db, inv.account_id, inv.created_at)
-    if locked is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invoice falls in closed fiscal period '{locked.name}' and cannot be deleted. "
-                   f"Issue a correction/credit note instead.",
-        )
-
     db.delete(inv); db.commit()
     log_activity_for_user(db, current_user, "invoice_delete", f"Deleted {inv.invoice_no}")
     return {"detail": "Invoice deleted"}
@@ -355,7 +405,7 @@ def email_invoice(invoice_id: int, payload: EmailDocRequest, db: Session = Depen
 
 
 def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: bool = True,
-                 signature_block: bool = False, verify_url: str = None) -> io.BytesIO:
+                 signature_block: bool = False, verify_url: str = None, party_label: str = "Bill To") -> io.BytesIO:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -410,7 +460,7 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: boo
     if getattr(doc, "customer_vrn", ""): client_id_bits.append(f"VRN: {doc.customer_vrn}")
     if client_id_bits: bt_lines.append("  ".join(client_id_bits))
     if doc.customer_phone: bt_lines.append(f"Contact: {doc.customer_phone}")
-    bt_block = [Paragraph("Bill To", section), Paragraph("<br/>".join(bt_lines), normal)]
+    bt_block = [Paragraph(party_label, section), Paragraph("<br/>".join(bt_lines), normal)]
 
     meta_rows = [[f"{label.title()} No.", doc.invoice_no],
                  [f"{label.title()} Date", doc.created_at.strftime("%d/%m/%Y")]]

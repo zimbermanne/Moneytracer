@@ -55,7 +55,8 @@
     "expensesItem": "Kharashaadka",
     "activityLogsItem": "Diiwaanka Howlaha",
     "settingsItem": "Dejinta",
-    "logOut": "Ka bax"
+    "logOut": "Ka bax",
+    "purchaseOrders": "Amarrada Iibsiga"
   },
   "auth": {
     "login": "Gal",
@@ -271,28 +272,100 @@
     "personalFeaturesTitle": "Ku kharash gareey xigmad, iyada oo aan loo baahnayn spreadsheet",
     "personalFeaturesSub": "Gali kharash ilbiriqsiyo gudahood, arag waxa maanta ammaan u ah in la kharash geliyo, kuna dhis caadooyin fiican waqti ka dib — sidaada, ha noqoto miisaaniyad, caado, ama kaydin la wadaago saaxiibbo.",
     "businessFeatures": [
-      { "icon": "🧾", "title": "Goobta Iibka", "text": "Bixin degdeg ah oo alaabo badan leh oo si toos ah loo xaqiijiyo kaydka, loogu talagalay miiska." },
-      { "icon": "📦", "title": "Alaabta Kaydka", "text": "La soco heerarka kaydka, geli alaabta guud ahaan, oo hel digniin ka hor inta kaydku ka dhammaanayo." },
-      { "icon": "📑", "title": "Qaansheegyada & Qiimeeyayaasha", "text": "Dir qaansheegyo iyo qiimeeyayaal xirfad leh, oo bedel qiimeeyayaasha la aqbalay iib." },
-      { "icon": "📒", "title": "Deynlayaasha iyo Lagu Leeyahay", "text": "Ogow qofka deynta kugu leh iyo qofka aad deyn ku leedahay, hal fiiris ah." },
-      { "icon": "📈", "title": "Warbixinnada", "text": "Faa'iido iyo khasaare, kooban maaliyadeed, iyo qiimaynta alaabta — had iyo jeer waa cusub tahay." },
-      { "icon": "🕵️", "title": "Diiwaanka Howlaha", "text": "Diiwaan buuxa oo ku saabsan cidii wax samaysay, si aysan waxna u dhaafin iyada oo aan la ogayn." }
+      {
+        "icon": "🧾",
+        "title": "Goobta Iibka",
+        "text": "Bixin degdeg ah oo alaabo badan leh oo si toos ah loo xaqiijiyo kaydka, loogu talagalay miiska."
+      },
+      {
+        "icon": "📦",
+        "title": "Alaabta Kaydka",
+        "text": "La soco heerarka kaydka, geli alaabta guud ahaan, oo hel digniin ka hor inta kaydku ka dhammaanayo."
+      },
+      {
+        "icon": "📑",
+        "title": "Qaansheegyada & Qiimeeyayaasha",
+        "text": "Dir qaansheegyo iyo qiimeeyayaal xirfad leh, oo bedel qiimeeyayaasha la aqbalay iib."
+      },
+      {
+        "icon": "📒",
+        "title": "Deynlayaasha iyo Lagu Leeyahay",
+        "text": "Ogow qofka deynta kugu leh iyo qofka aad deyn ku leedahay, hal fiiris ah."
+      },
+      {
+        "icon": "📈",
+        "title": "Warbixinnada",
+        "text": "Faa'iido iyo khasaare, kooban maaliyadeed, iyo qiimaynta alaabta — had iyo jeer waa cusub tahay."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Diiwaanka Howlaha",
+        "text": "Diiwaan buuxa oo ku saabsan cidii wax samaysay, si aysan waxna u dhaafin iyada oo aan la ogayn."
+      }
     ],
     "communityFeatures": [
-      { "icon": "👥", "title": "Maarayn Xubnaha", "text": "Ku dar xubno, u qoondee diiwaan-yeelayaal wax-ka-qaybqaata, oo sii xubnaha gelitaankooda oo akhrin kaliya ah." },
-      { "icon": "💰", "title": "Wax-ku-biirinta", "text": "Diiwaan geli wax-ku-biirinta kaydka xubin kasta oo arag wadarta kooxda oo si toos ah loo cusboonaysiinayo." },
-      { "icon": "🤝", "title": "Bixinta", "text": "La soco bixinta wareega ama qaybinta si caddaalad ah, oo leh taariikh buuxa xubin kasta." },
-      { "icon": "🏦", "title": "Deymaha Kooxda", "text": "Sii xubnaha deymo kaydka kooxda ka yimid oo la soco celinta ilaa senti u dambeysa." },
-      { "icon": "📊", "title": "Kooban Kooxda", "text": "Hal aragti oo cad oo ku saabsan wadarta kaydka, deymaha soo hara, iyo caafimaadka kooxda — kulan kasta." },
-      { "icon": "🔐", "title": "Gelitaan Ku Salaysan Doorka", "text": "Maamulayaasha iyo diiwaan-yeelayaashu waxay maareeyaan gelitaanka; xubnuhu had iyo jeer waxay arki karaan diiwaankooda." }
+      {
+        "icon": "👥",
+        "title": "Maarayn Xubnaha",
+        "text": "Ku dar xubno, u qoondee diiwaan-yeelayaal wax-ka-qaybqaata, oo sii xubnaha gelitaankooda oo akhrin kaliya ah."
+      },
+      {
+        "icon": "💰",
+        "title": "Wax-ku-biirinta",
+        "text": "Diiwaan geli wax-ku-biirinta kaydka xubin kasta oo arag wadarta kooxda oo si toos ah loo cusboonaysiinayo."
+      },
+      {
+        "icon": "🤝",
+        "title": "Bixinta",
+        "text": "La soco bixinta wareega ama qaybinta si caddaalad ah, oo leh taariikh buuxa xubin kasta."
+      },
+      {
+        "icon": "🏦",
+        "title": "Deymaha Kooxda",
+        "text": "Sii xubnaha deymo kaydka kooxda ka yimid oo la soco celinta ilaa senti u dambeysa."
+      },
+      {
+        "icon": "📊",
+        "title": "Kooban Kooxda",
+        "text": "Hal aragti oo cad oo ku saabsan wadarta kaydka, deymaha soo hara, iyo caafimaadka kooxda — kulan kasta."
+      },
+      {
+        "icon": "🔐",
+        "title": "Gelitaan Ku Salaysan Doorka",
+        "text": "Maamulayaasha iyo diiwaan-yeelayaashu waxay maareeyaan gelitaanka; xubnuhu had iyo jeer waxay arki karaan diiwaankooda."
+      }
     ],
     "personalFeatures": [
-      { "icon": "💸", "title": "Diiwaan Kharash Degdeg ah", "text": "Ku dar kharash ilbiriqsiyo gudahood — qadarka, qaybta, dhammaad. Ma jiraan spreadsheet, ma jiraan dhib." },
-      { "icon": "🧮", "title": "Miisaaniyadaha Xarfaha", "text": "Deji miisaaniyad bille ah qayb kasta oo had iyo jeer ogow waxa ammaan u ah in maanta la kharash geliyo." },
-      { "icon": "🔁", "title": "Caadooyinka Kharashka", "text": "U calaamadee kharashyada muhiim ama rabitaan lama filaan ah oo arag caadooyinkaaga oo hagaagaya toddobaad kasta." },
-      { "icon": "🎯", "title": "Yoolalka Kaydinta", "text": "Deji yool, la soco horumarka, oo sii ahaw mid dadaal badan leh iyada oo leh xariiq muuqda oo dhammaad ah." },
-      { "icon": "🧑‍🤝‍🧑", "title": "Tartannada Kooxda", "text": "Kaydso saaxiibbo la wadaag yool la wadaago, iyada oo horumarka qof kasta la arki karo." },
-      { "icon": "📉", "title": "Aragtida Shakhsiga", "text": "Arag halka lacagtaadu run ahaantii aado, iyo toddobaadyada ama qaybaha sii kordhaya." }
+      {
+        "icon": "💸",
+        "title": "Diiwaan Kharash Degdeg ah",
+        "text": "Ku dar kharash ilbiriqsiyo gudahood — qadarka, qaybta, dhammaad. Ma jiraan spreadsheet, ma jiraan dhib."
+      },
+      {
+        "icon": "🧮",
+        "title": "Miisaaniyadaha Xarfaha",
+        "text": "Deji miisaaniyad bille ah qayb kasta oo had iyo jeer ogow waxa ammaan u ah in maanta la kharash geliyo."
+      },
+      {
+        "icon": "🔁",
+        "title": "Caadooyinka Kharashka",
+        "text": "U calaamadee kharashyada muhiim ama rabitaan lama filaan ah oo arag caadooyinkaaga oo hagaagaya toddobaad kasta."
+      },
+      {
+        "icon": "🎯",
+        "title": "Yoolalka Kaydinta",
+        "text": "Deji yool, la soco horumarka, oo sii ahaw mid dadaal badan leh iyada oo leh xariiq muuqda oo dhammaad ah."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Tartannada Kooxda",
+        "text": "Kaydso saaxiibbo la wadaag yool la wadaago, iyada oo horumarka qof kasta la arki karo."
+      },
+      {
+        "icon": "📉",
+        "title": "Aragtida Shakhsiga",
+        "text": "Arag halka lacagtaadu run ahaantii aado, iyo toddobaadyada ama qaybaha sii kordhaya."
+      }
     ],
     "oneAccountTitle": "Hal akoon, sidii uu ahaan lahaa waxa aad u baahan tahay",
     "oneAccountSub": "Dooro akoon ganacsi, bulsho, ama shakhsi ah marka aad isdiiwaangeliso — shabakadda guud, doorarka, iyo warbixinnadu way isu habeeyaan.",

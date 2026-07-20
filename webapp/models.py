@@ -56,48 +56,11 @@ class Account(Base):
     is_active = Column(Boolean, default=True)
     is_suspended = Column(Boolean, default=False)
     onboarding_completed = Column(Boolean, default=False)
-    # SaaS subscription (separate from is_suspended, which is an admin/manual
-    # lock). "plan" gates paid-tier features elsewhere in the app; when a paid
-    # subscription lapses the account is lazily downgraded to free rather than
-    # suspended — see auth.get_current_user — so the user keeps read access
-    # on the free tier instead of being locked out entirely.
-    plan = Column(String(20), default="free")  # "free" | "paid"
-    subscription_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="account")
     country = relationship("Country")
     revenue_authority = relationship("RevenueAuthority")
-
-
-class PaymentStatus(str, enum.Enum):
-    pending = "pending"
-    success = "success"
-    failed = "failed"
-
-
-class SubscriptionPayment(Base):
-    """One row per STK Push attempt for the yearly SaaS subscription fee.
-    Lives in the default schema (like Account/User) since it's billing for
-    platform access itself, not a business-track record."""
-    __tablename__ = "subscription_payments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
-    phone = Column(String(20), nullable=False)  # normalized 2547XXXXXXXX
-    amount = Column(Float, default=20000)  # TZS, yearly subscription fee
-    # Safaricom's identifiers for this push — CheckoutRequestID is what the
-    # callback uses to tell us which attempt it's reporting on.
-    merchant_request_id = Column(String(60), nullable=True)
-    checkout_request_id = Column(String(60), unique=True, index=True, nullable=True)
-    status = Column(Enum(PaymentStatus), default=PaymentStatus.pending, index=True)
-    mpesa_receipt = Column(String(40), default="")
-    result_desc = Column(String(255), default="")
-    initiated_by = Column(String(80), default="")
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    account = relationship("Account")
 
 
 class PaymentMode(str, enum.Enum):
@@ -790,27 +753,4 @@ class JournalLine(Base):
 
     journal_entry = relationship("JournalEntry", back_populates="lines")
     account = relationship("ChartOfAccount", back_populates="journal_lines")
-
-
-class FiscalPeriodStatus(str, enum.Enum):
-    open = "open"
-    closed = "closed"
-
-
-class FiscalPeriod(Base):
-    """A named accounting period (e.g. a month or quarter) that can be
-    closed to lock the ledger against further posts/edits inside its date
-    range — see ledger.get_locked_period() and
-    routers/ledgers.py's close/reopen endpoints."""
-    __tablename__ = "fiscal_periods"
-
-    id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
-    name = Column(String(80), nullable=False)
-    start_date = Column(DateTime, nullable=False, index=True)
-    end_date = Column(DateTime, nullable=False, index=True)
-    status = Column(Enum(FiscalPeriodStatus), default=FiscalPeriodStatus.open, index=True)
-    closed_by = Column(String(80), nullable=True)
-    closed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -55,7 +55,8 @@
     "expensesItem": "Matumizi",
     "activityLogsItem": "Kumbukumbu za Shughuli",
     "settingsItem": "Mipangilio",
-    "logOut": "Toka"
+    "logOut": "Toka",
+    "purchaseOrders": "Maagizo ya Ununuzi"
   },
   "auth": {
     "login": "Ingia",
@@ -396,7 +397,7 @@
     "disclaimerTitle": "Tamko la Kutowajibika",
     "disclaimerText": "Moneytracer kwa sasa iko katika maendeleo hai (beta). Matumizi ya Huduma yanategemea Masharti yetu kamili ya Matumizi na Tamko la Kutowajibika, ambayo yanahusisha upotevu wa data, vikomo vya dhamana, uwajibikaji, na utatuzi wa migogoro. Tafadhali soma masharti kamili kabla ya kutegemea Huduma kwa kumbukumbu za kifedha za biashara, kijamii, au binafsi.",
     "readFullTerms": "Soma Masharti kamili ya Matumizi na Tamko la Kutowajibika →",
-    "availableInLanguages": "Inapatikana kwa Kiingereza, Kifaransa, Kireno, na Kiswahili.",
+    "availableInLanguages": "Inapatikana kwa lugha nyingi, ikiwemo Kiswahili, Kiingereza, Kifaransa, Kireno, Kiarabu, Kihausa, na Kiamhari.",
     "copyright": "Moneytracer."
   }
 }

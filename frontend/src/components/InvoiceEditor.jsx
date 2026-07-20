@@ -14,7 +14,7 @@ function money(n) {
 export default function InvoiceEditor({
   kind, isInvoice, editingId, form, setForm, company, error,
   updateLine, addLine, removeLine, subtotal, taxAmt, total,
-  onClose, onSave, saving,
+  onClose, onSave, saving, inventoryItems = [], selectInventoryItem,
 }) {
   const [checkAmount, setCheckAmount] = useState('')
   const label = isInvoice ? 'Invoice' : 'Quotation'
@@ -68,10 +68,28 @@ export default function InvoiceEditor({
             )}
 
             <div className="invoice-editor-section-label">Line Items</div>
-            {form.items.map((line, idx) => (
+            {form.items.map((line, idx) => {
+              const isCustom = !line.item_id
+              return (
               <div key={idx} className="invoice-editor-line">
-                <input placeholder="Description" value={line.description}
-                  onChange={(e) => updateLine(idx, 'description', e.target.value)} />
+                <div className="invoice-line-item-picker">
+                  <select
+                    className="invoice-line-item-select"
+                    value={line.item_id ?? ''}
+                    onChange={(e) => selectInventoryItem(idx, e.target.value)}
+                  >
+                    <option value="">— Custom item (not in inventory) —</option>
+                    {inventoryItems.map((it) => (
+                      <option key={it.id} value={it.id} disabled={it.quantity <= 0}>
+                        {it.name} {it.quantity <= 0 ? '(out of stock)' : `(${it.quantity} in stock)`}
+                      </option>
+                    ))}
+                  </select>
+                  {isCustom && (
+                    <input placeholder="Describe the item" value={line.description}
+                      onChange={(e) => updateLine(idx, 'description', e.target.value)} />
+                  )}
+                </div>
                 <input type="number" placeholder="Qty" value={line.quantity}
                   onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
                 <input type="number" placeholder="Unit Price" value={line.unit_price}
@@ -79,7 +97,7 @@ export default function InvoiceEditor({
                 <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
                 <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
               </div>
-            ))}
+            )})}
             <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 20 }}>+ Add Line</button>
 
             <div className="form-row"><label>Tax Rate (%)</label>

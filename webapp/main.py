@@ -11,7 +11,7 @@ from database import Base, engine, ensure_schemas
 import models  # noqa: F401 ensures models are registered before create_all
 from migrate import run_migrations
 from rate_limit import limiter
-from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders, payments
+from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders
 
 ensure_schemas(engine)
 Base.metadata.create_all(bind=engine)
@@ -70,7 +70,6 @@ app.include_router(community.router)
 app.include_router(personal.router)
 app.include_router(public.router)
 app.include_router(reference.router)
-app.include_router(payments.router)
 
 
 @app.get("/api/health")

@@ -55,7 +55,8 @@
     "expensesItem": "Uitgawes",
     "activityLogsItem": "Aktiwiteitlogboeke",
     "settingsItem": "Instellings",
-    "logOut": "Teken uit"
+    "logOut": "Teken uit",
+    "purchaseOrders": "Aankooporders"
   },
   "auth": {
     "login": "Meld aan",
@@ -271,28 +272,100 @@
     "personalFeaturesTitle": "Bestee verstandig, sonder sigblaaie",
     "personalFeaturesSub": "Log 'n uitgawe in sekondes, sien wat vandag veilig is om te bestee, en bou beter gewoontes oor tyd — op jou manier, of dit nou begrotings, gewoontes, of spaar saam met vriende is.",
     "businessFeatures": [
-      { "icon": "🧾", "title": "Verkoopspunt", "text": "Vinnige multi-item-uitklaring met intydse voorraadverifikasie, gebou vir die toonbank." },
-      { "icon": "📦", "title": "Voorraad", "text": "Volg voorraadvlakke, voer produkte in groepe in, en kry lae-voorraad-waarskuwings voordat jy uitloop." },
-      { "icon": "📑", "title": "Fakture & Kwotasies", "text": "Stuur professionele fakture en kwotasies, en verander aanvaarde kwotasies in verkope." },
-      { "icon": "📒", "title": "Debiteure & Krediteure", "text": "Weet wie jou skuld en wie jy skuld, met een oogopslag." },
-      { "icon": "📈", "title": "Verslae", "text": "Wins & verlies, finansiële opsommings, en voorraadwaardasie — altyd op datum." },
-      { "icon": "🕵️", "title": "Aktiwiteitlogboeke", "text": "Volledige oudit-spoor van wie wat gedoen het, sodat niks ongesiens verbygaan nie." }
+      {
+        "icon": "🧾",
+        "title": "Verkoopspunt",
+        "text": "Vinnige multi-item-uitklaring met intydse voorraadverifikasie, gebou vir die toonbank."
+      },
+      {
+        "icon": "📦",
+        "title": "Voorraad",
+        "text": "Volg voorraadvlakke, voer produkte in groepe in, en kry lae-voorraad-waarskuwings voordat jy uitloop."
+      },
+      {
+        "icon": "📑",
+        "title": "Fakture & Kwotasies",
+        "text": "Stuur professionele fakture en kwotasies, en verander aanvaarde kwotasies in verkope."
+      },
+      {
+        "icon": "📒",
+        "title": "Debiteure & Krediteure",
+        "text": "Weet wie jou skuld en wie jy skuld, met een oogopslag."
+      },
+      {
+        "icon": "📈",
+        "title": "Verslae",
+        "text": "Wins & verlies, finansiële opsommings, en voorraadwaardasie — altyd op datum."
+      },
+      {
+        "icon": "🕵️",
+        "title": "Aktiwiteitlogboeke",
+        "text": "Volledige oudit-spoor van wie wat gedoen het, sodat niks ongesiens verbygaan nie."
+      }
     ],
     "communityFeatures": [
-      { "icon": "👥", "title": "Lidbestuur", "text": "Voeg lede by, wys mede-aantekenaars aan, en gee lede hul eie leestoegang." },
-      { "icon": "💰", "title": "Bydraes", "text": "Teken elke lid se spaarbydrae aan en sien die groep se totaal onmiddellik opdateer." },
-      { "icon": "🤝", "title": "Uitbetalings", "text": "Volg omgaan- of dividend-uitbetalings regverdig, met 'n volledige geskiedenis per lid." },
-      { "icon": "🏦", "title": "Groeplenings", "text": "Gee lenings aan lede uit groepspaargeld en volg terugbetalings tot op die sent." },
-      { "icon": "📊", "title": "Groepopsomming", "text": "Een duidelike oorsig van totale spaargeld, uitstaande lenings, en groepgesondheid — vir elke vergadering." },
-      { "icon": "🔐", "title": "Roluitgebaseerde Toegang", "text": "Administrateurs en aantekenaars bestuur inskrywings; lede kan altyd hul eie rekords sien." }
+      {
+        "icon": "👥",
+        "title": "Lidbestuur",
+        "text": "Voeg lede by, wys mede-aantekenaars aan, en gee lede hul eie leestoegang."
+      },
+      {
+        "icon": "💰",
+        "title": "Bydraes",
+        "text": "Teken elke lid se spaarbydrae aan en sien die groep se totaal onmiddellik opdateer."
+      },
+      {
+        "icon": "🤝",
+        "title": "Uitbetalings",
+        "text": "Volg omgaan- of dividend-uitbetalings regverdig, met 'n volledige geskiedenis per lid."
+      },
+      {
+        "icon": "🏦",
+        "title": "Groeplenings",
+        "text": "Gee lenings aan lede uit groepspaargeld en volg terugbetalings tot op die sent."
+      },
+      {
+        "icon": "📊",
+        "title": "Groepopsomming",
+        "text": "Een duidelike oorsig van totale spaargeld, uitstaande lenings, en groepgesondheid — vir elke vergadering."
+      },
+      {
+        "icon": "🔐",
+        "title": "Roluitgebaseerde Toegang",
+        "text": "Administrateurs en aantekenaars bestuur inskrywings; lede kan altyd hul eie rekords sien."
+      }
     ],
     "personalFeatures": [
-      { "icon": "💸", "title": "Vinnige Uitgaweloglys", "text": "Voeg 'n uitgawe in sekondes by — bedrag, kategorie, klaar. Geen sigblaaie, geen wrywing nie." },
-      { "icon": "🧮", "title": "Koevertbegrotings", "text": "Stel 'n maandelikse begroting per kategorie en weet altyd wat vandag veilig is om te bestee." },
-      { "icon": "🔁", "title": "Bestedingsgewoontes", "text": "Merk uitgawes as noodsaaklik of impulsief en kyk hoe jou gewoontes week na week verbeter." },
-      { "icon": "🎯", "title": "Spaardoelwitte", "text": "Stel 'n doelwit, volg vordering, en bly gemotiveerd met 'n duidelike visuele wenstreep." },
-      { "icon": "🧑‍🤝‍🧑", "title": "Groepuitdagings", "text": "Spaar saam met vriende na 'n gedeelde doelwit, met almal se vordering sigbaar." },
-      { "icon": "📉", "title": "Persoonlike Insigte", "text": "Sien waarheen jou geld werklik gaan, en watter weke of kategorieë opkruip." }
+      {
+        "icon": "💸",
+        "title": "Vinnige Uitgaweloglys",
+        "text": "Voeg 'n uitgawe in sekondes by — bedrag, kategorie, klaar. Geen sigblaaie, geen wrywing nie."
+      },
+      {
+        "icon": "🧮",
+        "title": "Koevertbegrotings",
+        "text": "Stel 'n maandelikse begroting per kategorie en weet altyd wat vandag veilig is om te bestee."
+      },
+      {
+        "icon": "🔁",
+        "title": "Bestedingsgewoontes",
+        "text": "Merk uitgawes as noodsaaklik of impulsief en kyk hoe jou gewoontes week na week verbeter."
+      },
+      {
+        "icon": "🎯",
+        "title": "Spaardoelwitte",
+        "text": "Stel 'n doelwit, volg vordering, en bly gemotiveerd met 'n duidelike visuele wenstreep."
+      },
+      {
+        "icon": "🧑‍🤝‍🧑",
+        "title": "Groepuitdagings",
+        "text": "Spaar saam met vriende na 'n gedeelde doelwit, met almal se vordering sigbaar."
+      },
+      {
+        "icon": "📉",
+        "title": "Persoonlike Insigte",
+        "text": "Sien waarheen jou geld werklik gaan, en watter weke of kategorieë opkruip."
+      }
     ],
     "oneAccountTitle": "Een rekening, op enige manier wat jy nodig het",
     "oneAccountSub": "Kies 'n besigheids-, gemeenskaps-, of persoonlike rekening wanneer jy registreer — die paneelbord, rolle, en verslae pas aan.",

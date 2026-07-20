@@ -55,7 +55,8 @@
     "expensesItem": "Despesas",
     "activityLogsItem": "Registo de Atividade",
     "settingsItem": "Configurações",
-    "logOut": "Sair"
+    "logOut": "Sair",
+    "purchaseOrders": "Ordens de Compra"
   },
   "auth": {
     "login": "Entrar",
@@ -396,7 +397,7 @@
     "disclaimerTitle": "Isenção de Responsabilidade",
     "disclaimerText": "O Moneytracer encontra-se atualmente em desenvolvimento ativo (beta). A utilização do Serviço está sujeita aos nossos Termos de Uso e Isenção de Responsabilidade completos, que cobrem perda de dados, limitações de garantia, responsabilidade e resolução de litígios. Leia os termos completos antes de confiar no Serviço para registos financeiros de negócio, comunitários ou pessoais.",
     "readFullTerms": "Ler os Termos de Uso e Isenção de Responsabilidade completos →",
-    "availableInLanguages": "Disponível em inglês, francês, português e suaíli.",
+    "availableInLanguages": "Disponível em vários idiomas, incluindo português, inglês, francês, suaíli, árabe, hauçá e amárico.",
     "copyright": "Moneytracer."
   }
 }
