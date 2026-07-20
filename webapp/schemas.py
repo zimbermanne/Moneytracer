@@ -442,6 +442,9 @@ class PurchaseOrderUpdate(BaseModel):
     discount: Optional[float] = None
     notes: Optional[str] = None
     items: Optional[List[DocumentLineIn]] = None
+
+
+class QuotationCreate(BaseModel):
     customer_name: str = "Walk-in"
     customer_phone: Optional[str] = ""
     customer_address: Optional[str] = ""
