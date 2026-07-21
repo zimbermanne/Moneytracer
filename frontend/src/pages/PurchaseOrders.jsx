@@ -25,6 +25,7 @@ export default function PurchaseOrders() {
   const [pdfLoading, setPdfLoading] = useState(null)
   const [listLoading, setListLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
+  const [editingPoNo, setEditingPoNo] = useState('')
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
 
@@ -63,9 +64,10 @@ export default function PurchaseOrders() {
     }))
   }
 
-  const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
+  const openNew = () => { setEditingId(null); setEditingPoNo(''); setForm(emptyForm()); setError(''); setOpen(true) }
   const openEdit = (doc) => {
     setEditingId(doc.id)
+    setEditingPoNo(doc.po_no)
     setForm({
       supplier_name: doc.supplier_name || '', supplier_phone: doc.supplier_phone || '',
       supplier_address: doc.supplier_address || '', supplier_tin: doc.supplier_tin || '',
@@ -94,7 +96,7 @@ export default function PurchaseOrders() {
       } else {
         await api.post('/purchase-orders/', payload)
       }
-      setOpen(false); setEditingId(null); setForm(emptyForm()); load()
+      setOpen(false); setEditingId(null); setEditingPoNo(''); setForm(emptyForm()); load()
     } catch (e) { setError(e.message) }
     finally { setSaving(false) }
   }
@@ -189,6 +191,12 @@ export default function PurchaseOrders() {
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+                {editingId && (
+                  <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
+                          disabled={pdfLoading === editingId}>
+                    {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
+                  </button>
+                )}
                 <button className="btn btn-primary" onClick={save} disabled={saving}>
                   {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
                 </button>
