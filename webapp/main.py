@@ -79,11 +79,18 @@ app.include_router(personal.router)
 app.include_router(public.router)
 app.include_router(reference.router)
 
-
 @app.get("/api/health")
 def health():
     return {"status": "ok", "version": "2.5.0"}
 
+# Superadmin console — served same-origin from this same backend, on
+# purpose: it's the same API it manages, so there's no cross-origin request
+# for it to make, no CORS configuration needed, none of the "Failed to
+# fetch" grief that comes from hosting it as a separate origin and trying
+# to whitelist that origin via ALLOWED_ORIGINS.
+superadmin_static_dir = os.path.join(os.path.dirname(__file__), "superadmin_static")
+if os.path.isdir(superadmin_static_dir):
+    app.mount("/superadmin", StaticFiles(directory=superadmin_static_dir, html=True), name="superadmin")
 
 # Serve the legacy static SPA shell, if present, at the root
 static_dir = os.path.join(os.path.dirname(__file__), "static")

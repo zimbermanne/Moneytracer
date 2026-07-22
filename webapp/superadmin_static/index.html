@@ -19,30 +19,17 @@
     --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; font-family: var(--font-body); background: var(--cream);
-    color: var(--text-dark); font-size: 14px;
-  }
+  body { margin: 0; font-family: var(--font-body); background: var(--cream); color: var(--text-dark); font-size: 14px; }
   .hidden { display: none !important; }
 
-  .center-screen {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
-  }
-  .auth-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-    box-shadow: var(--shadow); padding: 32px; width: 100%; max-width: 380px;
-  }
+  .center-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 32px; width: 100%; max-width: 380px; }
   .auth-card h1 { font-size: 20px; margin: 0 0 4px; }
   .auth-card p.sub { color: var(--text-muted); margin: 0 0 20px; font-size: 13px; }
   label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
-  input, select {
-    width: 100%; padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 8px;
-    background: var(--surface); color: var(--text-dark); font-size: 14px; margin-bottom: 14px; font-family: inherit;
-  }
+  input, select { width: 100%; padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-dark); font-size: 14px; margin-bottom: 14px; font-family: inherit; }
   input:focus, select:focus { outline: none; border-color: var(--accent); }
-  button {
-    cursor: pointer; border: none; border-radius: 8px; font-family: inherit; font-weight: 600; font-size: 13px;
-  }
+  button { cursor: pointer; border: none; border-radius: 8px; font-family: inherit; font-weight: 600; font-size: 13px; }
   .btn-primary { background: var(--accent); color: #fff; padding: 10px 16px; width: 100%; }
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -56,26 +43,23 @@
   .btn-success:hover { background: var(--success); color: #fff; }
   .btn-sm { padding: 5px 10px; font-size: 12px; }
   .error-text { color: var(--danger); font-size: 13px; margin: -6px 0 14px; }
-  .link-btn {
-    background: none; border: none; color: var(--text-muted); font-size: 12px; text-decoration: underline;
-    padding: 0; margin-top: 10px;
-  }
+  .error-box { background: var(--danger-bg); color: var(--danger); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin: -6px 0 14px; line-height: 1.5; }
+  .link-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; text-decoration: underline; padding: 0; margin-top: 10px; }
 
-  header.topbar {
-    background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px;
-    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5;
-  }
+  header.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; }
   header.topbar h1 { font-size: 17px; margin: 0; }
   header.topbar .meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
   .page { max-width: 1180px; margin: 0 auto; padding: 24px; }
 
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 9px 14px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 16px 18px; box-shadow: var(--shadow);
-  }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
   .stat-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
   .stat-card .value { font-size: 24px; font-weight: 700; }
+  .stat-card .sub { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
 
   .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
   .toolbar input { margin: 0; max-width: 280px; }
@@ -91,52 +75,51 @@
   .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
   .badge-active { background: var(--success-bg); color: var(--success); }
   .badge-suspended { background: var(--danger-bg); color: var(--danger); }
+  .badge-critical { background: var(--danger-bg); color: var(--danger); }
+  .badge-ok { background: var(--success-bg); color: var(--success); }
+  .badge-warn { background: var(--warning-bg); color: var(--warning); }
 
   .users-panel { background: var(--surface-sunken); padding: 14px 18px; border-bottom: 1px solid var(--border); }
   .users-panel table { background: var(--surface); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
   .users-panel .empty { color: var(--text-faint); font-size: 13px; padding: 8px 0; }
 
   .action-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .toast {
-    position: fixed; bottom: 20px; right: 20px; background: var(--text-dark); color: #fff;
-    padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow); z-index: 50;
-    max-width: 360px;
-  }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--text-dark); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow); z-index: 50; max-width: 360px; }
   .toast.err { background: var(--danger); }
   .toast.ok { background: var(--success); }
   .empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; }
-  .warn-note {
-    font-size: 12px; color: var(--warning); background: var(--warning-bg); border-radius: 8px;
-    padding: 8px 12px; margin-bottom: 14px;
-  }
+  .warn-note { font-size: 12px; color: var(--warning); background: var(--warning-bg); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
+  .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .settings-link { font-size: 12px; color: var(--text-faint); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; }
 </style>
 </head>
 <body>
-
-<div id="setup-screen" class="center-screen hidden">
-  <div class="auth-card">
-    <h1>Connect to Moneytracer</h1>
-    <p class="sub">One-time setup — stored only in this browser.</p>
-    <label>Backend API URL</label>
-    <input id="setup-api" placeholder="https://moneytracer-production.up.railway.app" />
-    <label>Tenant app URL <span style="font-weight:400;color:var(--text-faint)">(used for "Login as")</span></label>
-    <input id="setup-app" placeholder="https://app.zimbermanne.co.tz" />
-    <div id="setup-error" class="error-text hidden"></div>
-    <button class="btn-primary" onclick="saveSetup()">Continue</button>
-  </div>
-</div>
 
 <div id="login-screen" class="center-screen hidden">
   <div class="auth-card">
     <h1>Superadmin Login</h1>
     <p class="sub">Platform-level access — accounts, users, support tools.</p>
+    <div id="preflight-error" class="error-box hidden"></div>
     <label>Username</label>
     <input id="login-username" autocomplete="username" />
     <label>Password</label>
     <input id="login-password" type="password" autocomplete="current-password" />
     <div id="login-error" class="error-text hidden"></div>
     <button class="btn-primary" id="login-btn" onclick="doLogin()">Log in</button>
-    <button class="link-btn" onclick="resetSetup()">Change API URL</button>
+    <button class="link-btn" onclick="openAdvanced()">Advanced: custom API URL</button>
+  </div>
+</div>
+
+<div id="advanced-screen" class="center-screen hidden">
+  <div class="auth-card">
+    <h1>Advanced setup</h1>
+    <p class="sub">Only change this if the console isn't served by the same backend it manages. Leave blank to use this same origin (recommended — avoids CORS entirely).</p>
+    <label>Backend API URL <span style="font-weight:400;color:var(--text-faint)">(blank = same origin)</span></label>
+    <input id="setup-api" placeholder="https://your-backend.up.railway.app" />
+    <label>Tenant app URL <span style="font-weight:400;color:var(--text-faint)">(used for "Login as")</span></label>
+    <input id="setup-app" placeholder="https://app.zimbermanne.co.tz" />
+    <button class="btn-primary" onclick="saveAdvanced()">Save</button>
+    <button class="link-btn" onclick="show('login-screen')">Back to login</button>
   </div>
 </div>
 
@@ -153,37 +136,71 @@
   </header>
 
   <div class="page">
-    <div class="stat-grid">
-      <div class="stat-card"><div class="label">Total Accounts</div><div class="value" id="stat-total">—</div></div>
-      <div class="stat-card"><div class="label">Active</div><div class="value" id="stat-active">—</div></div>
-      <div class="stat-card"><div class="label">Suspended</div><div class="value" id="stat-suspended">—</div></div>
-      <div class="stat-card"><div class="label">Business / Community</div><div class="value" id="stat-types" style="font-size:16px;">—</div></div>
+    <div class="tabs">
+      <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
+      <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
+      <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
     </div>
 
-    <div class="toolbar">
-      <input id="search-box" placeholder="Search by name, owner, phone, email…" oninput="renderAccounts()" />
-      <select id="status-filter" onchange="renderAccounts()">
-        <option value="all">All statuses</option>
-        <option value="active">Active only</option>
-        <option value="suspended">Suspended only</option>
-      </select>
-      <div class="spacer"></div>
-      <button class="btn-outline btn-sm" onclick="loadAccounts()">↻ Refresh</button>
+    <!-- ACCOUNTS TAB -->
+    <div id="tab-accounts">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Total Accounts</div><div class="value" id="stat-total">—</div></div>
+        <div class="stat-card"><div class="label">Active</div><div class="value" id="stat-active">—</div></div>
+        <div class="stat-card"><div class="label">Suspended</div><div class="value" id="stat-suspended">—</div></div>
+        <div class="stat-card"><div class="label">Business / Community</div><div class="value" id="stat-types" style="font-size:16px;">—</div></div>
+        <div class="stat-card"><div class="label">Signups (7d / 30d)</div><div class="value" id="stat-signups" style="font-size:16px;">—</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input id="search-box" placeholder="Search by name, owner, phone, email…" oninput="renderAccounts()" />
+        <select id="status-filter" onchange="renderAccounts()">
+          <option value="all">All statuses</option>
+          <option value="active">Active only</option>
+          <option value="suspended">Suspended only</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadAccounts()">↻ Refresh</button>
+      </div>
+
+      <div class="warn-note">"Login as" opens a support session in a new tab. It expires in 30 minutes and every use is recorded in that account's activity log.</div>
+
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th><th>Owner</th><th>Type</th><th>Region</th><th>Phone</th>
+              <th>Status</th><th>Created</th><th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-tbody"></tbody>
+        </table>
+        <div id="accounts-empty" class="empty-state hidden">No accounts match your search.</div>
+      </div>
     </div>
 
-    <div class="warn-note">"Login as" opens a support session in a new tab. It expires in 30 minutes and every use is recorded in that account's activity log.</div>
+    <!-- CRITICAL ACTIVITY TAB -->
+    <div id="tab-activity" class="hidden">
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadActivity()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Time</th><th>Account</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+          <tbody id="activity-tbody"></tbody>
+        </table>
+        <div id="activity-empty" class="empty-state hidden">No critical events. That's good.</div>
+      </div>
+    </div>
 
-    <div class="card" style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Account</th><th>Owner</th><th>Type</th><th>Region</th><th>Phone</th>
-            <th>Status</th><th>Created</th><th style="text-align:right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="accounts-tbody"></tbody>
-      </table>
-      <div id="accounts-empty" class="empty-state hidden">No accounts match your search.</div>
+    <!-- SYSTEM HEALTH TAB -->
+    <div id="tab-health" class="hidden">
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadHealth()">↻ Refresh</button>
+      </div>
+      <div class="health-grid" id="health-grid"></div>
     </div>
   </div>
 </div>
@@ -195,6 +212,9 @@ const LS_API = 'mt_superadmin_api_url';
 const LS_APP = 'mt_superadmin_app_url';
 const LS_TOKEN = 'mt_superadmin_token';
 
+// Default: same origin as this page. That's the whole point of serving this
+// console from the backend itself — no cross-origin request, no CORS
+// configuration needed, no "Failed to fetch" from a blocked preflight.
 let apiBase = localStorage.getItem(LS_API) || '';
 let appBase = localStorage.getItem(LS_APP) || '';
 let token = localStorage.getItem(LS_TOKEN) || '';
@@ -204,7 +224,7 @@ let expandedAccountId = null;
 let accountUsersCache = {};
 
 function show(id) {
-  ['setup-screen','login-screen','dashboard-screen'].forEach(s => {
+  ['login-screen','advanced-screen','dashboard-screen'].forEach(s => {
     document.getElementById(s).classList.toggle('hidden', s !== id);
   });
 }
@@ -218,42 +238,52 @@ function toast(msg, type) {
   toast._t = setTimeout(() => el.classList.add('hidden'), 4000);
 }
 
-function api(path, options) {
+// Wraps fetch with clear, distinct error messages: a network-level failure
+// (DNS, CORS block, backend unreachable) throws a TypeError with no status
+// code at all — that's NOT the same problem as the server responding with
+// a 401/403/500, and conflating them is exactly what made this so hard to
+// diagnose. Surface which one actually happened.
+async function api(path, options) {
   options = options || {};
-  return fetch(apiBase + path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  }).then(async (res) => {
-    if (!res.ok) {
-      let detail = `Request failed (${res.status})`;
-      try { const j = await res.json(); if (j.detail) detail = j.detail; } catch (e) {}
-      throw new Error(detail);
-    }
-    if (res.status === 204) return null;
-    return res.json();
-  });
+  let res;
+  try {
+    res = await fetch(apiBase + path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (networkErr) {
+    throw new Error(
+      `Network error reaching ${apiBase || '(this origin)'}${path} — the request never got a ` +
+      `response at all. This is almost always either: the backend is down/unreachable, or (if ` +
+      `apiBase is set to a different origin than this page) a CORS block. Check DevTools → Network ` +
+      `tab for the specific request to see which.`
+    );
+  }
+  if (!res.ok) {
+    let detail = `Request failed (HTTP ${res.status})`;
+    try { const j = await res.json(); if (j.detail) detail = j.detail; } catch (e) {}
+    throw new Error(detail);
+  }
+  if (res.status === 204) return null;
+  return res.json();
 }
 
-function resetSetup() {
+function openAdvanced() {
   document.getElementById('setup-api').value = apiBase;
   document.getElementById('setup-app').value = appBase;
-  show('setup-screen');
+  show('advanced-screen');
 }
 
-function saveSetup() {
-  const apiVal = document.getElementById('setup-api').value.trim().replace(/\/$/, '');
-  const appVal = document.getElementById('setup-app').value.trim().replace(/\/$/, '');
-  const errEl = document.getElementById('setup-error');
-  if (!apiVal) { errEl.textContent = 'Enter the backend API URL.'; errEl.classList.remove('hidden'); return; }
-  errEl.classList.add('hidden');
-  apiBase = apiVal;
-  appBase = appVal;
+function saveAdvanced() {
+  apiBase = document.getElementById('setup-api').value.trim().replace(/\/$/, '');
+  appBase = document.getElementById('setup-app').value.trim().replace(/\/$/, '');
   localStorage.setItem(LS_API, apiBase);
   localStorage.setItem(LS_APP, appBase);
+  toast('Saved.', 'ok');
   show('login-screen');
 }
 
@@ -261,8 +291,10 @@ async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
+  const preflightEl = document.getElementById('preflight-error');
   const btn = document.getElementById('login-btn');
   errEl.classList.add('hidden');
+  preflightEl.classList.add('hidden');
   if (!username || !password) { errEl.textContent = 'Enter username and password.'; errEl.classList.remove('hidden'); return; }
   btn.disabled = true; btn.textContent = 'Logging in…';
   try {
@@ -275,8 +307,14 @@ async function doLogin() {
     localStorage.setItem(LS_TOKEN, token);
     enterDashboard();
   } catch (e) {
-    errEl.textContent = e.message || 'Login failed.';
-    errEl.classList.remove('hidden');
+    const msg = e.message || 'Login failed.';
+    if (msg.startsWith('Network error')) {
+      preflightEl.textContent = msg;
+      preflightEl.classList.remove('hidden');
+    } else {
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+    }
   } finally {
     btn.disabled = false; btn.textContent = 'Log in';
   }
@@ -288,8 +326,17 @@ function logout() {
   show('login-screen');
 }
 
+function switchTab(name) {
+  ['accounts','activity','health'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+    document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
+  });
+  if (name === 'activity') loadActivity();
+  if (name === 'health') loadHealth();
+}
+
 async function enterDashboard() {
-  document.getElementById('api-meta').textContent = apiBase;
+  document.getElementById('api-meta').textContent = apiBase || window.location.origin + ' (same origin)';
   document.getElementById('whoami').textContent = currentUser ? `${currentUser.username} (superadmin)` : '';
   show('dashboard-screen');
   await loadAccounts();
@@ -316,6 +363,16 @@ function renderStats() {
   const business = accounts.filter(a => a.account_type === 'business').length;
   const community = accounts.filter(a => a.account_type === 'community').length;
   document.getElementById('stat-types').textContent = `${business} / ${community}`;
+
+  // Best-effort: /api/superadmin/stats gives signup windows without
+  // re-deriving them client-side. If it 403s (older backend build) the rest
+  // of the dashboard still works fine — this one card just stays blank.
+  api('/api/superadmin/stats').then(s => {
+    document.getElementById('stat-signups').textContent =
+      `${s.accounts.signups_last_7_days} / ${s.accounts.signups_last_30_days}`;
+  }).catch(() => {
+    document.getElementById('stat-signups').textContent = '—';
+  });
 }
 
 function renderAccounts() {
@@ -432,7 +489,7 @@ async function deleteAccount(accountId, name) {
 
 async function loginAs(userId, username) {
   if (!appBase) {
-    toast('Set the tenant app URL first (Change API URL screen).', 'err');
+    toast('Set the tenant app URL first (Advanced setup).', 'err');
     return;
   }
   try {
@@ -445,6 +502,52 @@ async function loginAs(userId, username) {
   }
 }
 
+async function loadActivity() {
+  const tbody = document.getElementById('activity-tbody');
+  const emptyEl = document.getElementById('activity-empty');
+  try {
+    const rows = await api('/api/superadmin/activity?critical_only=true&limit=200');
+    emptyEl.classList.toggle('hidden', rows.length > 0);
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="white-space:nowrap;">${new Date(r.created_at).toLocaleString()}</td>
+        <td>${r.account_id != null ? escapeHtml(String(r.account_id)) : '—'}</td>
+        <td>${escapeHtml(r.username || '—')}</td>
+        <td><span class="badge badge-critical">${escapeHtml(r.action.replace('CRITICAL: ', ''))}</span></td>
+        <td>${escapeHtml(r.details || '')}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadHealth() {
+  const grid = document.getElementById('health-grid');
+  grid.innerHTML = '<div class="stat-card">Loading…</div>';
+  try {
+    const h = await api('/api/superadmin/health');
+    const dbBadge = h.db_ok ? '<span class="badge badge-ok">OK</span>' : `<span class="badge badge-critical">DOWN: ${escapeHtml(h.db_error || '')}</span>`;
+    let schedBadge = '<span class="badge badge-warn">No heartbeat yet</span>';
+    if (h.scheduler_last_heartbeat) {
+      schedBadge = h.scheduler_healthy
+        ? `<span class="badge badge-ok">OK — ${Math.round(h.scheduler_minutes_since_heartbeat)}m ago</span>`
+        : `<span class="badge badge-critical">STALE — ${Math.round(h.scheduler_minutes_since_heartbeat)}m ago</span>`;
+    }
+    const counts = Object.entries(h.table_counts).map(([k, v]) => `
+      <div class="stat-card"><div class="label">${escapeHtml(k)}</div><div class="value">${v}</div></div>
+    `).join('');
+    grid.innerHTML = `
+      <div class="stat-card"><div class="label">Database</div><div class="value" style="font-size:16px;">${dbBadge}</div></div>
+      <div class="stat-card"><div class="label">Overdue-reminder job</div><div class="value" style="font-size:16px;">${schedBadge}</div></div>
+      <div class="stat-card"><div class="label">Open reminders</div><div class="value">${h.open_reminders}</div></div>
+      ${counts}
+    `;
+  } catch (e) {
+    grid.innerHTML = `<div class="stat-card"><div class="label">Error</div><div class="value" style="font-size:14px;color:var(--danger);">${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -453,7 +556,6 @@ function escapeHtml(s) {
 function escapeJs(s) { return String(s == null ? '' : s).replace(/'/g, "\\'"); }
 
 (function init() {
-  if (!apiBase) { show('setup-screen'); return; }
   if (!token) { show('login-screen'); return; }
   api('/api/auth/me').then((me) => {
     if (me.role !== 'superadmin') { logout(); return; }
