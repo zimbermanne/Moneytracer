@@ -7,6 +7,7 @@ import { useApi } from './hooks/useApi.js'
 import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
 import MobileTopBar from './components/MobileTopBar.jsx'
 import PageLoader from './components/PageLoader.jsx'
+import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
 import Landing from './pages/Landing.jsx'
 import Download from './pages/Download.jsx'
@@ -78,6 +79,7 @@ function Layout({ children }) {
       <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">
+        <PlatformBanner />
         <div className="desktop-topbar">
           <Clock
             accountName={company?.name}

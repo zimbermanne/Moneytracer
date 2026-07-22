@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import PasswordInput from '../components/PasswordInput.jsx'
+import PlatformBanner from '../components/PlatformBanner.jsx'
 
 export default function Login() {
   const { login, loginAsDemo, user } = useAuth()
@@ -48,6 +49,9 @@ export default function Login() {
 
   return (
     <div className="login-screen">
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20 }}>
+        <PlatformBanner />
+      </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div className="login-brand">
           <div className="login-brand-mark">M</div>

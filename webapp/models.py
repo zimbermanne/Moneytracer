@@ -58,6 +58,17 @@ class Account(Base):
     onboarding_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # ---- Superadmin/platform-management fields (not tenant-editable) ----
+    # Subscription tier. Free-text on purpose (not an Enum) — plan names and
+    # limits are still being figured out, and a plain string lets the
+    # superadmin console change/introduce tiers without a code deploy.
+    plan = Column(String(40), default="free")
+    # Internal notes visible only to superadmins (support context, billing
+    # status, escalation history) — never surfaced on any tenant-facing
+    # endpoint. See AccountAdminOut in schemas.py, the only schema that
+    # includes it.
+    admin_notes = Column(Text, default="")
+
     users = relationship("User", back_populates="account")
     country = relationship("Country")
     revenue_authority = relationship("RevenueAuthority")
@@ -101,6 +112,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Bumped to force-invalidate every outstanding JWT for this user (e.g. a
+    # superadmin "force logout") without waiting for natural token expiry.
+    # The login token embeds the value at issue-time as "tv"; get_current_user
+    # rejects any token whose "tv" doesn't match the current column value.
+    token_version = Column(Integer, default=0)
 
     account = relationship("Account", back_populates="users")
 
@@ -393,6 +409,27 @@ class ActivityLog(Base):
     username = Column(String(80))
     action = Column(String(255))
     details = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class AnnouncementLevel(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    critical = "critical"
+
+
+class Announcement(Base):
+    """Platform-wide banner, set by a superadmin, shown to every tenant user
+    (e.g. maintenance windows, new-feature notices). Deliberately a flat
+    table with no account_id — these are broadcast to everyone, not scoped
+    to a tenant."""
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message = Column(Text, nullable=False)
+    level = Column(Enum(AnnouncementLevel), default=AnnouncementLevel.info)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 

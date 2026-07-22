@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Sale, Invoice, Account
+from models import Sale, Invoice, Account, Announcement
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -65,3 +65,25 @@ def receipt_qr(receipt_no: str):
     checked at scan-time by /verify/receipt, not here, so this endpoint stays
     cheap and doesn't leak whether a given receipt number is real."""
     return _qr_png_response(f"{FRONTEND_URL}/verify/receipt/{receipt_no}")
+
+
+@router.get("/announcement/active")
+def active_announcement(db: Session = Depends(get_db)):
+    """The single most-recent active platform announcement, if any — polled
+    by every tenant app (business/community/personal) to show a banner.
+    Unauthenticated on purpose: it's the same message for every logged-out
+    login screen too, and it carries no tenant-specific data."""
+    announcement = (
+        db.query(Announcement)
+        .filter(Announcement.is_active.is_(True))
+        .order_by(Announcement.created_at.desc())
+        .first()
+    )
+    if not announcement:
+        return {"active": False}
+    return {
+        "active": True,
+        "message": announcement.message,
+        "level": announcement.level.value,
+        "created_at": announcement.created_at.isoformat(),
+    }

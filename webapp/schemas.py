@@ -97,6 +97,10 @@ class AccountUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_suspended: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    # plan / admin_notes deliberately omitted here — see update_my_account's
+    # explicit block on them, same pattern as is_suspended. Tenant admins
+    # change everything else on this model; those two are superadmin-only
+    # (PlanUpdate / NotesUpdate below, via routers/superadmin.py).
 
 
 class AccountOut(BaseModel):
@@ -128,10 +132,49 @@ class AccountOut(BaseModel):
     is_suspended: bool
     onboarding_completed: bool
     created_at: datetime
+    plan: Optional[str] = "free"
 
 
 class AccountWithUsersOut(AccountOut):
     users: List[UserOut] = []
+
+
+class AccountAdminOut(AccountWithUsersOut):
+    """Only used by superadmin-facing endpoints — adds admin_notes, which
+    must never appear on any tenant-facing response (AccountOut/
+    AccountWithUsersOut above stay as-is for that reason)."""
+    admin_notes: Optional[str] = ""
+
+
+class PlanUpdate(BaseModel):
+    plan: str
+
+
+class NotesUpdate(BaseModel):
+    admin_notes: str
+
+
+class BulkAccountIds(BaseModel):
+    account_ids: List[int]
+
+
+class RoleUpdate(BaseModel):
+    role: RoleEnum
+
+
+class AnnouncementCreate(BaseModel):
+    message: str
+    level: str = "info"
+
+
+class AnnouncementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    message: str
+    level: str
+    is_active: bool
+    created_by: str
+    created_at: datetime
 
 
 # ---------- Inventory ----------
