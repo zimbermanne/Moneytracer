@@ -125,6 +125,20 @@ async def get_current_user(
     user = db.query(User).filter(User.username == username).first()
     if user is None or not user.is_active:
         raise credentials_exception
+
+    # Force-logout check: a superadmin bumping token_version (see
+    # routers/superadmin.py force_logout_user/force_logout_account)
+    # invalidates every token issued before that point, even though JWTs are
+    # otherwise stateless. Tokens minted before this feature shipped have no
+    # "tv" claim — treat that as version 0, matching the column's default,
+    # so existing sessions aren't broken by the deploy.
+    token_version = payload.get("tv", 0)
+    if token_version != (user.token_version or 0):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # Check if user's account is suspended (unless they're a superadmin)
     if user.role != RoleEnum.superadmin and user.account_id:

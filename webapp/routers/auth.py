@@ -85,7 +85,7 @@ def login(request: Request, response: Response, payload: LoginRequest, db: Sessi
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     # Include account_id in JWT token
-    token_data = {"sub": user.username, "role": user.role.value}
+    token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0}
     if user.account_id:
         token_data["account_id"] = user.account_id
     
@@ -142,7 +142,7 @@ def demo_login(request: Request, response: Response, db: Session = Depends(get_d
         db.commit()
         db.refresh(user)
     
-    token_data = {"sub": user.username, "role": user.role.value}
+    token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0}
     if user.account_id:
         token_data["account_id"] = user.account_id
     
@@ -218,7 +218,10 @@ def impersonate(user_id: int, db: Session = Depends(get_db),
     if not target.is_active:
         raise HTTPException(status_code=400, detail="User is inactive")
 
-    token_data = {"sub": target.username, "role": target.role.value, "impersonated_by": superadmin.username}
+    token_data = {
+        "sub": target.username, "role": target.role.value,
+        "impersonated_by": superadmin.username, "tv": target.token_version or 0,
+    }
     if target.account_id:
         token_data["account_id"] = target.account_id
 

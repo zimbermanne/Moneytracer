@@ -91,6 +91,24 @@
   .warn-note { font-size: 12px; color: var(--warning); background: var(--warning-bg); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
   .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
   .settings-link { font-size: 12px; color: var(--text-faint); text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; }
+
+  .banner { padding: 10px 24px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .banner-info { background: var(--info-bg); color: var(--info); }
+  .banner-warning { background: var(--warning-bg); color: var(--warning); }
+  .banner-critical { background: var(--danger-bg); color: var(--danger); }
+  .banner button.link-btn { color: inherit; opacity: 0.75; margin: 0; }
+
+  .badge-plan { background: var(--info-bg); color: var(--info); }
+  textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-dark); font-size: 13px; margin-bottom: 8px; font-family: inherit; resize: vertical; min-height: 60px; }
+  .plan-notes-panel { background: var(--surface-sunken); padding: 14px 18px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+  .plan-notes-panel .col label { margin-bottom: 4px; }
+  .plan-notes-panel select { margin-bottom: 8px; }
+  .checkbox-cell { width: 30px; }
+  .checkbox-cell input { width: auto; margin: 0; }
+  .announce-form { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
+  .announce-form .grow { flex: 1; min-width: 240px; }
+  .announce-form textarea { margin-bottom: 0; }
+  .announce-form select { margin-bottom: 0; width: auto; }
 </style>
 </head>
 <body>
@@ -135,11 +153,14 @@
     </div>
   </header>
 
+  <div id="platform-banner" class="banner hidden"></div>
+
   <div class="page">
     <div class="tabs">
       <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
+      <div class="tab" data-tab="announcements" onclick="switchTab('announcements')">Announcements</div>
     </div>
 
     <!-- ACCOUNTS TAB -->
@@ -160,6 +181,9 @@
           <option value="suspended">Suspended only</option>
         </select>
         <div class="spacer"></div>
+        <button class="btn-warn btn-sm" onclick="bulkAction('suspend')">Suspend selected</button>
+        <button class="btn-success btn-sm" onclick="bulkAction('activate')">Activate selected</button>
+        <button class="btn-outline btn-sm" onclick="exportAccountsCsv()">⇩ Export CSV</button>
         <button class="btn-outline btn-sm" onclick="loadAccounts()">↻ Refresh</button>
       </div>
 
@@ -169,7 +193,8 @@
         <table>
           <thead>
             <tr>
-              <th>Account</th><th>Owner</th><th>Type</th><th>Region</th><th>Phone</th>
+              <th class="checkbox-cell"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" /></th>
+              <th>Account</th><th>Owner</th><th>Type</th><th>Plan</th><th>Region</th><th>Phone</th>
               <th>Status</th><th>Created</th><th style="text-align:right;">Actions</th>
             </tr>
           </thead>
@@ -183,6 +208,7 @@
     <div id="tab-activity" class="hidden">
       <div class="toolbar">
         <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="exportActivityCsv()">⇩ Export CSV</button>
         <button class="btn-outline btn-sm" onclick="loadActivity()">↻ Refresh</button>
       </div>
       <div class="card" style="overflow-x:auto;">
@@ -201,6 +227,33 @@
         <button class="btn-outline btn-sm" onclick="loadHealth()">↻ Refresh</button>
       </div>
       <div class="health-grid" id="health-grid"></div>
+    </div>
+
+    <!-- ANNOUNCEMENTS TAB -->
+    <div id="tab-announcements" class="hidden">
+      <div class="card" style="padding:16px 18px; margin-bottom:18px;">
+        <label>New announcement</label>
+        <div class="announce-form">
+          <div class="grow"><textarea id="announce-message" placeholder="e.g. Scheduled maintenance tonight 11pm–1am EAT."></textarea></div>
+          <select id="announce-level">
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+          </select>
+          <button class="btn-primary" style="width:auto;" onclick="createAnnouncement()">Post</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadAnnouncements()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Message</th><th>Level</th><th>Posted by</th><th>Posted</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+          <tbody id="announcements-tbody"></tbody>
+        </table>
+        <div id="announcements-empty" class="empty-state hidden">No announcements yet.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -222,6 +275,9 @@ let currentUser = null;
 let accounts = [];
 let expandedAccountId = null;
 let accountUsersCache = {};
+let selectedAccountIds = new Set();
+let expandedPlanNotesId = null;
+let accountAdminCache = {};
 
 function show(id) {
   ['login-screen','advanced-screen','dashboard-screen'].forEach(s => {
@@ -327,19 +383,33 @@ function logout() {
 }
 
 function switchTab(name) {
-  ['accounts','activity','health'].forEach(t => {
+  ['accounts','activity','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
   if (name === 'activity') loadActivity();
   if (name === 'health') loadHealth();
+  if (name === 'announcements') loadAnnouncements();
 }
 
 async function enterDashboard() {
   document.getElementById('api-meta').textContent = apiBase || window.location.origin + ' (same origin)';
   document.getElementById('whoami').textContent = currentUser ? `${currentUser.username} (superadmin)` : '';
   show('dashboard-screen');
+  loadBanner();
   await loadAccounts();
+}
+
+async function loadBanner() {
+  const el = document.getElementById('platform-banner');
+  try {
+    const a = await api('/api/public/announcement/active');
+    if (!a.active) { el.classList.add('hidden'); return; }
+    el.className = 'banner banner-' + a.level;
+    el.innerHTML = `<span>${escapeHtml(a.message)}</span>`;
+  } catch (e) {
+    el.classList.add('hidden');
+  }
 }
 
 async function loadAccounts() {
@@ -347,6 +417,8 @@ async function loadAccounts() {
     accounts = await api('/api/accounts/');
     accountUsersCache = {};
     expandedAccountId = null;
+    expandedPlanNotesId = null;
+    selectedAccountIds.clear();
     renderStats();
     renderAccounts();
   } catch (e) {
@@ -392,9 +464,11 @@ function renderAccounts() {
     const tr = document.createElement('tr');
     tr.className = 'account-row';
     tr.innerHTML = `
+      <td class="checkbox-cell"><input type="checkbox" ${selectedAccountIds.has(a.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect(${a.id}, this.checked)" /></td>
       <td><strong>${escapeHtml(a.name)}</strong><br><span style="color:var(--text-faint);font-size:12px;">${a.account_type}${a.tin ? ' · TIN ' + escapeHtml(a.tin) : ''}</span></td>
       <td>${escapeHtml(a.owner_full_name)}</td>
       <td>${escapeHtml(a.business_type || '—')}</td>
+      <td><span class="badge badge-plan">${escapeHtml(a.plan || 'free')}</span></td>
       <td>${escapeHtml([a.region, a.district].filter(Boolean).join(', ') || '—')}</td>
       <td>${escapeHtml(a.phone || '—')}</td>
       <td><span class="badge ${a.is_suspended ? 'badge-suspended' : 'badge-active'}">${a.is_suspended ? 'Suspended' : 'Active'}</span></td>
@@ -402,6 +476,8 @@ function renderAccounts() {
       <td>
         <div class="action-row" style="justify-content:flex-end;">
           <button class="btn-outline btn-sm" onclick="event.stopPropagation(); toggleUsers(${a.id})">Users</button>
+          <button class="btn-outline btn-sm" onclick="event.stopPropagation(); togglePlanNotes(${a.id})">Plan & Notes</button>
+          <button class="btn-warn btn-sm" onclick="event.stopPropagation(); forceLogoutAccount(${a.id}, '${escapeJs(a.name)}')">Force logout</button>
           ${a.is_suspended
             ? `<button class="btn-success btn-sm" onclick="event.stopPropagation(); setSuspended(${a.id}, false)">Activate</button>`
             : `<button class="btn-warn btn-sm" onclick="event.stopPropagation(); setSuspended(${a.id}, true)">Suspend</button>`}
@@ -415,36 +491,222 @@ function renderAccounts() {
     if (expandedAccountId === a.id) {
       const usersTr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 8;
+      td.colSpan = 10;
       td.className = 'users-panel';
       td.innerHTML = renderUsersPanel(a.id);
       usersTr.appendChild(td);
       tbody.appendChild(usersTr);
     }
+    if (expandedPlanNotesId === a.id) {
+      const pnTr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 10;
+      td.className = 'plan-notes-panel';
+      td.innerHTML = renderPlanNotesPanel(a.id);
+      pnTr.appendChild(td);
+      tbody.appendChild(pnTr);
+    }
   });
 }
+
+function toggleSelect(id, checked) {
+  if (checked) selectedAccountIds.add(id); else selectedAccountIds.delete(id);
+}
+
+function toggleSelectAll(checked) {
+  const q = document.getElementById('search-box').value.trim().toLowerCase();
+  const statusFilter = document.getElementById('status-filter').value;
+  accounts.filter(a => {
+    const matchesQ = !q || [a.name, a.owner_full_name, a.phone, a.email].some(v => (v || '').toLowerCase().includes(q));
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? !a.is_suspended : a.is_suspended);
+    return matchesQ && matchesStatus;
+  }).forEach(a => { if (checked) selectedAccountIds.add(a.id); else selectedAccountIds.delete(a.id); });
+  renderAccounts();
+}
+
+async function bulkAction(kind) {
+  const ids = Array.from(selectedAccountIds);
+  if (ids.length === 0) { toast('Select at least one account first.', 'err'); return; }
+  const verb = kind === 'suspend' ? 'suspend' : 'activate';
+  if (!confirm(`${verb === 'suspend' ? 'Suspend' : 'Activate'} ${ids.length} account(s)?`)) return;
+  try {
+    const result = await api(`/api/superadmin/accounts/bulk-${verb}`, { method: 'POST', body: JSON.stringify({ account_ids: ids }) });
+    toast(`${(result[verb === 'suspend' ? 'suspended' : 'activated'] || []).length} account(s) ${verb}d.`, 'ok');
+    await loadAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function renderPlanNotesPanel(accountId) {
+  const detail = accountAdminCache[accountId];
+  if (!detail) return `<div class="col"><div class="empty">Loading…</div></div>`;
+  return `
+    <div class="col">
+      <label>Plan</label>
+      <select id="plan-select-${accountId}">
+        ${['free','pro','business','enterprise'].map(p => `<option value="${p}" ${detail.plan === p ? 'selected' : ''}>${p}</option>`).join('')}
+      </select>
+      <button class="btn-primary btn-sm" style="width:auto;" onclick="savePlan(${accountId})">Save plan</button>
+    </div>
+    <div class="col">
+      <label>Internal notes <span style="font-weight:400;color:var(--text-faint);">(superadmin-only, never shown to the tenant)</span></label>
+      <textarea id="notes-text-${accountId}" placeholder="Support context, billing status, escalation history…">${escapeHtml(detail.admin_notes || '')}</textarea>
+      <button class="btn-primary btn-sm" style="width:auto;" onclick="saveNotes(${accountId})">Save notes</button>
+    </div>
+  `;
+}
+
+async function togglePlanNotes(accountId) {
+  if (expandedPlanNotesId === accountId) {
+    expandedPlanNotesId = null;
+    renderAccounts();
+    return;
+  }
+  expandedPlanNotesId = accountId;
+  renderAccounts();
+  try {
+    accountAdminCache[accountId] = await api(`/api/superadmin/accounts/${accountId}`);
+    renderAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+    expandedPlanNotesId = null;
+    renderAccounts();
+  }
+}
+
+async function savePlan(accountId) {
+  const plan = document.getElementById(`plan-select-${accountId}`).value;
+  try {
+    await api(`/api/superadmin/accounts/${accountId}/plan`, { method: 'PUT', body: JSON.stringify({ plan }) });
+    toast('Plan updated.', 'ok');
+    delete accountAdminCache[accountId];
+    await loadAccounts();
+    expandedPlanNotesId = accountId;
+    accountAdminCache[accountId] = await api(`/api/superadmin/accounts/${accountId}`);
+    renderAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function saveNotes(accountId) {
+  const admin_notes = document.getElementById(`notes-text-${accountId}`).value;
+  try {
+    await api(`/api/superadmin/accounts/${accountId}/notes`, { method: 'PUT', body: JSON.stringify({ admin_notes }) });
+    toast('Notes saved.', 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function forceLogoutAccount(accountId, name) {
+  if (!confirm(`Force-logout every user of "${name}"? They'll need to log in again.`)) return;
+  try {
+    const result = await api(`/api/superadmin/accounts/${accountId}/force-logout`, { method: 'POST' });
+    toast(result.detail, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function downloadCsv(path, filename) {
+  try {
+    const res = await fetch(apiBase + path, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) { toast(`Export failed (HTTP ${res.status})`, 'err'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    toast('Export failed — network error.', 'err');
+  }
+}
+
+function exportAccountsCsv() { downloadCsv('/api/superadmin/accounts/export', 'accounts_export.csv'); }
+function exportActivityCsv() { downloadCsv('/api/superadmin/activity/export?critical_only=true', 'activity_export.csv'); }
 
 function renderUsersPanel(accountId) {
   const users = accountUsersCache[accountId];
   if (!users) return `<div class="empty">Loading users…</div>`;
   if (users.length === 0) return `<div class="empty">No users in this account.</div>`;
+  const roles = ['admin','manager','employee','member'];
   const rows = users.map(u => `
     <tr>
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.full_name || '—')}</td>
-      <td>${escapeHtml(u.role)}</td>
+      <td>
+        <select id="role-select-${u.id}" style="margin:0;padding:5px 8px;font-size:12px;" ${u.role === 'superadmin' ? 'disabled' : ''}>
+          ${roles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+          ${u.role === 'superadmin' ? `<option value="superadmin" selected>superadmin</option>` : ''}
+        </select>
+      </td>
       <td>${u.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-suspended">Inactive</span>'}</td>
       <td style="text-align:right;">
-        <button class="btn-outline btn-sm" ${!u.is_active ? 'disabled title="User is inactive"' : ''} onclick="event.stopPropagation(); loginAs(${u.id}, '${escapeJs(u.username)}')">Login as this user</button>
+        <div class="action-row" style="justify-content:flex-end;">
+          <button class="btn-outline btn-sm" ${u.role === 'superadmin' ? 'disabled' : ''} onclick="event.stopPropagation(); saveUserRole(${accountId}, ${u.id})">Save role</button>
+          <button class="btn-outline btn-sm" ${!u.is_active ? 'disabled title="User is inactive"' : ''} onclick="event.stopPropagation(); loginAs(${u.id}, '${escapeJs(u.username)}')">Login as</button>
+          <button class="btn-outline btn-sm" onclick="event.stopPropagation(); resetUserPassword(${u.id}, '${escapeJs(u.username)}')">Reset password</button>
+          ${u.is_active
+            ? `<button class="btn-warn btn-sm" onclick="event.stopPropagation(); toggleUserActive(${accountId}, ${u.id}, false)">Deactivate</button>`
+            : `<button class="btn-success btn-sm" onclick="event.stopPropagation(); toggleUserActive(${accountId}, ${u.id}, true)">Activate</button>`}
+          <button class="btn-warn btn-sm" onclick="event.stopPropagation(); forceLogoutUser(${u.id}, '${escapeJs(u.username)}')">Force logout</button>
+        </div>
       </td>
     </tr>
   `).join('');
   return `
     <table>
-      <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th style="text-align:right;">Action</th></tr></thead>
+      <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
+}
+
+async function saveUserRole(accountId, userId) {
+  const role = document.getElementById(`role-select-${userId}`).value;
+  try {
+    await api(`/api/superadmin/users/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) });
+    toast('Role updated.', 'ok');
+    accountUsersCache[accountId] = (await api(`/api/accounts/${accountId}`)).users || [];
+    renderAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function resetUserPassword(userId, username) {
+  const newPassword = prompt(`New password for ${username}:`);
+  if (!newPassword) return;
+  if (newPassword.length < 6) { toast('Password must be at least 6 characters.', 'err'); return; }
+  try {
+    await api(`/api/superadmin/users/${userId}/reset-password`, { method: 'POST', body: JSON.stringify({ new_password: newPassword }) });
+    toast(`Password reset for ${username}.`, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function toggleUserActive(accountId, userId, activate) {
+  try {
+    await api(`/api/superadmin/users/${userId}/${activate ? 'activate' : 'deactivate'}`, { method: 'POST' });
+    toast(activate ? 'User activated.' : 'User deactivated.', 'ok');
+    accountUsersCache[accountId] = (await api(`/api/accounts/${accountId}`)).users || [];
+    renderAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function forceLogoutUser(userId, username) {
+  try {
+    const result = await api(`/api/superadmin/users/${userId}/force-logout`, { method: 'POST' });
+    toast(result.detail, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
 }
 
 async function toggleUsers(accountId) {
@@ -545,6 +807,56 @@ async function loadHealth() {
     `;
   } catch (e) {
     grid.innerHTML = `<div class="stat-card"><div class="label">Error</div><div class="value" style="font-size:14px;color:var(--danger);">${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
+async function loadAnnouncements() {
+  const tbody = document.getElementById('announcements-tbody');
+  const emptyEl = document.getElementById('announcements-empty');
+  try {
+    const rows = await api('/api/superadmin/announcements');
+    emptyEl.classList.toggle('hidden', rows.length > 0);
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="max-width:420px;">${escapeHtml(r.message)}</td>
+        <td><span class="badge ${r.level === 'critical' ? 'badge-critical' : r.level === 'warning' ? 'badge-warn' : 'badge-plan'}">${escapeHtml(r.level)}</span></td>
+        <td>${escapeHtml(r.created_by || '—')}</td>
+        <td style="white-space:nowrap;">${new Date(r.created_at).toLocaleString()}</td>
+        <td>${r.is_active ? '<span class="badge badge-active">Live</span>' : '<span class="badge badge-suspended">Off</span>'}</td>
+        <td style="text-align:right;">
+          ${r.is_active ? `<button class="btn-warn btn-sm" onclick="deactivateAnnouncement(${r.id})">Take down</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function createAnnouncement() {
+  const message = document.getElementById('announce-message').value.trim();
+  const level = document.getElementById('announce-level').value;
+  if (!message) { toast('Write a message first.', 'err'); return; }
+  try {
+    await api('/api/superadmin/announcements', { method: 'POST', body: JSON.stringify({ message, level }) });
+    document.getElementById('announce-message').value = '';
+    toast('Announcement posted.', 'ok');
+    await loadAnnouncements();
+    loadBanner();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function deactivateAnnouncement(id) {
+  if (!confirm('Take down this announcement?')) return;
+  try {
+    await api(`/api/superadmin/announcements/${id}/deactivate`, { method: 'POST' });
+    toast('Announcement taken down.', 'ok');
+    await loadAnnouncements();
+    loadBanner();
+  } catch (e) {
+    toast(e.message, 'err');
   }
 }
 
