@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
+    LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence,
 )
 
 
@@ -262,6 +263,98 @@ class ExpenseOut(BaseModel):
     category: str
     description: str
     amount: float
+    created_at: datetime
+
+
+# ---------- Bank Loans ----------
+class BankLoanCreate(BaseModel):
+    lender_name: str
+    principal: float
+    interest_type: LoanInterestType = LoanInterestType.simple
+    annual_rate: float = 0
+    start_date: datetime
+    due_day_of_month: int = 1
+    term_months: Optional[int] = None
+    grace_period_days: int = 0
+    notes: Optional[str] = ""
+
+
+class BankLoanUpdate(BaseModel):
+    lender_name: Optional[str] = None
+    due_day_of_month: Optional[int] = None
+    term_months: Optional[int] = None
+    grace_period_days: Optional[int] = None
+    status: Optional[LoanStatus] = None
+    notes: Optional[str] = None
+
+
+class BankLoanPaymentCreate(BaseModel):
+    amount: float
+    paid_at: Optional[datetime] = None
+
+
+class BankLoanPaymentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    amount: float
+    interest_portion: float
+    principal_portion: float
+    balance_after: float
+    paid_at: datetime
+
+
+class BankLoanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    lender_name: str
+    principal: float
+    interest_type: LoanInterestType
+    annual_rate: float
+    start_date: datetime
+    due_day_of_month: int
+    term_months: Optional[int] = None
+    grace_period_days: int
+    status: LoanStatus
+    notes: str
+    created_at: datetime
+    payments: List[BankLoanPaymentOut] = []
+
+
+class LoanRoadmapEntry(BaseModel):
+    period: int
+    date: datetime
+    interest: float
+    principal: float
+    payment: float
+    balance: float
+
+
+# ---------- Compliance Deadlines ----------
+class ComplianceDeadlineCreate(BaseModel):
+    deadline_type: DeadlineType = DeadlineType.custom
+    label: str
+    due_date: datetime
+    recurrence: DeadlineRecurrence = DeadlineRecurrence.monthly
+    notes: Optional[str] = ""
+
+
+class ComplianceDeadlineUpdate(BaseModel):
+    label: Optional[str] = None
+    due_date: Optional[datetime] = None
+    recurrence: Optional[DeadlineRecurrence] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+
+
+class ComplianceDeadlineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    deadline_type: DeadlineType
+    label: str
+    due_date: datetime
+    recurrence: DeadlineRecurrence
+    is_active: bool
+    notes: str
     created_at: datetime
 
 

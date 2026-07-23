@@ -58,10 +58,12 @@ _STANDARD_CHART = [
     ("2000", "Accounts Payable", LedgerAccountType.liability),
     ("2100", "VAT Payable (Output)", LedgerAccountType.liability),
     ("2110", "VAT Receivable (Input)", LedgerAccountType.asset),
+    ("2200", "Bank Loans Payable", LedgerAccountType.liability),
     ("3000", "Owner's Equity", LedgerAccountType.equity),
     ("4000", "Sales Revenue", LedgerAccountType.revenue),
     ("5000", "Cost of Goods Sold", LedgerAccountType.expense),
     ("5100", "Operating Expenses", LedgerAccountType.expense),
+    ("5200", "Interest Expense", LedgerAccountType.expense),
 ]
 
 
@@ -236,3 +238,36 @@ def reverse_journal_entry(db: Session, account_id: int, original: JournalEntry,
     db.commit()
     db.refresh(reversal)
     return reversal
+
+
+def post_loan_disbursement_entry(db: Session, account_id: int, loan, created_by: str = None):
+    """Bank/lender puts money in your account: debit Bank (asset up),
+    credit Bank Loans Payable (liability up)."""
+    lines = [("1010", loan.principal, 0), ("2200", 0, loan.principal)]
+    return post_journal_entry(
+        db, account_id,
+        description=f"Loan disbursed: {loan.lender_name}",
+        lines=lines,
+        reference=f"loan-disbursement-{loan.id}",
+        created_by=created_by,
+        date=loan.start_date,
+    )
+
+
+def post_loan_payment_entry(db: Session, account_id: int, loan, payment, created_by: str = None):
+    """A repayment reduces what's owed (principal portion) and recognizes
+    the cost of borrowing (interest portion) — both come out of the bank
+    account for the total payment amount."""
+    lines = [
+        ("2200", payment.principal_portion, 0),  # reduces the liability
+        ("5200", payment.interest_portion, 0),   # interest expense
+        ("1010", 0, payment.amount),              # cash/bank goes out
+    ]
+    return post_journal_entry(
+        db, account_id,
+        description=f"Loan payment: {loan.lender_name}",
+        lines=lines,
+        reference=f"loan-payment-{payment.id}",
+        created_by=created_by,
+        date=payment.paid_at,
+    )
