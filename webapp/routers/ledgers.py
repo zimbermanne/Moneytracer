@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Debtor, DebtorItem, Creditor, User, LedgerStatus, RoleEnum, FiscalPeriod, FiscalPeriodStatus
+from models import Debtor, DebtorItem, Creditor, CreditorItem, User, LedgerStatus, RoleEnum, FiscalPeriod, FiscalPeriodStatus
 from schemas import (
-    DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, LedgerOut, PaymentRequest,
+    DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, CreditorUpdate, CreditorOut, LedgerOut, PaymentRequest,
     FiscalPeriodCreate, FiscalPeriodOut,
 )
 from auth import get_current_user, require_manager_up, require_admin
@@ -121,7 +121,7 @@ def pay_debtor(debtor_id: int, payload: PaymentRequest, db: Session = Depends(ge
     return debtor
 
 
-@router.get("/creditors", response_model=List[LedgerOut])
+@router.get("/creditors", response_model=List[CreditorOut])
 def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Creditor)
     account_id = get_account_filter(current_user)
@@ -130,22 +130,69 @@ def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(g
     return query.order_by(Creditor.created_at.desc()).all()
 
 
-@router.post("/creditors", response_model=LedgerOut)
+@router.post("/creditors", response_model=CreditorOut)
 def add_creditor(payload: CreditorCreate, db: Session = Depends(get_db),
                   current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot add creditors")
-    
-    creditor = Creditor(**payload.model_dump(), account_id=account_id)
+
+    fields = payload.model_dump(exclude={"items"})
+    creditor = Creditor(**fields, account_id=account_id)
     db.add(creditor)
+    db.flush()  # need creditor.id before attaching items
+    for line in payload.items:
+        db.add(CreditorItem(creditor_id=creditor.id, **line.model_dump()))
     db.commit()
     db.refresh(creditor)
     log_activity_for_user(db, current_user, "creditor_add", f"Added creditor {creditor.name}")
     return creditor
 
 
-@router.post("/creditors/pay/{creditor_id}", response_model=LedgerOut)
+@router.put("/creditors/{creditor_id}", response_model=CreditorOut)
+def update_creditor(creditor_id: int, payload: CreditorUpdate, db: Session = Depends(get_db),
+                     current_user: User = Depends(require_manager_up)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Creditor).filter(Creditor.id == creditor_id)
+    if account_id is not None:
+        query = query.filter(Creditor.account_id == account_id)
+    creditor = query.first()
+    if not creditor:
+        raise HTTPException(status_code=404, detail="Creditor not found")
+
+    updates = payload.model_dump(exclude_unset=True, exclude={"items"})
+    for field, value in updates.items():
+        setattr(creditor, field, value)
+    _update_status(creditor)
+
+    if payload.items is not None:  # explicit [] clears items; omitted leaves them untouched
+        db.query(CreditorItem).filter(CreditorItem.creditor_id == creditor.id).delete()
+        for line in payload.items:
+            db.add(CreditorItem(creditor_id=creditor.id, **line.model_dump()))
+
+    db.commit()
+    db.refresh(creditor)
+    log_activity_for_user(db, current_user, "creditor_update", f"Updated creditor {creditor_id}")
+    return creditor
+
+
+@router.delete("/creditors/{creditor_id}")
+def delete_creditor(creditor_id: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(require_admin)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Creditor).filter(Creditor.id == creditor_id)
+    if account_id is not None:
+        query = query.filter(Creditor.account_id == account_id)
+    creditor = query.first()
+    if not creditor:
+        raise HTTPException(status_code=404, detail="Creditor not found")
+    db.delete(creditor)
+    db.commit()
+    log_activity_for_user(db, current_user, "creditor_delete", f"Deleted creditor {creditor_id}")
+    return {"detail": "Creditor deleted"}
+
+
+@router.post("/creditors/pay/{creditor_id}", response_model=CreditorOut)
 def pay_creditor(creditor_id: int, payload: PaymentRequest, db: Session = Depends(get_db),
                   current_user: User = Depends(get_current_user)):
     query = db.query(Creditor).filter(Creditor.id == creditor_id)

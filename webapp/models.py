@@ -308,6 +308,27 @@ class Creditor(Base):
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    items = relationship("CreditorItem", back_populates="creditor", cascade="all, delete-orphan")
+
+
+class CreditorItem(Base):
+    """What was bought on credit FROM this supplier — mirrors DebtorItem.
+    Informational/reference only, linked to an inventory item when picked
+    from stock, or a freehand description otherwise. Does not auto-drive
+    total_owed."""
+    __tablename__ = "creditor_items"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    creditor_id = Column(Integer, ForeignKey(fk_ref("creditors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    description = Column(String(255), nullable=False)
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    creditor = relationship("Creditor", back_populates="items")
+
 
 class DocumentStatus(str, enum.Enum):
     draft = "draft"

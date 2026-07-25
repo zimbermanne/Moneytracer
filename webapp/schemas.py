@@ -512,11 +512,49 @@ class DebtorOut(BaseModel):
     items: List[DebtorItemOut] = []
 
 
+class CreditorItemIn(BaseModel):
+    item_id: Optional[int] = None  # set when picked from inventory; omit for a freehand line
+    description: str
+    quantity: float = 1
+    unit_price: float = 0
+
+
+class CreditorItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    item_id: Optional[int] = None
+    description: str
+    quantity: float
+    unit_price: float
+
+
 class CreditorCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
+    items: List[CreditorItemIn] = []
+
+
+class CreditorUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    total_owed: Optional[float] = None
+    note: Optional[str] = None
+    items: Optional[List[CreditorItemIn]] = None  # omit to leave items untouched; [] clears them
+
+
+class CreditorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str
+    total_owed: float
+    amount_paid: float
+    status: LedgerStatus
+    note: str
+    created_at: datetime
+    items: List[CreditorItemOut] = []
 
 
 class LedgerOut(BaseModel):
