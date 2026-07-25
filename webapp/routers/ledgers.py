@@ -4,9 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Debtor, Creditor, User, LedgerStatus, RoleEnum, FiscalPeriod, FiscalPeriodStatus
-from schemas import DebtorCreate, CreditorCreate, LedgerOut, PaymentRequest, FiscalPeriodCreate, FiscalPeriodOut
-from auth import get_current_user, require_manager_up
+from models import Debtor, DebtorItem, Creditor, User, LedgerStatus, RoleEnum, FiscalPeriod, FiscalPeriodStatus
+from schemas import (
+    DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, LedgerOut, PaymentRequest,
+    FiscalPeriodCreate, FiscalPeriodOut,
+)
+from auth import get_current_user, require_manager_up, require_admin
 from activity import log_activity_for_user
 
 router = APIRouter(prefix="/api/ledgers", tags=["ledgers"])
@@ -30,7 +33,7 @@ def _update_status(entry):
         entry.status = LedgerStatus.partial
 
 
-@router.get("/debtors", response_model=List[LedgerOut])
+@router.get("/debtors", response_model=List[DebtorOut])
 def list_debtors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Debtor)
     account_id = get_account_filter(current_user)
@@ -39,21 +42,68 @@ def list_debtors(db: Session = Depends(get_db), current_user: User = Depends(get
     return query.order_by(Debtor.created_at.desc()).all()
 
 
-@router.post("/debtors", response_model=LedgerOut)
+@router.post("/debtors", response_model=DebtorOut)
 def add_debtor(payload: DebtorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot add debtors")
-    
-    debtor = Debtor(**payload.model_dump(), account_id=account_id)
+
+    fields = payload.model_dump(exclude={"items"})
+    debtor = Debtor(**fields, account_id=account_id)
     db.add(debtor)
+    db.flush()  # need debtor.id before attaching items
+    for line in payload.items:
+        db.add(DebtorItem(debtor_id=debtor.id, **line.model_dump()))
     db.commit()
     db.refresh(debtor)
     log_activity_for_user(db, current_user, "debtor_add", f"Added debtor {debtor.name}")
     return debtor
 
 
-@router.post("/debtors/pay/{debtor_id}", response_model=LedgerOut)
+@router.put("/debtors/{debtor_id}", response_model=DebtorOut)
+def update_debtor(debtor_id: int, payload: DebtorUpdate, db: Session = Depends(get_db),
+                   current_user: User = Depends(require_manager_up)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Debtor).filter(Debtor.id == debtor_id)
+    if account_id is not None:
+        query = query.filter(Debtor.account_id == account_id)
+    debtor = query.first()
+    if not debtor:
+        raise HTTPException(status_code=404, detail="Debtor not found")
+
+    updates = payload.model_dump(exclude_unset=True, exclude={"items"})
+    for field, value in updates.items():
+        setattr(debtor, field, value)
+    _update_status(debtor)
+
+    if payload.items is not None:  # explicit [] clears items; omitted leaves them untouched
+        db.query(DebtorItem).filter(DebtorItem.debtor_id == debtor.id).delete()
+        for line in payload.items:
+            db.add(DebtorItem(debtor_id=debtor.id, **line.model_dump()))
+
+    db.commit()
+    db.refresh(debtor)
+    log_activity_for_user(db, current_user, "debtor_update", f"Updated debtor {debtor_id}")
+    return debtor
+
+
+@router.delete("/debtors/{debtor_id}")
+def delete_debtor(debtor_id: int, db: Session = Depends(get_db),
+                   current_user: User = Depends(require_admin)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Debtor).filter(Debtor.id == debtor_id)
+    if account_id is not None:
+        query = query.filter(Debtor.account_id == account_id)
+    debtor = query.first()
+    if not debtor:
+        raise HTTPException(status_code=404, detail="Debtor not found")
+    db.delete(debtor)
+    db.commit()
+    log_activity_for_user(db, current_user, "debtor_delete", f"Deleted debtor {debtor_id}")
+    return {"detail": "Debtor deleted"}
+
+
+@router.post("/debtors/pay/{debtor_id}", response_model=DebtorOut)
 def pay_debtor(debtor_id: int, payload: PaymentRequest, db: Session = Depends(get_db),
                current_user: User = Depends(get_current_user)):
     query = db.query(Debtor).filter(Debtor.id == debtor_id)

@@ -272,6 +272,27 @@ class Debtor(Base):
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    items = relationship("DebtorItem", back_populates="debtor", cascade="all, delete-orphan")
+
+
+class DebtorItem(Base):
+    """What was bought on credit — informational/reference only, linked to
+    an inventory item when picked from stock, or a freehand description
+    otherwise. Does not auto-drive total_owed; that stays a manually set
+    figure on Debtor, same as before this existed."""
+    __tablename__ = "debtor_items"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    debtor_id = Column(Integer, ForeignKey(fk_ref("debtors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    description = Column(String(255), nullable=False)
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    debtor = relationship("Debtor", back_populates="items")
+
 
 class Creditor(Base):
     __tablename__ = "creditors"
