@@ -49,6 +49,10 @@ export default function Login() {
 
   return (
     <div className="login-screen">
+      <div className="login-orb login-orb-shadow login-orb-1" />
+      <div className="login-orb login-orb-shadow login-orb-2" />
+      <div className="login-orb login-orb-glass login-orb-3" />
+      <div className="login-orb login-orb-glass login-orb-4" />
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20 }}>
         <PlatformBanner />
       </div>
