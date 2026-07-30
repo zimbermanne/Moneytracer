@@ -6,6 +6,7 @@ import { NavigationGuardProvider } from './hooks/useNavigationGuard.jsx'
 import { useApi } from './hooks/useApi.js'
 import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
 import MobileTopBar from './components/MobileTopBar.jsx'
+import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
@@ -95,6 +96,7 @@ function Layout({ children }) {
         </div>
         {children}
       </div>
+      <BottomNav onMore={() => setMobileOpen(true)} />
     </div>
   )
 }

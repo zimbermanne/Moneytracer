@@ -8,7 +8,7 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
     return <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{emptyText}</div>
   }
   return (
-    <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+    <div className="card responsive-table" style={{ overflowX: 'auto', padding: 0 }}>
       <table>
         <thead>
           <tr>
@@ -23,7 +23,16 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
               style={onRowClick ? { cursor: 'pointer' } : undefined}
             >
               {columns.map((col) => (
-                <td key={col.key} onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}>
+                <td
+                  key={col.key}
+                  // data-label powers the mobile card layout (see
+                  // .responsive-table in globals.css): below the 640px
+                  // breakpoint each <td> becomes its own row with this as
+                  // a left-hand label, turning a cramped scrolling table
+                  // into a stack of readable label/value pairs per record.
+                  data-label={col.header}
+                  onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}
+                >
                   {col.render ? col.render(row) : row[col.key]}
                 </td>
               ))}
