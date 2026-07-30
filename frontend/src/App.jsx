@@ -125,12 +125,12 @@ function PrivateRoutes() {
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
         <Route path="/creditors" element={<Creditors />} />
-        <Route path="/reports/profit-loss" element={<Reports view="profit-loss" />} />
-        <Route path="/reports/financial-summary" element={<Reports view="financial-summary" />} />
-        <Route path="/reports/cashflow" element={<Reports view="cashflow" />} />
-        <Route path="/reports/debtors" element={<Reports view="debtors" />} />
-        <Route path="/reports/creditors" element={<Reports view="creditors" />} />
-        <Route path="/reports/inventory-valuation" element={<Reports view="inventory-valuation" />} />
+        <Route path="/reports/profit-loss" element={<Reports key="profit-loss" view="profit-loss" />} />
+        <Route path="/reports/financial-summary" element={<Reports key="financial-summary" view="financial-summary" />} />
+        <Route path="/reports/cashflow" element={<Reports key="cashflow" view="cashflow" />} />
+        <Route path="/reports/debtors" element={<Reports key="debtors" view="debtors" />} />
+        <Route path="/reports/creditors" element={<Reports key="creditors" view="creditors" />} />
+        <Route path="/reports/inventory-valuation" element={<Reports key="inventory-valuation" view="inventory-valuation" />} />
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />
