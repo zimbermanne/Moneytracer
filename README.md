@@ -1,6 +1,6 @@
-# Moneytracer — v3.0 Skyscratcher
+# Moneytracer — v4.0 SkyMapper.
 
-This project was generated from `README3.0.md`. It implements the **"Currently Working (v3.0)"**
+This project was generated from `README4.0.md`. It implements the **"Currently Working (v5.0)"**
 feature set as a working FastAPI backend (`webapp/`) and a React + Vite frontend (`frontend/`),
 matching the project structure, sidebar design, and theme described in the README.
 
