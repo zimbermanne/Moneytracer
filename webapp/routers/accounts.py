@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Account, User, RoleEnum, Country, RevenueAuthority
-from schemas import AccountOut, AccountUpdate, AccountWithUsersOut
+from models import Account, User, RoleEnum, Country, RevenueAuthority, ExchangeRate
+from schemas import AccountOut, AccountUpdate, AccountWithUsersOut, ExchangeRateCreate, ExchangeRateOut
 from auth import require_superadmin, require_admin, get_current_user
 from activity import log_activity_for_user
 
@@ -177,4 +177,69 @@ def delete_account(account_id: int, db: Session = Depends(get_db), superadmin: U
     db.delete(account)
     db.commit()
     log_activity_for_user(db, superadmin, "account_delete", f"Deleted account {account.name}")
-    return {"detail": f"Account {account.name} has been deleted"}
+
+
+# ---------- Exchange Rates (Multi-Currency) ----------
+
+@router.get("/exchange-rates", response_model=List[ExchangeRateOut])
+def list_exchange_rates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all exchange rates for the account."""
+    if not current_user.account_id:
+        raise HTTPException(status_code=403, detail="You must belong to an account")
+    return db.query(ExchangeRate).filter(
+        ExchangeRate.account_id == current_user.account_id
+    ).order_by(ExchangeRate.effective_date.desc()).all()
+
+
+@router.post("/exchange-rates", response_model=ExchangeRateOut)
+def create_exchange_rate(
+    payload: ExchangeRateCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Create a new exchange rate."""
+    if not current_user.account_id:
+        raise HTTPException(status_code=403, detail("You must belong to an account"))
+    
+    rate = ExchangeRate(
+        account_id=current_user.account_id,
+        base_currency=payload.base_currency.upper(),
+        target_currency=payload.target_currency.upper(),
+        rate=payload.rate,
+        effective_date=payload.effective_date,
+        source=payload.source,
+        created_by=current_user.username,
+    )
+    db.add(rate)
+    db.commit()
+    db.refresh(rate)
+    log_activity_for_user(db, current_user, "exchange_rate_create", 
+                        f"Added rate: {payload.base_currency} -> {payload.target_currency} = {payload.rate}")
+    return rate
+
+
+@router.delete("/exchange-rates/{rate_id}")
+def delete_exchange_rate(
+    rate_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Delete an exchange rate."""
+    if not current_user.account_id:
+        raise HTTPException(status_code=403, detail("You must belong to an account"))
+    
+    rate = db.query(ExchangeRate).filter(
+        ExchangeRate.id == rate_id,
+        ExchangeRate.account_id == current_user.account_id
+    ).first()
+    if not rate:
+        raise HTTPException(status_code=404, detail="Exchange rate not found")
+    
+    db.delete(rate)
+    db.commit()
+    log_activity_for_user(db, current_user, "exchange_rate_delete", 
+                        f"Deleted rate: {rate.base_currency} -> {rate.target_currency}")
+    return {"message": "Exchange rate deleted"}

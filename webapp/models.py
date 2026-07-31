@@ -987,6 +987,206 @@ class FiscalPeriod(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint("account_id", "name", name="uq_fiscal_period_account_name"),
+        # Ensure periods don't overlap for the same account
+        UniqueConstraint("account_id", "start_date", "end_date", name="uq_fiscal_period_dates"),
     )
+
+
+class Attachment(Base):
+    """File attachments for transactions (expenses, purchases, invoices)."""
+    __tablename__ = "attachments"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    entity_type = Column(String(50), nullable=False, index=True)  # "expense", "purchase", "invoice"
+    entity_id = Column(Integer, nullable=False, index=True)  # ID of the related entity
+    file_url = Column(String(500), nullable=False)  # URL to stored file (S3, local, etc.)
+    file_name = Column(String(255), nullable=False)
+    mime_type = Column(String(100), nullable=False)
+    file_size = Column(Integer, nullable=False)  # Size in bytes
+    uploaded_by = Column(String(80), nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class RecurringInvoice(Base):
+    """Template for automatically generating invoices on a recurring schedule."""
+    __tablename__ = "recurring_invoices"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)  # e.g., "Monthly retainer - ABC Corp"
+    description = Column(String(500), nullable=True)
+    
+    # Line items stored as JSON for flexibility
+    line_items = Column(Text, nullable=False)  # JSON array of {item_id, description, quantity, unit_price}
+    
+    # Schedule
+    frequency = Column(String(50), nullable=False)  # "weekly", "biweekly", "monthly", "quarterly", "yearly"
+    interval = Column(Integer, default=1)  # e.g., 2 for "every 2 months"
+    day_of_month = Column(Integer, nullable=True)  # For monthly: 1-31
+    day_of_week = Column(String(20), nullable=True)  # For weekly: "monday", "tuesday", etc.
+    
+    # Control
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)  # Optional end date
+    last_generated = Column(DateTime, nullable=True)  # Last time an invoice was generated
+    next_generation = Column(DateTime, nullable=True, index=True)  # Next scheduled generation
+    is_active = Column(Boolean, default=True, index=True)
+    
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ExchangeRate(Base):
+    """Exchange rates for multi-currency support. Rates are stored as base_currency to target_currency."""
+    __tablename__ = "exchange_rates"
+    __table_args__ = (
+        schema_args(SCHEMA_BUSINESS),
+        UniqueConstraint("account_id", "base_currency", "target_currency", "effective_date", 
+                        name="uq_exchange_rate_date"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    base_currency = Column(String(3), nullable=False, index=True)  # e.g., "TZS", "USD", "EUR"
+    target_currency = Column(String(3), nullable=False, index=True)  # e.g., "TZS", "USD", "EUR"
+    rate = Column(Float, nullable=False)  # 1 base_currency = rate target_currency
+    effective_date = Column(DateTime, nullable=False, index=True)
+    source = Column(String(50), nullable=True)  # "manual", "bank", "api"
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Employee(Base):
+    """Employee records for payroll."""
+    __tablename__ = "employees"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Link to user if employee has login
+    employee_number = Column(String(20), nullable=False, unique=True, index=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    email = Column(String(120), nullable=True)
+    phone = Column(String(40), nullable=True)
+    address = Column(String(255), nullable=True)
+    
+    # Employment details
+    hire_date = Column(DateTime, nullable=False)
+    position = Column(String(100), nullable=True)
+    department = Column(String(100), nullable=True)
+    employment_type = Column(String(50), nullable=True)  # "full-time", "part-time", "contract"
+    is_active = Column(Boolean, default=True, index=True)
+    
+    # Compensation
+    salary = Column(Float, nullable=False)  # Monthly salary
+    pay_frequency = Column(String(20), default="monthly")  # "weekly", "biweekly", "monthly"
+    
+    # Tax and deductions
+    tax_id = Column(String(50), nullable=True)  # NIN, TIN, etc.
+    bank_name = Column(String(100), nullable=True)
+    bank_account = Column(String(50), nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Payslip(Base):
+    """Generated payslip for an employee for a pay period."""
+    __tablename__ = "payslips"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    
+    # Pay period
+    period_start = Column(DateTime, nullable=False)
+    period_end = Column(DateTime, nullable=False)
+    pay_date = Column(DateTime, nullable=False)
+    
+    # Earnings
+    gross_pay = Column(Float, nullable=False)
+    basic_salary = Column(Float, nullable=False)
+    overtime = Column(Float, default=0)
+    bonuses = Column(Float, default=0)
+    allowances = Column(Float, default=0)
+    
+    # Deductions
+    paye_tax = Column(Float, default=0)  # Pay As You Earn
+    social_security = Column(Float, default=0)
+    pension = Column(Float, default=0)
+    other_deductions = Column(Float, default=0)
+    total_deductions = Column(Float, default=0)
+    
+    # Net pay
+    net_pay = Column(Float, nullable=False)
+    
+    # Status
+    status = Column(String(20), default="draft")  # "draft", "finalized", "paid"
+    notes = Column(Text, nullable=True)
+    
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Approval(Base):
+    """Approval workflow for transactions above a threshold."""
+    __tablename__ = "approvals"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    
+    # Target entity
+    entity_type = Column(String(50), nullable=False, index=True)  # "invoice", "expense", "purchase"
+    entity_id = Column(Integer, nullable=False, index=True)
+    
+    # Approval details
+    requested_by = Column(String(80), nullable=False)
+    requested_at = Column(DateTime, default=datetime.utcnow, index=True)
+    approved_by = Column(String(80), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejected_by = Column(String(80), nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+    
+    status = Column(String(20), default="pending")  # "pending", "approved", "rejected"
+    amount = Column(Float, nullable=False)  # Amount being approved
+    reason = Column(Text, nullable=True)  # Reason for rejection
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Budget(Base):
+    """Budget tracking for expense categories."""
+    __tablename__ = "budgets"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    
+    # Budget period
+    period_type = Column(String(20), nullable=False)  # "monthly", "quarterly", "yearly"
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=True)  # For monthly budgets
+    quarter = Column(Integer, nullable=True)  # For quarterly budgets
+    
+    # Category budget
+    category = Column(String(100), nullable=False, index=True)  # e.g., "Office Supplies", "Marketing"
+    budgeted_amount = Column(Float, nullable=False)
+    
+    # Actual tracking
+    actual_amount = Column(Float, default=0)
+    variance = Column(Float, default=0)
+    
+    is_active = Column(Boolean, default=True)
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

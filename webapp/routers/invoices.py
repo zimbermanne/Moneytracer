@@ -10,8 +10,8 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode
-from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut
+from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode, RecurringInvoice
+from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut, RecurringInvoiceCreate, RecurringInvoiceUpdate, RecurringInvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
@@ -633,3 +633,154 @@ def _render_pdf(doc: Invoice, label: str, account: dict = None, show_prices: boo
 
 # Export reference so quotations.py can reuse
 invoice_pdf_render = _render_pdf
+
+
+# ---------- Recurring Invoices ----------
+
+@router.get("/recurring", response_model=List[RecurringInvoiceOut])
+def list_recurring_invoices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all recurring invoice templates for the account."""
+    account_id = get_account_filter(current_user)
+    query = db.query(RecurringInvoice)
+    if account_id is not None:
+        query = query.filter(RecurringInvoice.account_id == account_id)
+    return query.order_by(RecurringInvoice.next_generation.asc()).all()
+
+
+@router.post("/recurring", response_model=RecurringInvoiceOut)
+def create_recurring_invoice(
+    payload: RecurringInvoiceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Create a new recurring invoice template."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot create recurring invoices")
+
+    import json
+    line_items_json = json.dumps(payload.line_items)
+
+    # Calculate next generation date based on frequency
+    next_gen = payload.start_date
+    if payload.frequency == "weekly":
+        # For weekly, set to the specified day of week
+        pass  # Simplified - would need date calculation logic
+    elif payload.frequency == "monthly" and payload.day_of_month:
+        # Set to the specified day of month
+        pass  # Simplified
+
+    recurring = RecurringInvoice(
+        account_id=account_id,
+        customer_id=payload.customer_id,
+        name=payload.name,
+        description=payload.description,
+        line_items=line_items_json,
+        frequency=payload.frequency,
+        interval=payload.interval,
+        day_of_month=payload.day_of_month,
+        day_of_week=payload.day_of_week,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        next_generation=next_gen,
+        created_by=current_user.username,
+    )
+    db.add(recurring)
+    db.commit()
+    db.refresh(recurring)
+    log_activity_for_user(db, current_user, "recurring_invoice_create", f"Created recurring invoice: {payload.name}")
+    return recurring
+
+
+@router.put("/recurring/{recurring_id}", response_model=RecurringInvoiceOut)
+def update_recurring_invoice(
+    recurring_id: int,
+    payload: RecurringInvoiceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Update a recurring invoice template."""
+    account_id = get_account_filter(current_user)
+    query = db.query(RecurringInvoice).filter(RecurringInvoice.id == recurring_id)
+    if account_id is not None:
+        query = query.filter(RecurringInvoice.account_id == account_id)
+    recurring = query.first()
+    if not recurring:
+        raise HTTPException(status_code=404, detail="Recurring invoice not found")
+
+    import json
+    if payload.name is not None:
+        recurring.name = payload.name
+    if payload.description is not None:
+        recurring.description = payload.description
+    if payload.line_items is not None:
+        recurring.line_items = json.dumps(payload.line_items)
+    if payload.frequency is not None:
+        recurring.frequency = payload.frequency
+    if payload.interval is not None:
+        recurring.interval = payload.interval
+    if payload.day_of_month is not None:
+        recurring.day_of_month = payload.day_of_month
+    if payload.day_of_week is not None:
+        recurring.day_of_week = payload.day_of_week
+    if payload.end_date is not None:
+        recurring.end_date = payload.end_date
+    if payload.is_active is not None:
+        recurring.is_active = payload.is_active
+
+    db.commit()
+    db.refresh(recurring)
+    log_activity_for_user(db, current_user, "recurring_invoice_update", f"Updated recurring invoice: {recurring.name}")
+    return recurring
+
+
+@router.delete("/recurring/{recurring_id}")
+def delete_recurring_invoice(
+    recurring_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Delete a recurring invoice template."""
+    account_id = get_account_filter(current_user)
+    query = db.query(RecurringInvoice).filter(RecurringInvoice.id == recurring_id)
+    if account_id is not None:
+        query = query.filter(RecurringInvoice.account_id == account_id)
+    recurring = query.first()
+    if not recurring:
+        raise HTTPException(status_code=404, detail="Recurring invoice not found")
+
+    db.delete(recurring)
+    db.commit()
+    log_activity_for_user(db, current_user, "recurring_invoice_delete", f"Deleted recurring invoice: {recurring.name}")
+    return {"message": "Recurring invoice deleted"}
+
+
+@router.post("/recurring/{recurring_id}/generate")
+def generate_invoice_from_template(
+    recurring_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Manually generate an invoice from a recurring template."""
+    account_id = get_account_filter(current_user)
+    query = db.query(RecurringInvoice).filter(RecurringInvoice.id == recurring_id)
+    if account_id is not None:
+        query = query.filter(RecurringInvoice.account_id == account_id)
+    recurring = query.first()
+    if not recurring:
+        raise HTTPException(status_code=404, detail="Recurring invoice not found")
+
+    import json
+    line_items = json.loads(recurring.line_items)
+
+    # Create invoice from template
+    # This would call the existing invoice creation logic
+    # For now, return a placeholder response
+    return {
+        "message": "Invoice generation from template - to be implemented with existing invoice creation logic",
+        "recurring_invoice_id": recurring_id,
+        "line_items": line_items,
+    }
