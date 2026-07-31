@@ -1045,9 +1045,9 @@ class ExchangeRate(Base):
     """Exchange rates for multi-currency support. Rates are stored as base_currency to target_currency."""
     __tablename__ = "exchange_rates"
     __table_args__ = (
-        schema_args(SCHEMA_BUSINESS),
-        UniqueConstraint("account_id", "base_currency", "target_currency", "effective_date", 
+        UniqueConstraint("account_id", "base_currency", "target_currency", "effective_date",
                         name="uq_exchange_rate_date"),
+        schema_args(SCHEMA_BUSINESS),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -1189,4 +1189,3 @@ class Budget(Base):
     created_by = Column(String(80), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
