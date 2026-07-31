@@ -77,9 +77,23 @@ def get_activity_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return a summary count of actions grouped by type."""
-    query = db.query(ActivityLog.action, func.count(ActivityLog.id).label("count"))
+    """Return a summary of activity: total events, counts by user, and counts by action type."""
+    query = db.query(ActivityLog)
     if current_user.account_id:
         query = query.filter(ActivityLog.account_id == current_user.account_id)
-    results = query.group_by(ActivityLog.action).all()
-    return [{"action": r.action, "count": r.count} for r in results]
+
+    by_action_rows = query.with_entities(
+        ActivityLog.action, func.count(ActivityLog.id).label("count")
+    ).group_by(ActivityLog.action).all()
+
+    by_user_rows = query.with_entities(
+        ActivityLog.username, func.count(ActivityLog.id).label("count")
+    ).group_by(ActivityLog.username).all()
+
+    total_events = sum(r.count for r in by_action_rows)
+
+    return {
+        "total_events": total_events,
+        "by_action": {r.action: r.count for r in by_action_rows},
+        "by_user": {r.username: r.count for r in by_user_rows},
+    }

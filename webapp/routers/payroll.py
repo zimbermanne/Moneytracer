@@ -234,19 +234,22 @@ def finalize_payslip(
         raise HTTPException(status_code=400, detail="Payslip is not in draft status")
 
     # Post journal entry for payroll
-    # Debit: Salaries Expense (account code 5200)
-    # Credit: Cash/Bank (account code 1000) for net pay
-    # Credit: PAYE Tax Payable (account code 2200)
-    # Credit: Social Security Payable (account code 2210)
-    
+    # Debit: Salaries & Wages Expense (account code 5300)
+    # Credit: Cash (account code 1000) for net pay
+    # Credit: PAYE Tax Payable (account code 2300)
+    # Credit: Social Security Payable (account code 2310)
+    # Credit: Other Payroll Deductions Payable (account code 2320)
+
     try:
         from ledger import post_journal_entry
         lines = [
-            ("5200", payslip.gross_pay, 0),  # Debit Salaries Expense
+            ("5300", payslip.gross_pay, 0),  # Debit Salaries & Wages Expense
             ("1000", 0, payslip.net_pay),  # Credit Cash for net pay
-            ("2200", 0, payslip.paye_tax),  # Credit PAYE Payable
-            ("2210", 0, payslip.social_security + payslip.pension),  # Credit Social Security Payable
+            ("2300", 0, payslip.paye_tax),  # Credit PAYE Payable
+            ("2310", 0, payslip.social_security + payslip.pension),  # Credit Social Security Payable
         ]
+        if payslip.other_deductions:
+            lines.append(("2320", 0, payslip.other_deductions))  # Credit Other Deductions Payable
         post_journal_entry(
             db,
             account_id,

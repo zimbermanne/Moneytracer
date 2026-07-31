@@ -20,6 +20,7 @@ const ACTION_LABELS = {
 }
 
 function actionLabel(action) {
+  if (!action) return 'Unknown action'
   return ACTION_LABELS[action] || action.replace(/_/g, ' ')
 }
 
@@ -49,7 +50,7 @@ function buildSessions(logs) {
   const sessions = []
 
   for (const log of chronological) {
-    const user = log.username
+    const user = log.username || 'unknown'
     if (log.action === 'login' || log.action === 'demo_login') {
       // Close any dangling session for this user (missed logout)
       if (openSessions[user]) sessions.push(openSessions[user])
@@ -144,11 +145,11 @@ export default function ActivityLogs() {
 
       {stats && (
         <div className="card-grid" style={{ marginBottom: 16 }}>
-          <div className="card metric-card"><div className="label">Total Events</div><div className="value">{stats.total_events}</div></div>
-          <div className="card metric-card"><div className="label">Employees Active</div><div className="value">{Object.keys(stats.by_user).length}</div></div>
+          <div className="card metric-card"><div className="label">Total Events</div><div className="value">{stats.total_events ?? 0}</div></div>
+          <div className="card metric-card"><div className="label">Employees Active</div><div className="value">{Object.keys(stats.by_user || {}).length}</div></div>
           <div className="card metric-card"><div className="label">Most Common Action</div>
             <div className="value" style={{ fontSize: 15, textTransform: 'capitalize' }}>
-              {Object.entries(stats.by_action).sort((a, b) => b[1] - a[1])[0]?.[0]?.replace(/_/g, ' ') || '—'}
+              {Object.entries(stats.by_action || {}).sort((a, b) => b[1] - a[1])[0]?.[0]?.replace(/_/g, ' ') || '—'}
             </div>
           </div>
         </div>
@@ -209,7 +210,7 @@ export default function ActivityLogs() {
                         color: 'var(--accent-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: 700, fontSize: 13,
                       }}>
-                        {s.username.slice(0, 2).toUpperCase()}
+                        {(s.username || '?').slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 14 }}>{s.username}</div>

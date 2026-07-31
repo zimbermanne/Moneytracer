@@ -64,6 +64,10 @@ _STANDARD_CHART = [
     ("5000", "Cost of Goods Sold", LedgerAccountType.expense),
     ("5100", "Operating Expenses", LedgerAccountType.expense),
     ("5200", "Interest Expense", LedgerAccountType.expense),
+    ("5300", "Salaries & Wages Expense", LedgerAccountType.expense),
+    ("2300", "PAYE Tax Payable", LedgerAccountType.liability),
+    ("2310", "Social Security Payable", LedgerAccountType.liability),
+    ("2320", "Other Payroll Deductions Payable", LedgerAccountType.liability),
 ]
 
 
