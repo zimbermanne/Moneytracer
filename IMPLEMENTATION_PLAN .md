@@ -53,6 +53,47 @@ else.
 
 ---
 
+## Phase 0 (shipped) — Home Dashboard: Income/Expense & Top Expenses widgets
+
+Added directly to `frontend/src/pages/Dashboard.jsx` (in `BusinessDashboard`),
+modeled on a QuickBooks-style dashboard reference screenshot. No backend
+changes were needed — both widgets reuse existing report endpoints.
+
+1. **`IncomeExpenseChart`** — grouped bar chart, Total Income vs. Total
+   Expenses for the last 6 months.
+   - Data source: `GET /reports/cashflow?months=12` (already fetched on the
+     dashboard for the existing cashflow area chart) — sliced to the last 6
+     months client-side. `incoming` → Income, `outgoing` → Expenses.
+   - Built with `recharts` `BarChart`/`Bar`, matching the existing
+     `CashflowChart` component's styling conventions (CSS vars for colors,
+     same tooltip/axis formatting).
+
+2. **`TopExpensesDonut`** — donut chart of expense categories with a
+   center total and a ranked legend.
+   - Data source: `GET /reports/profit-loss` → `expense_by_category`
+     (newly fetched — added to the dashboard's `Promise.all` alongside the
+     existing report calls). Currently shown as an all-time breakdown
+     rather than "Previous Fiscal Year" like the reference screenshot,
+     since Moneytracer's fiscal-year boundary isn't currently threaded
+     through this endpoint — see the note below.
+   - Top 5 categories shown individually; everything else is folded into
+     an "Others" slice so the legend doesn't overflow on accounts with many
+     expense categories.
+   - Built with `recharts` `PieChart`/`Pie`/`Cell` (innerRadius for the
+     donut hole), no new dependency — `recharts` was already in use on
+     this page.
+
+**Known follow-up (not yet done):** to fully match the reference screenshot,
+`GET /reports/profit-loss` would need optional `fiscal_year` or
+`start`/`end` params wired to the account's actual fiscal-period boundaries
+(the same `FiscalPeriod` model used by the ledger's period-locking) so the
+donut can offer a "Previous Fiscal Year" toggle instead of "All Time." Also
+worth adding an "Accrual" vs. "Cash" toggle to `IncomeExpenseChart` like the
+reference UI — today it always reflects cash-basis (transaction date), same
+as the existing cashflow chart.
+
+---
+
 ## Phase 1 — Chart of Accounts & General Ledger UI
 
 **Why first:** the double-entry engine (`ledger.py` → `post_journal_entry()`)
@@ -102,6 +143,85 @@ new read endpoints plus one write endpoint that reuses existing logic.
 - A user can browse every account, see its balance, drill into its
   transaction history, and post a manual entry (e.g. opening balances)
   without touching the database directly.
+
+---
+
+## Phase 1B — Accounting Depth (verified against a second audit)
+
+A second, code-level audit surfaced gaps specifically in the accounting
+correctness/compliance layer — distinct from Phase 1's "no front door"
+framing. Checked every claim directly against `ledger.py`, `models.py`,
+`routers/reports.py`, `routers/assets.py`, and the frontend `Reports.jsx` /
+`Sidebar.jsx`. All of it held up:
+
+- **Trial Balance and Balance Sheet exist in the backend
+  (`/reports/trial-balance`, `/reports/balance-sheet`) but have zero
+  frontend routes** — no `Reports.jsx` tab, no sidebar link, no export.
+  Confirmed: no match for `trial-balance`/`balance-sheet` anywhere in
+  `frontend/src`. This is the single highest-ROI item in the whole
+  analysis — the backend work is already done.
+- **VAT never actually posts.** The chart of accounts seeded by
+  `ensure_default_chart_of_accounts()` (`ledger.py`) includes `2100 VAT
+  Payable (Output)` and `2110 VAT Receivable (Input)`, but
+  `post_sale_entry()` posts the entire `sale.total` to `4000 Sales
+  Revenue` with no VAT split — confirmed by reading the function directly.
+  The two VAT accounts exist on the chart but nothing ever writes to them,
+  and there's no VAT return/summary report. For VAT-registered Tanzanian
+  businesses this is a real compliance gap, not a nice-to-have.
+- **Chart of accounts is a fixed 13-account list**
+  (`_STANDARD_CHART` in `ledger.py`) with no create/edit API — confirmed
+  no such endpoint in `routers/ledgers.py`. It's also missing fixed
+  assets, accumulated depreciation, retained earnings, and owner's
+  drawings as distinct accounts.
+- **No depreciation schedule at all** — `routers/assets.py` explicitly
+  says so in its own module docstring ("no depreciation schedule for v1;
+  estimated_value is whatever the owner last..."). `estimated_value` on an
+  asset is a flat manually-updated number, never posted to the ledger.
+- **No AR/AP aging** — confirmed no `aging` logic anywhere in
+  `routers/reports.py` or `models.py`. Debtors/Creditors are flat
+  balances only.
+- **No bank reconciliation** — confirmed the only `reconcile` matches in
+  the codebase are in `bank_loans.py`/`invoices.py`, unrelated to matching
+  ledger entries against a bank statement.
+- **No fiscal year closing** — `reports.py` computes balance-sheet equity
+  as `"retained_earnings_current_period": net_income` with a comment
+  admitting there's no fiscal closing mechanism yet. Revenue/expense
+  accounts never zero out into a permanent Retained Earnings balance.
+- **No petty cash tracking** — chart of accounts has `1000 Cash` and
+  `1010 Bank` only, no float/top-up model.
+- **Manual journal entries** — same gap as Phase 1 above (the engine
+  exists via `post_journal_entry()`, no UI); not duplicated here.
+
+### Suggested build order for this set (per the audit)
+
+1. **Trial Balance + Balance Sheet pages** — wire existing endpoints into
+   `Reports.jsx` and the sidebar. Smallest effort, immediate value; do
+   this alongside or right after Phase 1's General Ledger UI since it's
+   the same "front door" problem.
+2. **VAT return report** — first, split VAT out of `post_sale_entry()`
+   (and the equivalent purchase path, for input VAT) so `2100`/`2110`
+   actually accumulate balances, then build a period VAT summary
+   (output VAT − input VAT = net due) as a new `/reports/vat-return`
+   endpoint. This is the one legal-compliance item in this list —
+   prioritize it accordingly for VAT-registered users.
+3. **AR/AP aging** — bucket existing Debtor/Creditor balances by days
+   outstanding (0–30/31–60/61–90/90+); pure reporting on top of data that
+   already exists.
+4. **Manual journal entries UI** — covered under Phase 1 above.
+5. **Bank reconciliation** — statement import/entry + a matching UI
+   against `1010 Bank` ledger lines, with a "cleared" flag per line.
+6. **Chart of accounts editor** — CRUD for custom accounts on top of the
+   standard seeded chart, plus adding the missing standard accounts
+   (fixed assets, accumulated depreciation, retained earnings, drawings).
+7. **Fixed asset depreciation** — straight-line or reducing-balance calc,
+   posting a periodic depreciation journal entry (Dr Depreciation Expense
+   / Cr Accumulated Depreciation) instead of just editing
+   `estimated_value` by hand.
+8. **Fiscal year closing** — a year-end routine that zeroes revenue/expense
+   accounts into a permanent Retained Earnings account, so Balance Sheets
+   compare correctly across years.
+9. **Petty cash** — a float account with top-ups from Bank and individual
+   payments tracked against it.
 
 ---
 
@@ -166,27 +286,35 @@ introduces new infrastructure.
 **Why fourth:** high regional value (cross-border trade) but a genuinely
 invasive change — touches invoices, journal entries, and reports.
 
+Note: this app is Africa-focused (`african_currencies.py` already lists
+country/currency pairs across the continent — TZS, KES, UGX, NGN, ZAR, GHS,
+EGP, etc.). Multi-currency here means cross-border *African* trade — e.g. a
+Tanzanian business invoicing a Kenyan client in KES while its books stay in
+TZS — not USD as a default reference currency.
+
 1. **Model changes:**
    - Add `currency_code` to `Invoice`, `Purchase`, `Expense`.
    - Add `ExchangeRate` table: `from_currency, to_currency, rate, date`.
    - Every `JournalEntry` line keeps its original transaction currency
      *and* a converted base-currency (tenant's home currency) amount —
      never convert destructively; store both.
-2. **Rate source:** a scheduled job pulls daily rates from a free/low-cost
-   FX API (e.g. exchangerate.host, or a paid provider if reliability
-   matters) and caches them locally — don't call an external API per
-   transaction.
+2. **Rate source:** a scheduled job pulls daily rates for the currency
+   pairs actually in `african_currencies.py` from a free/low-cost FX API
+   (e.g. exchangerate.host, or a paid provider if reliability matters) and
+   caches them locally — don't call an external API per transaction.
 3. **Period-end revaluation:** at fiscal period close, revalue open
-   foreign-currency balances (e.g. an unpaid USD invoice) against the
-   period-end rate and post the FX gain/loss as a journal entry. This is
-   the trickiest accounting logic in this phase — build it as an isolated,
-   well-tested function since it directly affects the P&L.
+   foreign-currency balances (e.g. an unpaid KES invoice held by a
+   TZS-based tenant) against the period-end rate and post the FX gain/loss
+   as a journal entry. This is the trickiest accounting logic in this
+   phase — build it as an isolated, well-tested function since it directly
+   affects the P&L.
 4. **Reports:** balance sheet/P&L must clearly show base-currency totals,
    with an optional "as invoiced" column for transaction-level views.
 
 ### Definition of done
-- A tenant can invoice in USD while books consolidate to TZS, with FX
-  gain/loss correctly posted at period end.
+- A Tanzanian tenant can invoice a client in KES (or any other supported
+  African currency) while books consolidate to TZS, with FX gain/loss
+  correctly posted at period end.
 
 ---
 
