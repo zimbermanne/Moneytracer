@@ -1016,7 +1016,7 @@ class RecurringInvoice(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey(fk_ref("debtors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
     name = Column(String(150), nullable=False)  # e.g., "Monthly retainer - ABC Corp"
     description = Column(String(500), nullable=True)
     
@@ -1045,9 +1045,9 @@ class ExchangeRate(Base):
     """Exchange rates for multi-currency support. Rates are stored as base_currency to target_currency."""
     __tablename__ = "exchange_rates"
     __table_args__ = (
-        schema_args(SCHEMA_BUSINESS),
-        UniqueConstraint("account_id", "base_currency", "target_currency", "effective_date", 
+        UniqueConstraint("account_id", "base_currency", "target_currency", "effective_date",
                         name="uq_exchange_rate_date"),
+        schema_args(SCHEMA_BUSINESS),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -1103,7 +1103,7 @@ class Payslip(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey(fk_ref("employees.id", SCHEMA_BUSINESS)), nullable=False, index=True)
     
     # Pay period
     period_start = Column(DateTime, nullable=False)
