@@ -1,4 +1,6 @@
-# Moneytracer Implementation Plan — Closing the Feature Gaps
+# Moneytracer Implementation Plan — 
+
+Closing the Feature Gaps
 
 This README turns `FEATURE_GAP_ANALYSIS.md` into an actionable build order:
 what to build, in what sequence, and how each piece fits the existing
