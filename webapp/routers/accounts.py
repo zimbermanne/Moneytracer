@@ -202,7 +202,7 @@ def create_exchange_rate(
 ):
     """Create a new exchange rate."""
     if not current_user.account_id:
-        raise HTTPException(status_code=403, detail("You must belong to an account"))
+        raise HTTPException(status_code=403, detail="You must belong to an account")
     
     rate = ExchangeRate(
         account_id=current_user.account_id,
@@ -229,7 +229,7 @@ def delete_exchange_rate(
 ):
     """Delete an exchange rate."""
     if not current_user.account_id:
-        raise HTTPException(status_code=403, detail("You must belong to an account"))
+        raise HTTPException(status_code=403, detail="You must belong to an account")
     
     rate = db.query(ExchangeRate).filter(
         ExchangeRate.id == rate_id,
