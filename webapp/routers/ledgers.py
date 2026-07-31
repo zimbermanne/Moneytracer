@@ -1,16 +1,22 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
 
 from database import get_db
-from models import Debtor, DebtorItem, Creditor, CreditorItem, User, LedgerStatus, RoleEnum, FiscalPeriod, FiscalPeriodStatus
+from models import (
+    Debtor, DebtorItem, Creditor, CreditorItem, User, LedgerStatus, RoleEnum,
+    FiscalPeriod, FiscalPeriodStatus, ChartOfAccount, JournalEntry, JournalLine
+)
 from schemas import (
-    DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, CreditorUpdate, CreditorOut, LedgerOut, PaymentRequest,
-    FiscalPeriodCreate, FiscalPeriodOut,
+    DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, CreditorUpdate, CreditorOut,
+    LedgerOut, PaymentRequest, FiscalPeriodCreate, FiscalPeriodOut,
+    ChartOfAccountOut, JournalEntryOut, JournalEntryCreate, JournalLineOut
 )
 from auth import get_current_user, require_manager_up, require_admin
 from activity import log_activity_for_user
+from ledger import post_journal_entry, FiscalPeriodLockedError
 
 router = APIRouter(prefix="/api/ledgers", tags=["ledgers"])
 
@@ -299,3 +305,177 @@ def reopen_fiscal_period(period_id: int, db: Session = Depends(get_db),
     db.refresh(period)
     log_activity_for_user(db, current_user, "CRITICAL: fiscal_period_reopen", f"Reopened period {period.name}")
     return period
+
+
+# ---------- Chart of Accounts ----------
+
+@router.get("/chart-of-accounts", response_model=List[ChartOfAccountOut])
+def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return ChartOfAccount records as a nested tree grouped by type, with running balances."""
+    account_id = get_account_filter(current_user)
+    query = db.query(ChartOfAccount)
+    if account_id is not None:
+        query = query.filter(ChartOfAccount.account_id == account_id)
+    accounts = query.filter(ChartOfAccount.is_active == True).order_by(ChartOfAccount.code).all()
+
+    # Compute running balance per account
+    account_balances = {}
+    for acc in accounts:
+        balance_result = (
+            db.query(func.sum(JournalLine.debit) - func.sum(JournalLine.credit))
+            .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+            .filter(
+                JournalLine.chart_account_id == acc.id,
+                JournalEntry.account_id == acc.account_id,
+                JournalEntry.is_voided == False,
+            )
+            .scalar()
+        )
+        account_balances[acc.id] = balance_result or 0
+
+    # Build nested tree structure
+    def build_tree(parent_id=None):
+        children = []
+        for acc in accounts:
+            if acc.parent_id == parent_id:
+                acc_dict = {
+                    "id": acc.id,
+                    "account_id": acc.account_id,
+                    "code": acc.code,
+                    "name": acc.name,
+                    "account_type": acc.account_type,
+                    "parent_id": acc.parent_id,
+                    "is_active": acc.is_active,
+                    "balance": account_balances.get(acc.id, 0),
+                    "children": build_tree(acc.id),
+                }
+                children.append(ChartOfAccountOut(**acc_dict))
+        return children
+
+    return build_tree(parent_id=None)
+
+
+# ---------- Journal Entries ----------
+
+@router.get("/journal-entries", response_model=List[JournalEntryOut])
+def list_journal_entries(
+    account_id_filter: Optional[int] = Query(None, description="Filter by chart account ID"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Paginated list of journal entries with optional filtering by account and date range."""
+    account_id = get_account_filter(current_user)
+    query = db.query(JournalEntry).filter(JournalEntry.is_voided == False)
+    if account_id is not None:
+        query = query.filter(JournalEntry.account_id == account_id)
+    if account_id_filter is not None:
+        query = query.join(JournalLine).filter(JournalLine.chart_account_id == account_id_filter)
+    if start_date is not None:
+        query = query.filter(JournalEntry.date >= start_date)
+    if end_date is not None:
+        query = query.filter(JournalEntry.date <= end_date)
+
+    entries = query.order_by(JournalEntry.date.desc()).all()
+
+    # Build response with lines and running balance
+    result = []
+    for entry in entries:
+        lines = []
+        for line in entry.lines:
+            lines.append(JournalLineOut(
+                id=line.id,
+                chart_account_id=line.chart_account_id,
+                account_code=line.account.code,
+                account_name=line.account.name,
+                debit=line.debit,
+                credit=line.credit,
+                description=line.description,
+            ))
+        result.append(JournalEntryOut(
+            id=entry.id,
+            account_id=entry.account_id,
+            date=entry.date,
+            description=entry.description,
+            reference=entry.reference,
+            created_by=entry.created_by,
+            is_locked=entry.is_locked,
+            is_reversal=entry.is_reversal,
+            is_voided=entry.is_voided,
+            reversed_entry_id=entry.reversed_entry_id,
+            lines=lines,
+        ))
+    return result
+
+
+@router.post("/journal-entries", response_model=JournalEntryOut)
+def create_journal_entry(
+    payload: JournalEntryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Create a manual journal entry. Validates balance and calls existing post_journal_entry."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot create journal entries")
+
+    # Validate that lines balance
+    total_debit = sum(line.get("debit", 0) for line in payload.lines)
+    total_credit = sum(line.get("credit", 0) for line in payload.lines)
+    if abs(total_debit - total_credit) > 0.01:
+        raise HTTPException(status_code=400, detail=f"Entry doesn't balance: debits {total_debit} != credits {total_credit}")
+
+    # Build lines for post_journal_entry
+    lines = []
+    for line in payload.lines:
+        # Get account code from chart_account_id
+        chart_account = db.query(ChartOfAccount).filter(
+            ChartOfAccount.id == line["account_id"],
+            ChartOfAccount.account_id == account_id
+        ).first()
+        if not chart_account:
+            raise HTTPException(status_code=404, detail=f"Chart account {line['account_id']} not found")
+        lines.append((chart_account.code, line.get("debit", 0), line.get("credit", 0)))
+
+    try:
+        entry = post_journal_entry(
+            db,
+            account_id,
+            description=payload.description,
+            lines=lines,
+            reference=payload.reference,
+            created_by=current_user.username,
+            date=payload.date,
+        )
+    except FiscalPeriodLockedError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Build response
+    lines_out = []
+    for line in entry.lines:
+        lines_out.append(JournalLineOut(
+            id=line.id,
+            chart_account_id=line.chart_account_id,
+            account_code=line.account.code,
+            account_name=line.account.name,
+            debit=line.debit,
+            credit=line.credit,
+            description=line.description,
+        ))
+
+    return JournalEntryOut(
+        id=entry.id,
+        account_id=entry.account_id,
+        date=entry.date,
+        description=entry.description,
+        reference=entry.reference,
+        created_by=entry.created_by,
+        is_locked=entry.is_locked,
+        is_reversal=entry.is_reversal,
+        is_voided=entry.is_voided,
+        reversed_entry_id=entry.reversed_entry_id,
+        lines=lines_out,
+    )
