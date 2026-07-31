@@ -58,6 +58,17 @@ class Account(Base):
     onboarding_completed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # ---- Superadmin/platform-management fields (not tenant-editable) ----
+    # Subscription tier. Free-text on purpose (not an Enum) — plan names and
+    # limits are still being figured out, and a plain string lets the
+    # superadmin console change/introduce tiers without a code deploy.
+    plan = Column(String(40), default="free")
+    # Internal notes visible only to superadmins (support context, billing
+    # status, escalation history) — never surfaced on any tenant-facing
+    # endpoint. See AccountAdminOut in schemas.py, the only schema that
+    # includes it.
+    admin_notes = Column(Text, default="")
+
     users = relationship("User", back_populates="account")
     country = relationship("Country")
     revenue_authority = relationship("RevenueAuthority")
@@ -101,6 +112,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Bumped to force-invalidate every outstanding JWT for this user (e.g. a
+    # superadmin "force logout") without waiting for natural token expiry.
+    # The login token embeds the value at issue-time as "tv"; get_current_user
+    # rejects any token whose "tv" doesn't match the current column value.
+    token_version = Column(Integer, default=0)
 
     account = relationship("Account", back_populates="users")
 
@@ -256,6 +272,27 @@ class Debtor(Base):
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    items = relationship("DebtorItem", back_populates="debtor", cascade="all, delete-orphan")
+
+
+class DebtorItem(Base):
+    """What was bought on credit — informational/reference only, linked to
+    an inventory item when picked from stock, or a freehand description
+    otherwise. Does not auto-drive total_owed; that stays a manually set
+    figure on Debtor, same as before this existed."""
+    __tablename__ = "debtor_items"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    debtor_id = Column(Integer, ForeignKey(fk_ref("debtors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    description = Column(String(255), nullable=False)
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    debtor = relationship("Debtor", back_populates="items")
+
 
 class Creditor(Base):
     __tablename__ = "creditors"
@@ -270,6 +307,27 @@ class Creditor(Base):
     status = Column(Enum(LedgerStatus), default=LedgerStatus.unpaid)
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    items = relationship("CreditorItem", back_populates="creditor", cascade="all, delete-orphan")
+
+
+class CreditorItem(Base):
+    """What was bought on credit FROM this supplier — mirrors DebtorItem.
+    Informational/reference only, linked to an inventory item when picked
+    from stock, or a freehand description otherwise. Does not auto-drive
+    total_owed."""
+    __tablename__ = "creditor_items"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    creditor_id = Column(Integer, ForeignKey(fk_ref("creditors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    description = Column(String(255), nullable=False)
+    quantity = Column(Float, default=1)
+    unit_price = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    creditor = relationship("Creditor", back_populates="items")
 
 
 class DocumentStatus(str, enum.Enum):
@@ -393,6 +451,27 @@ class ActivityLog(Base):
     username = Column(String(80))
     action = Column(String(255))
     details = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class AnnouncementLevel(str, enum.Enum):
+    info = "info"
+    warning = "warning"
+    critical = "critical"
+
+
+class Announcement(Base):
+    """Platform-wide banner, set by a superadmin, shown to every tenant user
+    (e.g. maintenance windows, new-feature notices). Deliberately a flat
+    table with no account_id — these are broadcast to everyone, not scoped
+    to a tenant."""
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message = Column(Text, nullable=False)
+    level = Column(Enum(AnnouncementLevel), default=AnnouncementLevel.info)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
@@ -691,6 +770,133 @@ class SpendingGroupContribution(Base):
     contributed_at = Column(DateTime, default=datetime.utcnow)
 
     group = relationship("SpendingGroup", back_populates="contributions")
+
+
+# ---------------------------------------------------------------------------
+# Bank loans (business borrowing FROM a bank/lender) — distinct from
+# GroupLoan above (a member borrowing from a Vikoba's own pooled fund).
+# ---------------------------------------------------------------------------
+
+class LoanInterestType(str, enum.Enum):
+    simple = "simple"
+    reducing_balance = "reducing_balance"
+
+
+class LoanStatus(str, enum.Enum):
+    active = "active"
+    closed = "closed"
+    defaulted = "defaulted"
+
+
+# ---------------------------------------------------------------------------
+# Assets — a flat value-tracker (house, vehicle, equipment, etc). No
+# depreciation schedule for v1; estimated_value is whatever the owner last
+# updated it to. account_id is intentionally not restricted to business-type
+# accounts — personal-type tenants use these same endpoints/tables directly
+# (the personal/business/community separation is enforced elsewhere, e.g.
+# community.py's ownership check; it was never actually enforced here).
+# ---------------------------------------------------------------------------
+
+class AssetCategory(str, enum.Enum):
+    property = "property"
+    vehicle = "vehicle"
+    equipment = "equipment"
+    other = "other"
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    category = Column(Enum(AssetCategory), default=AssetCategory.other)
+    estimated_value = Column(Float, default=0)
+    acquired_date = Column(DateTime, nullable=True)
+    notes = Column(String(255), default="")
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BankLoan(Base):
+    __tablename__ = "bank_loans"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    lender_name = Column(String(120), nullable=False)
+    principal = Column(Float, nullable=False)
+    interest_type = Column(Enum(LoanInterestType), default=LoanInterestType.simple)
+    annual_rate = Column(Float, default=0)  # % per year
+    start_date = Column(DateTime, nullable=False)
+    due_day_of_month = Column(Integer, default=1)  # 1-28, for reminder scheduling
+    term_months = Column(Integer, nullable=True)  # optional — enables a projected roadmap
+    grace_period_days = Column(Integer, default=0)
+    status = Column(Enum(LoanStatus), default=LoanStatus.active)
+    notes = Column(String(255), default="")
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    payments = relationship("BankLoanPayment", back_populates="loan",
+                             cascade="all, delete-orphan", order_by="BankLoanPayment.paid_at")
+
+
+class BankLoanPayment(Base):
+    __tablename__ = "bank_loan_payments"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    loan_id = Column(Integer, ForeignKey(fk_ref("bank_loans.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    interest_portion = Column(Float, default=0)
+    principal_portion = Column(Float, default=0)
+    balance_after = Column(Float, default=0)
+    paid_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(String(80), default="")
+
+    loan = relationship("BankLoan", back_populates="payments")
+
+
+# ---------------------------------------------------------------------------
+# Compliance deadlines (TRA, BRELA, NSSF/WCF/OSHA, or a custom recurring
+# obligation). Reminders are generated by the scheduler, not stored here —
+# this table just holds the "what/when/how often", scheduler.py does the
+# threshold math (7/1 days for monthly, 30/14/7/1 for yearly) each run.
+# ---------------------------------------------------------------------------
+
+class DeadlineType(str, enum.Enum):
+    tra_paye = "tra_paye"
+    tra_sdl = "tra_sdl"
+    tra_vat = "tra_vat"
+    brela_annual_fee = "brela_annual_fee"
+    business_name_renewal = "business_name_renewal"
+    nssf = "nssf"
+    wcf = "wcf"
+    osha = "osha"
+    custom = "custom"
+
+
+class DeadlineRecurrence(str, enum.Enum):
+    monthly = "monthly"
+    yearly = "yearly"
+    once = "once"
+
+
+class ComplianceDeadline(Base):
+    __tablename__ = "compliance_deadlines"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    deadline_type = Column(Enum(DeadlineType), default=DeadlineType.custom)
+    label = Column(String(120), nullable=False)
+    due_date = Column(DateTime, nullable=False)  # next occurrence; rolled forward by the scheduler once past
+    recurrence = Column(Enum(DeadlineRecurrence), default=DeadlineRecurrence.monthly)
+    is_active = Column(Boolean, default=True)  # false = paused/cancelled, no more reminders
+    notes = Column(String(255), default="")
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # ---------- Double-Entry Accounting Ledger ----------

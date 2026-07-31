@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
+    LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence, AssetCategory,
 )
 
 
@@ -97,6 +98,10 @@ class AccountUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_suspended: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    # plan / admin_notes deliberately omitted here — see update_my_account's
+    # explicit block on them, same pattern as is_suspended. Tenant admins
+    # change everything else on this model; those two are superadmin-only
+    # (PlanUpdate / NotesUpdate below, via routers/superadmin.py).
 
 
 class AccountOut(BaseModel):
@@ -128,10 +133,49 @@ class AccountOut(BaseModel):
     is_suspended: bool
     onboarding_completed: bool
     created_at: datetime
+    plan: Optional[str] = "free"
 
 
 class AccountWithUsersOut(AccountOut):
     users: List[UserOut] = []
+
+
+class AccountAdminOut(AccountWithUsersOut):
+    """Only used by superadmin-facing endpoints — adds admin_notes, which
+    must never appear on any tenant-facing response (AccountOut/
+    AccountWithUsersOut above stay as-is for that reason)."""
+    admin_notes: Optional[str] = ""
+
+
+class PlanUpdate(BaseModel):
+    plan: str
+
+
+class NotesUpdate(BaseModel):
+    admin_notes: str
+
+
+class BulkAccountIds(BaseModel):
+    account_ids: List[int]
+
+
+class RoleUpdate(BaseModel):
+    role: RoleEnum
+
+
+class AnnouncementCreate(BaseModel):
+    message: str
+    level: str = "info"
+
+
+class AnnouncementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    message: str
+    level: str
+    is_active: bool
+    created_by: str
+    created_at: datetime
 
 
 # ---------- Inventory ----------
@@ -265,6 +309,144 @@ class ExpenseOut(BaseModel):
     created_at: datetime
 
 
+# ---------- Personal overview ----------
+class VikobaMembershipSummary(BaseModel):
+    group_id: int
+    group_name: str
+    group_role: str
+    total_contributed: float
+    active_loan_balance: float
+
+
+class PersonalOverview(BaseModel):
+    total_assets_value: float
+    total_bank_debt: float
+    total_owed_to_creditors: float
+    total_owed_by_debtors: float
+    expenses_this_month: float
+    vikoba_memberships: List[VikobaMembershipSummary]
+
+
+# ---------- Assets ----------
+class AssetCreate(BaseModel):
+    name: str
+    category: AssetCategory = AssetCategory.other
+    estimated_value: float = 0
+    acquired_date: Optional[datetime] = None
+    notes: Optional[str] = ""
+
+
+class AssetUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[AssetCategory] = None
+    estimated_value: Optional[float] = None
+    acquired_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
+class AssetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    category: AssetCategory
+    estimated_value: float
+    acquired_date: Optional[datetime] = None
+    notes: str
+    created_at: datetime
+
+
+# ---------- Bank Loans ----------
+class BankLoanCreate(BaseModel):
+    lender_name: str
+    principal: float
+    interest_type: LoanInterestType = LoanInterestType.simple
+    annual_rate: float = 0
+    start_date: datetime
+    due_day_of_month: int = 1
+    term_months: Optional[int] = None
+    grace_period_days: int = 0
+    notes: Optional[str] = ""
+
+
+class BankLoanUpdate(BaseModel):
+    lender_name: Optional[str] = None
+    due_day_of_month: Optional[int] = None
+    term_months: Optional[int] = None
+    grace_period_days: Optional[int] = None
+    status: Optional[LoanStatus] = None
+    notes: Optional[str] = None
+
+
+class BankLoanPaymentCreate(BaseModel):
+    amount: float
+    paid_at: Optional[datetime] = None
+
+
+class BankLoanPaymentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    amount: float
+    interest_portion: float
+    principal_portion: float
+    balance_after: float
+    paid_at: datetime
+
+
+class BankLoanOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    lender_name: str
+    principal: float
+    interest_type: LoanInterestType
+    annual_rate: float
+    start_date: datetime
+    due_day_of_month: int
+    term_months: Optional[int] = None
+    grace_period_days: int
+    status: LoanStatus
+    notes: str
+    created_at: datetime
+    payments: List[BankLoanPaymentOut] = []
+
+
+class LoanRoadmapEntry(BaseModel):
+    period: int
+    date: datetime
+    interest: float
+    principal: float
+    payment: float
+    balance: float
+
+
+# ---------- Compliance Deadlines ----------
+class ComplianceDeadlineCreate(BaseModel):
+    deadline_type: DeadlineType = DeadlineType.custom
+    label: str
+    due_date: datetime
+    recurrence: DeadlineRecurrence = DeadlineRecurrence.monthly
+    notes: Optional[str] = ""
+
+
+class ComplianceDeadlineUpdate(BaseModel):
+    label: Optional[str] = None
+    due_date: Optional[datetime] = None
+    recurrence: Optional[DeadlineRecurrence] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+
+
+class ComplianceDeadlineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    deadline_type: DeadlineType
+    label: str
+    due_date: datetime
+    recurrence: DeadlineRecurrence
+    is_active: bool
+    notes: str
+    created_at: datetime
+
+
 # ---------- Fiscal Periods ----------
 class FiscalPeriodCreate(BaseModel):
     name: str
@@ -285,11 +467,65 @@ class FiscalPeriodOut(BaseModel):
 
 
 # ---------- Ledgers ----------
+class DebtorItemIn(BaseModel):
+    item_id: Optional[int] = None  # set when picked from inventory; omit for a freehand line
+    description: str
+    quantity: float = 1
+    unit_price: float = 0
+
+
+class DebtorItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    item_id: Optional[int] = None
+    description: str
+    quantity: float
+    unit_price: float
+
+
 class DebtorCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
+    items: List[DebtorItemIn] = []
+
+
+class DebtorUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    total_owed: Optional[float] = None
+    note: Optional[str] = None
+    items: Optional[List[DebtorItemIn]] = None  # omit to leave items untouched; [] clears them
+
+
+class DebtorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str
+    total_owed: float
+    amount_paid: float
+    status: LedgerStatus
+    note: str
+    created_at: datetime
+    items: List[DebtorItemOut] = []
+
+
+class CreditorItemIn(BaseModel):
+    item_id: Optional[int] = None  # set when picked from inventory; omit for a freehand line
+    description: str
+    quantity: float = 1
+    unit_price: float = 0
+
+
+class CreditorItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    item_id: Optional[int] = None
+    description: str
+    quantity: float
+    unit_price: float
 
 
 class CreditorCreate(BaseModel):
@@ -297,6 +533,28 @@ class CreditorCreate(BaseModel):
     phone: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
+    items: List[CreditorItemIn] = []
+
+
+class CreditorUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    total_owed: Optional[float] = None
+    note: Optional[str] = None
+    items: Optional[List[CreditorItemIn]] = None  # omit to leave items untouched; [] clears them
+
+
+class CreditorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str
+    total_owed: float
+    amount_paid: float
+    status: LedgerStatus
+    note: str
+    created_at: datetime
+    items: List[CreditorItemOut] = []
 
 
 class LedgerOut(BaseModel):

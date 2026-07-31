@@ -153,6 +153,7 @@ export default function Inventory() {
         <Modal
           title="Redundant / Duplicate Items"
           onClose={() => setRedundant(null)}
+          isDirty={false}
           footer={<button className="btn btn-outline" onClick={() => setRedundant(null)}>Close</button>}
         >
           {redundant.flagged_item_count === 0 ? (
@@ -184,6 +185,7 @@ export default function Inventory() {
         <Modal
           title={editing.id ? 'Edit Item' : 'Add Item'}
           onClose={() => setEditing(null)}
+          isDirty={JSON.stringify(form) !== JSON.stringify(editing.id ? editing : empty)}
           footer={(
             <>
               <button className="btn btn-outline" onClick={() => setEditing(null)}>Cancel</button>

@@ -6,7 +6,9 @@ import { NavigationGuardProvider } from './hooks/useNavigationGuard.jsx'
 import { useApi } from './hooks/useApi.js'
 import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
 import MobileTopBar from './components/MobileTopBar.jsx'
+import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
+import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
 import Landing from './pages/Landing.jsx'
 import Download from './pages/Download.jsx'
@@ -29,6 +31,10 @@ import Customers from './pages/Customers.jsx'
 import Settings from './pages/Settings.jsx'
 import ActivityLogs from './pages/ActivityLogs.jsx'
 import VerifyDocument from './pages/VerifyDocument.jsx'
+import BankLoans from './pages/BankLoans.jsx'
+import Deadlines from './pages/Deadlines.jsx'
+import Assets from './pages/Assets.jsx'
+import Personal from './pages/Personal.jsx'
 
 function pageTitle(pathname, t) {
   const key = PAGE_TITLE_KEYS[pathname]
@@ -78,6 +84,7 @@ function Layout({ children }) {
       <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">
+        <PlatformBanner />
         <div className="desktop-topbar">
           <Clock
             accountName={company?.name}
@@ -89,6 +96,7 @@ function Layout({ children }) {
         </div>
         {children}
       </div>
+      <BottomNav onMore={() => setMobileOpen(true)} />
     </div>
   )
 }
@@ -117,17 +125,21 @@ function PrivateRoutes() {
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
         <Route path="/creditors" element={<Creditors />} />
-        <Route path="/reports/profit-loss" element={<Reports view="profit-loss" />} />
-        <Route path="/reports/financial-summary" element={<Reports view="financial-summary" />} />
-        <Route path="/reports/cashflow" element={<Reports view="cashflow" />} />
-        <Route path="/reports/debtors" element={<Reports view="debtors" />} />
-        <Route path="/reports/creditors" element={<Reports view="creditors" />} />
-        <Route path="/reports/inventory-valuation" element={<Reports view="inventory-valuation" />} />
+        <Route path="/reports/profit-loss" element={<Reports key="profit-loss" view="profit-loss" />} />
+        <Route path="/reports/financial-summary" element={<Reports key="financial-summary" view="financial-summary" />} />
+        <Route path="/reports/cashflow" element={<Reports key="cashflow" view="cashflow" />} />
+        <Route path="/reports/debtors" element={<Reports key="debtors" view="debtors" />} />
+        <Route path="/reports/creditors" element={<Reports key="creditors" view="creditors" />} />
+        <Route path="/reports/inventory-valuation" element={<Reports key="inventory-valuation" view="inventory-valuation" />} />
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/activity" element={<ActivityLogs />} />
+        <Route path="/bank-loans" element={<BankLoans />} />
+        <Route path="/deadlines" element={<Deadlines />} />
+        <Route path="/assets" element={<Assets />} />
+        <Route path="/personal" element={<Personal />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </Layout>

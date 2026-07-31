@@ -567,6 +567,14 @@ label {
   padding: 6px 10px 10px;
 }
 
+/* Bottom tab bar — hidden by default (desktop), shown under the 768px
+   breakpoint below. Fixed to the viewport bottom with safe-area padding so
+   it clears the home-indicator on notched iPhones instead of sitting under
+   it. */
+.bottom-nav {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -610,6 +618,173 @@ label {
   }
 
   .app-shell { flex-direction: column; padding: 0; gap: 0; }
+
+  /* Leave room at the bottom of the scrollable content so the fixed tab
+     bar never overlaps the last row of a form or table. */
+  .main-content {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 58;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.2;
+    padding: 4px 2px;
+    border-radius: 10px;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent);
+  }
+
+  .bottom-nav-icon {
+    font-size: 19px;
+  }
+
+  .bottom-nav-label {
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Touch targets: anything tappable should meet the ~44px minimum touch
+     target size on phones, not just shrink to fit desktop density. */
+  .menu-item, .group-header {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  button, .btn, input[type="checkbox"], input[type="radio"] {
+    min-height: 40px;
+  }
+
+  input, select, textarea {
+    font-size: 16px; /* prevents iOS Safari auto-zoom on focus */
+  }
+
+  /* Desktop-density spacing is the single biggest reason a responsive page
+     still "reads" as a shrunk desktop site instead of a native mobile
+     screen. Phones get tighter, edge-to-edge padding instead. */
+  .page {
+    padding: 14px;
+  }
+
+  .page-header h1 {
+    font-size: 19px;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .card-grid {
+    gap: 10px;
+  }
+
+  /* Dialogs: on desktop a small centered box makes sense next to a large
+     canvas of content around it. On a phone that same box just looks like
+     a shrunk desktop popup. Native mobile apps use full-width sheets that
+     slide up from the bottom instead — so modals switch to that pattern
+     here rather than just scaling their max-width down. */
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-up 0.22s var(--ease, ease-out);
+  }
+
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* Data tables: a scrolling, shrunk-down grid of tiny cells is the classic
+     "desktop site on a phone" tell. Below this breakpoint every table
+     wearing .responsive-table drops its grid structure and each row
+     becomes its own card — every <td> stacks as a label/value line using
+     the data-label each column already carries (see components/Table.jsx).
+     Row taps and per-cell click-stopping keep working exactly as before
+     since nothing about the DOM structure changes, only how it's drawn. */
+  .responsive-table table,
+  .responsive-table thead,
+  .responsive-table tbody,
+  .responsive-table th,
+  .responsive-table td,
+  .responsive-table tr {
+    display: block;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tr {
+    padding: 12px 14px;
+    border-bottom: 8px solid var(--cream);
+  }
+
+  .responsive-table tr:last-child {
+    border-bottom: none;
+  }
+
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: none;
+    text-align: right;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  /* A column with no header text (e.g. a trailing actions/kebab cell)
+     shouldn't render an empty label row — let it sit full-width instead. */
+  .responsive-table td:empty,
+  .responsive-table td[data-label=""] {
+    display: none;
+  }
 }
 
 @media (min-width: 769px) and (max-width: 1100px) {
@@ -632,12 +807,46 @@ label {
   /* Sahel dusk illustration (baobabs + mudbrick mosque), with a light
      wash so the frosted-glass card stays legible against it. */
   background:
-    linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35)),
+    linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
     url('../assets/hero-bg.jpg');
   background-size: cover, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
 }
+
+/* Floating glass/neumorphic orbs — purely decorative, sit behind the card.
+   Two "glass" orbs (light, blurred, bubble-like highlight) and two soft
+   dark blur blooms, echoing the glassmorphism/neumorphism reference:
+   translucent spheres with a highlight catch-light, plus soft out-of-focus
+   shadow blooms for depth. Hidden on small screens — the login card is the
+   whole point, not the ambience, once space is tight. */
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.login-orb-glass {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0.35) 70%);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(80, 60, 120, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+.login-orb-shadow {
+  background: radial-gradient(circle, rgba(30, 25, 20, 0.5), rgba(30, 25, 20, 0) 70%);
+  filter: blur(18px);
+}
+.login-orb-1 { width: 150px; height: 150px; top: 8%; left: 7%; }
+.login-orb-2 { width: 190px; height: 190px; bottom: 10%; right: 8%; }
+.login-orb-3 { width: 130px; height: 130px; top: 14%; right: 12%; }
+.login-orb-4 { width: 110px; height: 110px; bottom: 16%; left: 11%; }
+@media (max-width: 720px) {
+  .login-orb { display: none; }
+}
+
+.login-screen > * { position: relative; z-index: 1; }
 
 .login-brand {
   display: flex;
@@ -671,12 +880,13 @@ label {
 }
 
 .login-card {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-top-color: rgba(255, 255, 255, 0.95); /* a touch brighter — the glass "sheen" catching light from above */
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(80, 60, 120, 0.18), var(--neu-raised);
+  box-shadow: 0 24px 70px rgba(80, 60, 120, 0.2), var(--neu-raised);
   padding: var(--space-8) var(--space-8) var(--space-6);
   width: 380px;
   max-width: 90vw;
@@ -2078,6 +2288,41 @@ label {
 
   .landing-grid-three {
     grid-template-columns: 1fr;
+  }
+
+  /* Hero track-switch (business/community/personal) and CTA buttons had no
+     mobile rules at all — on a narrow phone the three long pill labels
+     ("I track my own spending" etc.) would overflow past the screen edge
+     instead of wrapping, and the two hero action links looked like a
+     mismatched pair floating side by side instead of a clean stacked pair. */
+  .landing-track-switch {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+  }
+  .landing-track-switch button {
+    padding: 9px 14px;
+    font-size: var(--text-xs);
+  }
+
+  .landing-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+    gap: 10px;
+  }
+  .landing-btn-primary,
+  .landing-btn-secondary {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .landing-btn-secondary {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
   }
 }
 

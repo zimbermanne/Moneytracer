@@ -14,7 +14,6 @@ from models import (
     Sale, Purchase, Expense, Debtor, Creditor, InventoryItem, User, LedgerStatus, RoleEnum,
     ChartOfAccount, JournalEntry, JournalLine,
 )
-from schemas import DebtorCreate, CreditorCreate, LedgerOut
 from auth import get_current_user
 from activity import log_activity, log_activity_for_user
 
@@ -334,27 +333,6 @@ def daily_summary(db: Session = Depends(get_db), current_user: User = Depends(ge
         "low_stock_count": low_stock_count,
         "transactions": len(sales_today),
     }
-
-
-@router.post("/add-debtor", response_model=LedgerOut)
-def add_debtor(payload: DebtorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    debtor = Debtor(**payload.model_dump())
-    db.add(debtor)
-    db.commit()
-    db.refresh(debtor)
-    log_activity(db, current_user.username, "debtor_add", f"Added debtor {debtor.name}")
-    return debtor
-
-
-@router.post("/add-creditor", response_model=LedgerOut)
-def add_creditor(payload: CreditorCreate, db: Session = Depends(get_db),
-                  current_user: User = Depends(get_current_user)):
-    creditor = Creditor(**payload.model_dump())
-    db.add(creditor)
-    db.commit()
-    db.refresh(creditor)
-    log_activity(db, current_user.username, "creditor_add", f"Added creditor {creditor.name}")
-    return creditor
 
 
 def _ledger_account_balances(db: Session, account_id, start: datetime = None, end: datetime = None):

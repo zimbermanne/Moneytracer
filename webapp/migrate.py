@@ -19,6 +19,8 @@ from sqlalchemy.engine import Engine
 _MIGRATIONS = {
     "users": [
         ("is_demo", "BOOLEAN", "false"),
+        # Force-logout support — see models.User.token_version docstring.
+        ("token_version", "INTEGER", "0"),
     ],
     "accounts": [
         # Existing accounts predate the onboarding wizard, so they default to
@@ -37,6 +39,9 @@ _MIGRATIONS = {
         # Pan-African Reference App: country and revenue authority references.
         ("country_id", "INTEGER", None),
         ("revenue_authority_id", "INTEGER", None),
+        # Superadmin-only fields — subscription tier + internal support notes.
+        ("plan", "VARCHAR(40)", "'free'"),
+        ("admin_notes", "TEXT", "''"),
     ],
 }
 

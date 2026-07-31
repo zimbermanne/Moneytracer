@@ -139,6 +139,15 @@ def suspend_account(account_id: int, db: Session = Depends(get_db), superadmin: 
         raise HTTPException(status_code=404, detail="Account not found")
     
     account.is_suspended = True
+    # Force out anyone already logged in under this account — otherwise a
+    # currently-active session keeps working until its token naturally
+    # expires, even though get_current_user also independently checks
+    # is_suspended on every request. Bumping token_version is the belt to
+    # that suspenders: it invalidates the token outright rather than relying
+    # on the suspended-account check running every time.
+    db.query(User).filter(User.account_id == account_id).update(
+        {User.token_version: User.token_version + 1}
+    )
     db.commit()
     log_activity_for_user(db, superadmin, "account_suspend", f"Suspended account {account.name}")
     return {"detail": f"Account {account.name} has been suspended"}

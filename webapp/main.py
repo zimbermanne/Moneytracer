@@ -10,13 +10,24 @@ from slowapi.middleware import SlowAPIMiddleware
 from database import Base, engine, ensure_schemas
 import models  # noqa: F401 ensures models are registered before create_all
 from migrate import run_migrations
+from seed_pan_african_data import seed_all_pan_african_data
 from rate_limit import limiter
-from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin
+from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets
 from scheduler import start_scheduler
+from database import SessionLocal
 
 ensure_schemas(engine)
 Base.metadata.create_all(bind=engine)
 run_migrations(engine)
+
+# Self-healing reference data: seed_countries()/seed_revenue_authorities()/
+# seed_languages() each skip rows that already exist, so this is safe to run
+# on every startup/deploy. Without this, any country added to
+# african_currencies.py never reaches the live DB until someone remembers to
+# run the seed script by hand -- which is exactly how "Unknown country:
+# Burkina Faso" errors happened during registration.
+with SessionLocal() as _seed_db:
+    seed_all_pan_african_data(_seed_db)
 
 app = FastAPI(title="Moneytracer API", version="2.5.0")
 
@@ -73,17 +84,27 @@ app.include_router(quotations.router)
 app.include_router(customers.router)
 app.include_router(accounts.router)
 app.include_router(superadmin.router)
+app.include_router(bank_loans.router)
+app.include_router(deadlines.router)
+app.include_router(assets.router)
 app.include_router(reminders.router)
 app.include_router(community.router)
 app.include_router(personal.router)
 app.include_router(public.router)
 app.include_router(reference.router)
 
-
 @app.get("/api/health")
 def health():
     return {"status": "ok", "version": "2.5.0"}
 
+# Superadmin console — served same-origin from this same backend, on
+# purpose: it's the same API it manages, so there's no cross-origin request
+# for it to make, no CORS configuration needed, none of the "Failed to
+# fetch" grief that comes from hosting it as a separate origin and trying
+# to whitelist that origin via ALLOWED_ORIGINS.
+superadmin_static_dir = os.path.join(os.path.dirname(__file__), "superadmin_static")
+if os.path.isdir(superadmin_static_dir):
+    app.mount("/superadmin", StaticFiles(directory=superadmin_static_dir, html=True), name="superadmin")
 
 # Serve the legacy static SPA shell, if present, at the root
 static_dir = os.path.join(os.path.dirname(__file__), "static")
