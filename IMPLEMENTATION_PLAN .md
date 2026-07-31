@@ -18,7 +18,10 @@ and `frontend/src/pages/`. Findings:
   `get_locked_period()` — exactly as described. `models.py` has
   `ChartOfAccount`, `JournalEntry`, `JournalLine`, `FiscalPeriod` already
   defined, just with no API surface. Phase 1 as written is accurate.
-- **No `Attachment`, `RecurringInvoiceTemplate`, `ExchangeRate`, `Employee`,
+- **`Attachment`,
+`RecurringInvoiceTemplate`,
+`ExchangeRate`,
+`Employee`,
   or `Budget` models exist anywhere in `models.py`** — Phases 2, 3, 4, and 5
   are genuinely greenfield, confirming the gap analysis.
 - **Correction — recurring infrastructure already exists, reuse it:**
@@ -28,7 +31,7 @@ and `frontend/src/pages/`. Findings:
   roll-forward logic for recurring compliance deadlines. Phase 3
   (Recurring Invoices) should add a new job to this same scheduler instance
   rather than introducing new scheduling infrastructure.
-- **Correction — email is already implemented, not just planned:**
+- **Correction — email is already implemented:**
   `email_utils.py` sends invoice/quotation PDFs via plain SMTP
   (`SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD` env vars), not Resend/Postmark.
   Phase 3's auto-send step should call `send_email_with_attachment()`
