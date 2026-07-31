@@ -60,7 +60,15 @@
     "bankLoans": "Bank Loans",
     "assets": "Assets",
     "personal": "Personal Finance",
-    "deadlines": "Compliance Deadlines"
+    "deadlines": "Compliance Deadlines",
+    "accountingGroup": "Accounting",
+    "chartOfAccounts": "Chart of Accounts",
+    "generalLedger": "General Ledger",
+    "trialBalance": "Trial Balance",
+    "balanceSheet": "Balance Sheet",
+    "vatReturn": "VAT Return",
+    "payroll": "Payroll",
+    "budgets": "Budgets"
   },
   "auth": {
     "login": "Login",

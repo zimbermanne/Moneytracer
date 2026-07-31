@@ -35,6 +35,10 @@ import BankLoans from './pages/BankLoans.jsx'
 import Deadlines from './pages/Deadlines.jsx'
 import Assets from './pages/Assets.jsx'
 import Personal from './pages/Personal.jsx'
+import ChartOfAccounts from './pages/ChartOfAccounts.jsx'
+import GeneralLedger from './pages/GeneralLedger.jsx'
+import Payroll from './pages/Payroll.jsx'
+import Budgets from './pages/Budgets.jsx'
 
 function pageTitle(pathname, t) {
   const key = PAGE_TITLE_KEYS[pathname]
@@ -131,6 +135,13 @@ function PrivateRoutes() {
         <Route path="/reports/debtors" element={<Reports key="debtors" view="debtors" />} />
         <Route path="/reports/creditors" element={<Reports key="creditors" view="creditors" />} />
         <Route path="/reports/inventory-valuation" element={<Reports key="inventory-valuation" view="inventory-valuation" />} />
+        <Route path="/reports/trial-balance" element={<Reports key="trial-balance" view="trial-balance" />} />
+        <Route path="/reports/balance-sheet" element={<Reports key="balance-sheet" view="balance-sheet" />} />
+        <Route path="/reports/vat-return" element={<Reports key="vat-return" view="vat-return" />} />
+        <Route path="/accounting/chart-of-accounts" element={<ChartOfAccounts />} />
+        <Route path="/accounting/general-ledger" element={<GeneralLedger />} />
+        <Route path="/payroll" element={<Payroll />} />
+        <Route path="/budgets" element={<Budgets />} />
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />
