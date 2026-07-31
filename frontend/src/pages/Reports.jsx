@@ -220,6 +220,133 @@ function InventoryValuation({ data }) {
   )
 }
 
+function TrialBalance({ data }) {
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Trial Balance</h3>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
+              <th style={{ padding: '6px 8px' }}>Account Code</th>
+              <th style={{ padding: '6px 8px' }}>Account Name</th>
+              <th style={{ padding: '6px 8px' }}>Type</th>
+              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Debit</th>
+              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Credit</th>
+              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data.accounts || []).map((acc) => (
+              <tr key={acc.code} style={{ borderTop: '1px solid #f0ece1' }}>
+                <td style={{ padding: '6px 8px' }}>{acc.code}</td>
+                <td style={{ padding: '6px 8px' }}>{acc.name}</td>
+                <td style={{ padding: '6px 8px', textTransform: 'capitalize' }}>{acc.account_type}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{acc.total_debit > 0 ? money(acc.total_debit) : '—'}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{acc.total_credit > 0 ? money(acc.total_credit) : '—'}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{money(acc.balance)}</td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: '2px solid #f0ece1', backgroundColor: 'var(--bg-light)' }}>
+              <td style={{ padding: '8px', fontWeight: 700 }} colSpan={3}>Totals</td>
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_debit)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_credit)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_balance)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function BalanceSheet({ data }) {
+  return (
+    <>
+      <div className="card-grid" style={{ marginBottom: 20 }}>
+        <div className="card metric-card"><div className="label">Total Assets</div><div className="value">{money(data.total_assets)}</div></div>
+        <div className="card metric-card"><div className="label">Total Liabilities</div><div className="value">{money(data.total_liabilities)}</div></div>
+        <div className="card metric-card"><div className="label">Total Equity</div><div className="value">{money(data.total_equity)}</div></div>
+      </div>
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        <div className="card" style={{ flex: 1, minWidth: 280 }}>
+          <h3 style={{ marginTop: 0 }}>Assets</h3>
+          {Object.entries(data.assets || {}).map(([name, val]) => (
+            <Row key={name} left={name} right={money(val)} />
+          ))}
+          <Row left="Total Assets" right={money(data.total_assets)} bold border />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 280 }}>
+          <h3 style={{ marginTop: 0 }}>Liabilities</h3>
+          {Object.entries(data.liabilities || {}).map(([name, val]) => (
+            <Row key={name} left={name} right={money(val)} />
+          ))}
+          <Row left="Total Liabilities" right={money(data.total_liabilities)} bold border />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 280 }}>
+          <h3 style={{ marginTop: 0 }}>Equity</h3>
+          {Object.entries(data.equity || {}).map(([name, val]) => (
+            <Row key={name} left={name} right={money(val)} />
+          ))}
+          <Row left="Total Equity" right={money(data.total_equity)} bold border />
+        </div>
+      </div>
+    </>
+  )
+}
+
+function VATReturn({ data }) {
+  const statusColors = {
+    refund_due: 'var(--success)',
+    payment_due: 'var(--danger)',
+    balanced: 'var(--text-muted)',
+  }
+  const statusLabels = {
+    refund_due: 'Refund Due',
+    payment_due: 'Payment Due',
+    balanced: 'Balanced',
+  }
+
+  return (
+    <>
+      <div className="card-grid" style={{ marginBottom: 20 }}>
+        <div className="card metric-card">
+          <div className="label">VAT Output (Sales)</div>
+          <div className="value">{money(data.vat_output)}</div>
+        </div>
+        <div className="card metric-card">
+          <div className="label">VAT Input (Purchases)</div>
+          <div className="value">{money(data.vat_input)}</div>
+        </div>
+        <div className="card metric-card">
+          <div className="label">Net VAT Due</div>
+          <div className="value" style={{ color: statusColors[data.status] }}>
+            {money(data.net_vat_due)}
+          </div>
+        </div>
+        <div className="card metric-card">
+          <div className="label">Status</div>
+          <div className="value" style={{ color: statusColors[data.status], textTransform: 'capitalize' }}>
+            {statusLabels[data.status]}
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>VAT Return Summary</h3>
+        <Row left="Period Start" right={data.period_start || 'All time'} />
+        <Row left="Period End" right={data.period_end || 'Now'} />
+        <Row left="Total Output VAT" right={money(data.vat_output)} />
+        <Row left="Total Input VAT" right={money(data.vat_input)} />
+        <Row left="Net VAT Due" right={money(data.net_vat_due)} bold color={statusColors[data.status]} border />
+        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+          This report calculates VAT liability based on posted journal entries to the VAT Payable (Output) 
+          and VAT Receivable (Input) accounts. Ensure all sales and purchases with VAT are properly recorded.
+        </div>
+      </div>
+    </>
+  )
+}
+
 const VIEW_CONFIG = {
   'profit-loss': { title: 'Profit & Loss', endpoint: '/reports/profit-loss', dateFilter: true, Component: ProfitLoss },
   'financial-summary': { title: 'Financial Summary', endpoint: '/reports/financial-summary', dateFilter: true, Component: FinancialSummary },
@@ -227,6 +354,9 @@ const VIEW_CONFIG = {
   'debtors': { title: 'Debtors Report', endpoint: '/reports/debtors', dateFilter: false, Component: (p) => <LedgerReport {...p} listKey="top_debtors" title="Top Debtors" /> },
   'creditors': { title: 'Creditors Report', endpoint: '/reports/creditors', dateFilter: false, Component: (p) => <LedgerReport {...p} listKey="top_creditors" title="Top Creditors" /> },
   'inventory-valuation': { title: 'Inventory Valuation', endpoint: '/reports/inventory-valuation', dateFilter: false, Component: InventoryValuation },
+  'trial-balance': { title: 'Trial Balance', endpoint: '/reports/trial-balance', dateFilter: true, Component: TrialBalance },
+  'balance-sheet': { title: 'Balance Sheet', endpoint: '/reports/balance-sheet', dateFilter: true, Component: BalanceSheet },
+  'vat-return': { title: 'VAT Return', endpoint: '/reports/vat-return', dateFilter: true, Component: VATReturn },
 }
 
 export default function Reports({ view }) {

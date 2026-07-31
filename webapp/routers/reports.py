@@ -451,6 +451,61 @@ def balance_sheet(as_of: Optional[date] = None, db: Session = Depends(get_db),
     }
 
 
+@router.get("/vat-return")
+def vat_return(start: Optional[date] = None, end: Optional[date] = None,
+              db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """VAT return report: output VAT (sales) minus input VAT (purchases) = net due.
+    Computed from the VAT Payable (Output) and VAT Receivable (Input) accounts."""
+    account_id = get_account_filter(current_user)
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end, datetime.max.time()) if end else None
+
+    # Get VAT Payable (Output) account balance - account code 2100
+    vat_output = (
+        db.query(func.sum(JournalLine.credit) - func.sum(JournalLine.debit))
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .join(ChartOfAccount, JournalLine.chart_account_id == ChartOfAccount.id)
+        .filter(
+            ChartOfAccount.code == "2100",
+            ChartOfAccount.account_id == account_id,
+            JournalEntry.is_voided == False,
+        )
+    )
+    if start_dt:
+        vat_output = vat_output.filter(JournalEntry.date >= start_dt)
+    if end_dt:
+        vat_output = vat_output.filter(JournalEntry.date <= end_dt)
+    vat_output_balance = vat_output.scalar() or 0
+
+    # Get VAT Receivable (Input) account balance - account code 2110
+    vat_input = (
+        db.query(func.sum(JournalLine.debit) - func.sum(JournalLine.credit))
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .join(ChartOfAccount, JournalLine.chart_account_id == ChartOfAccount.id)
+        .filter(
+            ChartOfAccount.code == "2110",
+            ChartOfAccount.account_id == account_id,
+            JournalEntry.is_voided == False,
+        )
+    )
+    if start_dt:
+        vat_input = vat_input.filter(JournalEntry.date >= start_dt)
+    if end_dt:
+        vat_input = vat_input.filter(JournalEntry.date <= end_dt)
+    vat_input_balance = vat_input.scalar() or 0
+
+    net_vat_due = vat_output_balance - vat_input_balance
+
+    return {
+        "period_start": str(start) if start else None,
+        "period_end": str(end) if end else None,
+        "vat_output": round(vat_output_balance, 2),
+        "vat_input": round(vat_input_balance, 2),
+        "net_vat_due": round(net_vat_due, 2),
+        "status": "refund_due" if net_vat_due < 0 else ("payment_due" if net_vat_due > 0 else "balanced"),
+    }
+
+
 _EXPORTABLE_REPORTS = {
     "financial-summary": "Financial Summary",
     "profit-loss": "Profit and Loss",
@@ -460,6 +515,7 @@ _EXPORTABLE_REPORTS = {
     "inventory-valuation": "Inventory Valuation",
     "trial-balance": "Trial Balance",
     "balance-sheet": "Balance Sheet",
+    "vat-return": "VAT Return",
 }
 
 
@@ -487,6 +543,8 @@ def export_report(report_type: str, start: Optional[date] = None, end: Optional[
         data = inventory_valuation(db, current_user)
     elif report_type == "trial-balance":
         data = trial_balance(start, end, db, current_user)
+    elif report_type == "vat-return":
+        data = vat_return(start, end, db, current_user)
     else:
         data = balance_sheet(end, db, current_user)
 

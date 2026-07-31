@@ -137,12 +137,27 @@ def post_journal_entry(db: Session, account_id: int, description: str, lines: li
 
 
 def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) -> JournalEntry:
-    """Dr Cash/Accounts Receivable, Cr Sales Revenue — plus Dr COGS / Cr
+    """Dr Cash/Accounts Receivable, Cr Sales Revenue + VAT Payable (Output) — plus Dr COGS / Cr
     Inventory for the cost side, when a cost is known."""
     lines = []
     cash_or_ar_code = "1100" if getattr(sale, "payment_mode", None) and sale.payment_mode.value == "credit" else "1000"
+    
+    # Get tax rate from sale if available, otherwise 0
+    tax_rate = getattr(sale, "tax_rate", 0) or 0
+    tax_amount = getattr(sale, "tax_amount", 0) or 0
+    
+    # Debit Cash/AR for the full amount
     lines.append((cash_or_ar_code, sale.total, 0))
-    lines.append(("4000", 0, sale.total))
+    
+    # Split credit: net revenue + output VAT
+    if tax_rate > 0 and tax_amount > 0:
+        # VAT-registered sale: split revenue and VAT
+        net_revenue = sale.total - tax_amount
+        lines.append(("4000", 0, net_revenue))
+        lines.append(("2100", 0, tax_amount))  # VAT Payable (Output)
+    else:
+        # Non-VAT sale: full amount to revenue
+        lines.append(("4000", 0, sale.total))
 
     cost = (sale.cost_price_at_sale or 0) * (sale.quantity or 0)
     if cost:
@@ -162,11 +177,25 @@ def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) 
 
 
 def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str = None) -> JournalEntry:
-    """Dr Inventory, Cr Cash/Accounts Payable."""
-    lines = [
-        ("1200", purchase.total, 0),
-        ("1000", 0, purchase.total),
-    ]
+    """Dr Inventory + VAT Receivable (Input), Cr Cash/Accounts Payable."""
+    lines = []
+    
+    # Get tax rate from purchase if available (for future VAT support)
+    # Currently Purchase model doesn't have tax_rate/tax_amount, but we'll add the structure
+    tax_rate = getattr(purchase, "tax_rate", 0) or 0
+    tax_amount = getattr(purchase, "tax_amount", 0) or 0
+    
+    if tax_rate > 0 and tax_amount > 0:
+        # VAT-registered purchase: split inventory and input VAT
+        net_inventory = purchase.total - tax_amount
+        lines.append(("1200", net_inventory, 0))
+        lines.append(("2110", tax_amount, 0))  # VAT Receivable (Input)
+    else:
+        # Non-VAT purchase: full amount to inventory
+        lines.append(("1200", purchase.total, 0))
+    
+    lines.append(("1000", 0, purchase.total))
+    
     return post_journal_entry(
         db, account_id,
         description=f"Purchase: {purchase.item_name or 'item'} x{purchase.quantity} from {purchase.supplier or 'supplier'}",

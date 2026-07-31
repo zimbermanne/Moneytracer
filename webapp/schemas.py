@@ -5,6 +5,8 @@ from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
     LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence, AssetCategory,
+    LedgerAccountType, Attachment, RecurringInvoice, ExchangeRate, Employee, Payslip,
+    Approval, Budget,
 )
 
 
@@ -1041,3 +1043,327 @@ class SpendingAlert(BaseModel):
 class SmartInsights(BaseModel):
     alerts: List[SpendingAlert]
     recurring: List[RecurringExpense]
+
+
+# ---------------------------------------------------------------------------
+# Chart of Accounts & General Ledger
+# ---------------------------------------------------------------------------
+
+class ChartOfAccountOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    code: str
+    name: str
+    account_type: LedgerAccountType
+    parent_id: Optional[int] = None
+    is_active: bool
+    balance: float = 0  # Running balance computed from journal lines
+    children: List['ChartOfAccountOut'] = []  # Nested structure for tree view
+
+
+ChartOfAccountOut.model_rebuild()
+
+
+class JournalLineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    chart_account_id: int
+    account_code: str
+    account_name: str
+    debit: float
+    credit: float
+    description: Optional[str] = None
+
+
+class JournalEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    date: datetime
+    description: str
+    reference: Optional[str] = None
+    created_by: Optional[str] = None
+    is_locked: bool
+    is_reversal: bool
+    is_voided: bool
+    reversed_entry_id: Optional[int] = None
+    lines: List[JournalLineOut] = []
+
+
+class JournalEntryCreate(BaseModel):
+    date: Optional[datetime] = None
+    description: str
+    reference: Optional[str] = None
+    lines: List[dict]  # Each: {"account_id": int, "debit": float, "credit": float}
+
+
+# ---------------------------------------------------------------------------
+# Document Attachments
+# ---------------------------------------------------------------------------
+
+class AttachmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    entity_type: str
+    entity_id: int
+    file_url: str
+    file_name: str
+    mime_type: str
+    file_size: int
+    uploaded_by: Optional[str] = None
+    uploaded_at: datetime
+
+
+class AttachmentCreate(BaseModel):
+    entity_type: str  # "expense", "purchase", "invoice"
+    entity_id: int
+    file_url: str
+    file_name: str
+    mime_type: str
+    file_size: int
+
+
+# ---------------------------------------------------------------------------
+# Recurring Invoices
+# ---------------------------------------------------------------------------
+
+class RecurringInvoiceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    customer_id: int
+    name: str
+    description: Optional[str] = None
+    line_items: str  # JSON string
+    frequency: str
+    interval: int
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    last_generated: Optional[datetime] = None
+    next_generation: Optional[datetime] = None
+    is_active: bool
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RecurringInvoiceCreate(BaseModel):
+    customer_id: int
+    name: str
+    description: Optional[str] = None
+    line_items: List[dict]  # Array of {item_id, description, quantity, unit_price}
+    frequency: str  # "weekly", "biweekly", "monthly", "quarterly", "yearly"
+    interval: int = 1
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+
+
+class RecurringInvoiceUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    line_items: Optional[List[dict]] = None
+    frequency: Optional[str] = None
+    interval: Optional[int] = None
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+
+# ---------------------------------------------------------------------------
+# Multi-Currency (Exchange Rates)
+# ---------------------------------------------------------------------------
+
+class ExchangeRateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    base_currency: str
+    target_currency: str
+    rate: float
+    effective_date: datetime
+    source: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+
+
+class ExchangeRateCreate(BaseModel):
+    base_currency: str  # e.g., "TZS", "USD", "EUR"
+    target_currency: str
+    rate: float
+    effective_date: datetime
+    source: Optional[str] = "manual"
+
+
+# ---------------------------------------------------------------------------
+# Payroll
+# ---------------------------------------------------------------------------
+
+class EmployeeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    user_id: Optional[int] = None
+    employee_number: str
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    hire_date: datetime
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employment_type: Optional[str] = None
+    is_active: bool
+    salary: float
+    pay_frequency: str
+    tax_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class EmployeeCreate(BaseModel):
+    user_id: Optional[int] = None
+    employee_number: str
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    hire_date: datetime
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employment_type: Optional[str] = None
+    salary: float
+    pay_frequency: str = "monthly"
+    tax_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account: Optional[str] = None
+
+
+class EmployeeUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employment_type: Optional[str] = None
+    is_active: Optional[bool] = None
+    salary: Optional[float] = None
+    pay_frequency: Optional[str] = None
+    tax_id: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account: Optional[str] = None
+
+
+class PayslipOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    employee_id: int
+    period_start: datetime
+    period_end: datetime
+    pay_date: datetime
+    gross_pay: float
+    basic_salary: float
+    overtime: float
+    bonuses: float
+    allowances: float
+    paye_tax: float
+    social_security: float
+    pension: float
+    other_deductions: float
+    total_deductions: float
+    net_pay: float
+    status: str
+    notes: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PayslipCreate(BaseModel):
+    employee_id: int
+    period_start: datetime
+    period_end: datetime
+    pay_date: datetime
+    basic_salary: float
+    overtime: float = 0
+    bonuses: float = 0
+    allowances: float = 0
+    paye_tax: float = 0
+    social_security: float = 0
+    pension: float = 0
+    other_deductions: float = 0
+    notes: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Approvals & Budgets (Phase 6)
+# ---------------------------------------------------------------------------
+
+class ApprovalOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    entity_type: str
+    entity_id: int
+    requested_by: str
+    requested_at: datetime
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    rejected_by: Optional[str] = None
+    rejected_at: Optional[datetime] = None
+    status: str
+    amount: float
+    reason: Optional[str] = None
+    created_at: datetime
+
+
+class ApprovalCreate(BaseModel):
+    entity_type: str
+    entity_id: int
+    amount: float
+
+
+class BudgetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    period_type: str
+    year: int
+    month: Optional[int] = None
+    quarter: Optional[int] = None
+    category: str
+    budgeted_amount: float
+    actual_amount: float
+    variance: float
+    is_active: bool
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class BudgetCreate(BaseModel):
+    period_type: str  # "monthly", "quarterly", "yearly"
+    year: int
+    month: Optional[int] = None
+    quarter: Optional[int] = None
+    category: str
+    budgeted_amount: float
+
+
+class BudgetUpdate(BaseModel):
+    budgeted_amount: Optional[float] = None
+    actual_amount: Optional[float] = None
+    is_active: Optional[bool] = None
