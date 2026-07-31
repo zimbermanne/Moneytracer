@@ -10,7 +10,7 @@ from activity import log_activity_for_user
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
-
+ 
 @router.get("/company-info")
 def company_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lightweight account name/address/contact for any logged-in user —
