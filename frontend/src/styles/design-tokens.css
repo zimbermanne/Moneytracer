@@ -7,6 +7,9 @@
    ========================================================================== */
 
 :root {
+  /* ---- Layout ---- */
+  --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
+
   /* ---- Core palette ---- */
   --cream:            #F7F4EE;   /* page background */
   --surface:          #FFFFFF;   /* cards, inputs, modals */

@@ -13,7 +13,7 @@ export default function MobileTopBar({
           {open ? '✕' : '☰'}
         </button>
         <div className="brand-logo" style={{ width: 26, height: 26, fontSize: 13 }}>M</div>
-        <div style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{title}</div>
+        <div className="mobile-topbar-title">{title}</div>
         <Clock showAccount={false} showReminders={false} />
       </div>
       {hasInfoRow && (

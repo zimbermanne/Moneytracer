@@ -74,6 +74,18 @@ function buildNav(t) {
 
 // Static path -> translation key map, used by App.jsx to resolve page titles
 // without needing the fully-built (and thus language-dependent) NAV array.
+// Flat list of every leaf nav item (groups expanded), in the same order
+// they appear in the sidebar — used by BottomNav so the phone tab bar can
+// show every destination the sidebar has, not just a hand-picked subset.
+export function buildFlatNav(t) {
+  const flat = []
+  buildNav(t).forEach((entry) => {
+    if (entry.type === 'item') flat.push(entry)
+    else entry.children.forEach((child) => flat.push({ ...child, accountTypes: entry.accountTypes, roles: entry.roles }))
+  })
+  return flat
+}
+
 export const PAGE_TITLE_KEYS = {
   '/app': 'nav.home',
   '/app/pos': 'nav.pos',
