@@ -100,7 +100,7 @@ Set your local database URL and secrets inside `.env`:
 PROJECT_NAME="MoneyTracer"
 SECRET_KEY="your-super-secret-key"
 DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/moneytracer_db"
-DEFAULT_LANGUAGE="sw"
+DEFAULT_LANGUAGE="ENG"
 
 ```
 
@@ -155,11 +155,127 @@ MoneyTracer is configured for seamless deployment on **Railway**:
 5. Open a Pull Request.
 
 ---
+Got it! That changes the core identity of the platform completely. **MoneyTracer** is purpose-built as an **All-African financial platform**—eliminating western defaults like USD to focus exclusively on intra-African trade, local fiat currencies, and native cross-border commerce across all **54 African nations and languages**.
+
+Here is the updated, deeply tailored **`README.md`**:
+
+---
+
+```markdown
+# 🌍 MoneyTracer — Pan-African Financial Ledger
+
+**MoneyTracer** is a lightweight, high-performance multi-tenant financial tracking platform built specifically for the African continent. Designed from the ground up for cross-border trade, regional SMEs, and multi-market enterprise operations, MoneyTracer operates entirely within the African economic ecosystem—featuring **zero USD dependencies**, native support for **54 African national currencies**, and dynamic **54-language African localization**.
+
+---
+
+## 🌍 Pan-African Core Architecture
+
+### 🗣️ 1. 54-Language Localization Engine
+MoneyTracer bridges linguistic gaps across northern, sub-Saharan, eastern, western, and southern Africa.
+* **Native Language System:** Native translation dictionaries for **54 African languages** (e.g., Kiswahili, Amharic, Hausa, Yoruba, Zulu, Igbo, Oromo, Somali, Shona, Luganda, Lingala, Kinyarwanda, Afrikaans, Berber, Wolof, etc.).
+* **Dynamic Regional Dialect Switcher:** Real-time UI rendering based on tenant, branch, or user preference without reloading application state.
+* **Localized Numeral & Date Parsing:** Automatic formatting of dates, numbers, and monetary figures according to regional African conventions.
+
+### 💱 2. Intra-African Multi-Currency Engine (100% USD-Free)
+MoneyTracer strips away Western currency defaults in favor of direct intra-African cross-border exchange logic.
+* **54 African National Currencies:** Native handling for all African legal tender (e.g., TZS, KES, UGX, RWF, ETB, NGN, GHS, ZAR, EGP, MAD, XOF, XAF, BWP, etc.).
+* **Direct Intra-African FX Rates:** Direct cross-currency conversions between African markets (e.g., TZS ↔ KES, NGN ↔ GHS) without routing value through intermediary fiat like USD or EUR.
+* **Base Currency Standard:** Each workspace/branch locks a primary operational base currency, with automatic real-time FX conversions for regional suppliers or customers.
+* **Inflation & Rate Adjustment Logs:** Historical rate tracking to safeguard ledger accuracy against regional currency fluctuations.
+
+---
+
+## 🛠️ System Roles & Functional Architecture
+
+### 👑 Administrator & Owner Functions
+Administrative controls designed for business owners, multi-branch operations, and regional group managers:
+
+* **Tenant & Branch Isolation:** Provision separate workspace environments for independent shops, cross-border outlets, or sub-entities.
+* **Custom African Currency & FX Controls:** Set workspace base currencies, override exchange rates for cross-border trade, and configure conversion margins.
+* **Granular Role-Based Access (RBAC):** Assign custom permissions to Regional Managers, Branch Administrators, Accountants, Store Clerks, and Auditors.
+* **Mobile Money & Bank Reconciliations:** Configure tracking for African digital wallets and banking rails (e.g., M-Pesa, Airtel Money, MTN Mobile Money, Tigo Pesa, Orange Money, local bank accounts).
+* **Consolidated Financial Statements:** Generate multi-currency P&L reports, Balance Sheets, tax summaries, and exportable ledger data (CSV/Excel).
+* **Audit Trail & System Integrity:** Real-time logging of backdated entries, rate adjustments, user activity, and soft-deleted records.
+
+### 💼 Operational & User Functions
+Fast, low-friction interfaces built for day-to-day transaction logging:
+
+* **Income & Expense Entry:** Rapid logging for sales, stock procurement, shipping/logistics costs, and daily overheads with receipt attachment support.
+* **Receivables & Payables (Debts & Micro-Loans):** Track customer credit, supplier debts, installment payments, and automated settlement reminders.
+* **Digital Wallet & Cash Balance Tracking:** Real-time visibility across physical cash drawers, till balances, and mobile money merchant accounts.
+* **Custom Category Mapping:** Flexible classification for inventory purchases, customs duties, transport, and operational expenses.
+
+---
+
+## 📁 Repository Structure
+
+```text
+Moneytracer/
+├── app/
+│   ├── api/            # REST API routes and endpoints
+│   ├── core/           # Security, authentication, & database engine
+│   ├── i18n/           # 54-language African dictionaries & locale configs
+│   ├── currencies/     # Intra-African FX engine & conversion logic
+│   ├── models/         # SQLAlchemy models (Tenants, Users, Ledgers, FX Rates)
+│   ├── schemas/        # Pydantic validation schemas
+│   ├── services/       # Core business logic (Ledger, Auth, Admin)
+│   ├── static/         # CSS, JS, and UI assets
+│   └── templates/      # Localized HTML templates
+├── migrations/         # Alembic database migration scripts
+├── .env.example        # Environment variable template
+├── Dockerfile          # Container setup
+├── docker-compose.yml  # Local multi-container orchestration
+├── requirements.txt    # Dependencies
+└── README.md
+
+```
+
+---
+
+## ⚙️ Environment Configuration
+
+Set up your `.env` file with native African defaults:
+
+```env
+# General App Config
+PROJECT_NAME="MoneyTracer"
+SECRET_KEY="your-super-secret-key"
+ENVIRONMENT="production"
+
+# Database Link
+DATABASE_URL="postgresql+asyncpg://user:password@localhost:5432/moneytracer_db"
+
+# Pan-African Localization Variables
+DEFAULT_LANGUAGE="sw"                 # Default: Kiswahili (or am, ha, yo, zu, etc.)
+DEFAULT_BASE_CURRENCY="TZS"           # Primary operational currency (e.g., TZS, KES, NGN, ZAR)
+ENABLE_ALL_AFRICAN_CURRENCIES=true    # Enables full 54-currency registry
+
+```
+
+---
+
+## 🚀 Deployment (Railway / Docker)
+
+MoneyTracer is optimized for fast deployment on cloud environments like **Railway**:
+
+1. Connect your repository (`zimbermanne/Moneytracer`) to **Railway**.
+2. Provision a **PostgreSQL** database service in Railway.
+3. Configure environment variables (`DATABASE_URL`, `SECRET_KEY`, `DEFAULT_BASE_CURRENCY`, `DEFAULT_LANGUAGE`).
+4. Railway will automatically detect the `Dockerfile`, build the application, and bring the service online.
+
+---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for details.
+Distributed under the **MIT License**. Built for Africa.
 
 ```
+
+---
+
+<ElicitationsGroup message="Where would you like to refine next?">
+  <Elicitation label="Draft a contribution guide for adding new African language dictionaries" query="Draft a CONTRIBUTING.md section specifically explaining how translators can contribute new JSON/PO translation dictionaries for African languages."/>
+  <Elicitation label="Add a technical section detailing the intra-African FX database models" query="Write a technical breakdown of the database schema for handling direct intra-African exchange rates without routing through USD."/>
+</ElicitationsGroup>
 
 ```
