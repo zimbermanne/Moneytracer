@@ -1189,4 +1189,3 @@ class Budget(Base):
     created_by = Column(String(80), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
