@@ -43,6 +43,16 @@ _MIGRATIONS = {
         ("plan", "VARCHAR(40)", "'free'"),
         ("admin_notes", "TEXT", "''"),
     ],
+    "journal_entries": [
+        # This table predates reversal/void support (only is_locked existed
+        # originally) — without this, every query touching journal_entries
+        # throws psycopg2.errors.UndefinedColumn on any DB that was created
+        # before these columns were added to the model, taking down Chart of
+        # Accounts, General Ledger, and VAT Return (they all query this table).
+        ("is_reversal", "BOOLEAN", "false"),
+        ("is_voided", "BOOLEAN", "false"),
+        ("reversed_entry_id", "INTEGER", None),
+    ],
 }
 
 # (schema, table) -> list of (column_name, DDL type, default SQL literal or None)
