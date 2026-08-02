@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
-function AccountTypeBadge(type) {
+function AccountTypeBadge({ type }) {
   const colors = {
     asset: 'badge badge-paid',
     liability: 'badge badge-partial',
