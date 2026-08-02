@@ -36,7 +36,7 @@ export default function GeneralLedger() {
     setLoading(true)
     setError('')
     const params = new URLSearchParams()
-    if (accountIdFilter) params.set('account_id', accountIdFilter)
+    if (accountIdFilter) params.set('account_id_filter', accountIdFilter)
     if (startDate) params.set('start_date', startDate)
     if (endDate) params.set('end_date', endDate)
     

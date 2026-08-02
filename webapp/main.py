@@ -41,6 +41,23 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request, exc):
+    # Without this, an unhandled exception deep in a request (e.g. a bad
+    # lazy-load, a None attribute access) can, depending on how far it
+    # unwinds, produce a response the browser can't parse as a normal HTTP
+    # error — which shows up client-side as a bare network failure ("Could
+    # not reach the server") instead of a readable error, making it look
+    # like a connectivity problem when it's actually a 500. This guarantees
+    # every request gets a clean, CORS-safe JSON response no matter what
+    # goes wrong inside the route.
+    import logging
+    logging.getLogger("uvicorn.error").exception("Unhandled exception on %s %s", request.method, request.url.path)
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
 origins_env = os.getenv("ALLOWED_ORIGINS", "*")
 allowed_origins = [o.strip() for o in origins_env.split(",")] if origins_env != "*" else ["*"]
 

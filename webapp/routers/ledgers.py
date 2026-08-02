@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, and_
 
 from database import get_db
@@ -318,26 +318,32 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
         query = query.filter(ChartOfAccount.account_id == account_id)
     accounts = query.filter(ChartOfAccount.is_active == True).order_by(ChartOfAccount.code).all()
 
-    # Compute running balance per account
-    account_balances = {}
-    for acc in accounts:
-        balance_result = (
-            db.query(func.sum(JournalLine.debit) - func.sum(JournalLine.credit))
-            .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
-            .filter(
-                JournalLine.chart_account_id == acc.id,
-                JournalEntry.account_id == acc.account_id,
-                JournalEntry.is_voided == False,
-            )
-            .scalar()
+    # Compute running balance per account in a single grouped query instead
+    # of one query per account — with a real chart of accounts + years of
+    # transactions this was slow enough to time out the request entirely.
+    balance_query = (
+        db.query(
+            JournalLine.chart_account_id,
+            (func.sum(JournalLine.debit) - func.sum(JournalLine.credit)).label("balance"),
         )
-        account_balances[acc.id] = balance_result or 0
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .filter(
+            JournalLine.chart_account_id.in_([a.id for a in accounts]),
+            JournalEntry.is_voided == False,
+        )
+    )
+    if account_id is not None:
+        balance_query = balance_query.filter(JournalEntry.account_id == account_id)
+    balance_rows = balance_query.group_by(JournalLine.chart_account_id).all()
+    account_balances = {row.chart_account_id: row.balance or 0 for row in balance_rows}
 
-    # Build nested tree structure
-    def build_tree(parent_id=None):
+    # Build nested tree structure. `seen` guards against a corrupted
+    # parent_id cycle (e.g. A -> B -> A) recursing forever and taking the
+    # whole endpoint down with a stack overflow.
+    def build_tree(parent_id=None, seen=frozenset()):
         children = []
         for acc in accounts:
-            if acc.parent_id == parent_id:
+            if acc.parent_id == parent_id and acc.id not in seen:
                 acc_dict = {
                     "id": acc.id,
                     "account_id": acc.account_id,
@@ -347,7 +353,7 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
                     "parent_id": acc.parent_id,
                     "is_active": acc.is_active,
                     "balance": account_balances.get(acc.id, 0),
-                    "children": build_tree(acc.id),
+                    "children": build_tree(acc.id, seen | {acc.id}),
                 }
                 children.append(ChartOfAccountOut(**acc_dict))
         return children
@@ -367,7 +373,9 @@ def list_journal_entries(
 ):
     """Paginated list of journal entries with optional filtering by account and date range."""
     account_id = get_account_filter(current_user)
-    query = db.query(JournalEntry).filter(JournalEntry.is_voided == False)
+    query = db.query(JournalEntry).options(
+        selectinload(JournalEntry.lines).selectinload(JournalLine.account)
+    ).filter(JournalEntry.is_voided == False)
     if account_id is not None:
         query = query.filter(JournalEntry.account_id == account_id)
     if account_id_filter is not None:
@@ -384,11 +392,14 @@ def list_journal_entries(
     for entry in entries:
         lines = []
         for line in entry.lines:
+            # line.account can be None if the chart-of-accounts row it points
+            # at was ever deleted — without this guard, `.code`/`.name` on
+            # None raises AttributeError and takes the whole endpoint down.
             lines.append(JournalLineOut(
                 id=line.id,
                 chart_account_id=line.chart_account_id,
-                account_code=line.account.code,
-                account_name=line.account.name,
+                account_code=line.account.code if line.account else "—",
+                account_name=line.account.name if line.account else "(deleted account)",
                 debit=line.debit,
                 credit=line.credit,
                 description=line.description,
