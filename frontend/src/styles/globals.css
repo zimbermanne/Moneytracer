@@ -1,3 +1,35 @@
+/* =========================================================================
+   MONEYTRACER — GLOBAL STYLES
+   =========================================================================
+   This file is one big stylesheet (no CSS modules), organized top-to-bottom
+   by feature area. Colors/spacing/radii come from ./design-tokens.css
+   (imported below) — change values there first if it's a theme-wide tweak.
+
+   MOBILE / RESPONSIVE — quick index of every @media block in this file
+   (search for "MOBILE:" to jump between them; exact line numbers shift as
+   the file changes, so use search rather than the numbers below):
+   ------------------------------------------------------------------------
+   MOBILE: App shell — sidebar becomes a slide-in drawer, hamburger +
+           mobile topbar appear, horizontally-scrolling bottom tab bar
+           appears. (max-width: 768px) — the main phone breakpoint.
+   MOBILE: Sidebar on medium/tablet screens — narrower but still a fixed
+           side panel, not yet a drawer. (769px–1100px)
+   MOBILE: Login screen — hides the decorative background orb on small
+           screens. (max-width: 720px)
+   MOBILE: Document preview panel (invoices/quotations view) — stacks
+           header/meta/totals instead of side-by-side. (max-width: 768px)
+   MOBILE: Invoice/Quotation editor — form + live preview stack vertically
+           instead of side-by-side. (max-width: 960px)
+   MOBILE: Invoice/Quotation editor on phones — live preview is hidden
+           entirely in favor of a simplified mobile preview, since the
+           full invoice sheet needs more width than a phone has.
+           (max-width: 640px)
+   MOBILE: Marketing/landing page "About" section — grid drops to a single
+           column. (max-width: 860px)
+   MOBILE: Marketing/landing page nav + hero grid — collapses nav links,
+           stacks hero grid to one column. (max-width: 860px)
+   ========================================================================= */
+
 @import './design-tokens.css';
 
 @font-face {
@@ -402,7 +434,10 @@ label {
 
 .error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
 
-/* ---------- Sidebar (floating panel) ---------- */
+/* ---------- Sidebar (floating panel) ----------------------------------
+   Base rules here are the DESKTOP layout (fixed floating panel, sticky).
+   On phones this same .sidebar class gets turned into a slide-in drawer —
+   see the "MOBILE: main phone breakpoint" block further down. */
 .sidebar {
   width: 240px;
   max-width: 22vw;
@@ -526,6 +561,11 @@ label {
   box-shadow: var(--neu-raised-sm);
 }
 
+/* These next few (.mobile-topbar, .hamburger, .mobile-backdrop,
+   .mobile-info-row, .bottom-nav) are MOBILE-ONLY components — hidden here
+   by default on desktop (display: none) and switched on inside the
+   "MOBILE: main phone breakpoint" @media block below. Their actual
+   sizing/spacing on phones is set in that block, not here. */
 .mobile-topbar {
   display: none;
   align-items: center;
@@ -594,6 +634,12 @@ label {
   display: none;
 }
 
+/* ---- MOBILE: main phone breakpoint (<=768px) --------------------------
+   Sidebar -> slide-in drawer, hamburger + .mobile-topbar appear,
+   .desktop-topbar hides, and the .bottom-nav scrolling tab strip
+   appears fixed to the viewport bottom (with clearance so it never
+   overlaps the drawer's footer/logout row). This is the block to
+   edit for "how does the whole app frame look on a phone". */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -832,6 +878,9 @@ label {
   }
 }
 
+/* ---- MOBILE: tablet / narrow-desktop breakpoint (769px-1100px) --------
+   Sidebar stays a fixed side panel (not a drawer yet) but narrows, and
+   sidebar text shrinks slightly so labels don't wrap. */
 @media (min-width: 769px) and (max-width: 1100px) {
   .sidebar {
     width: 190px;
@@ -887,6 +936,9 @@ label {
 .login-orb-2 { width: 190px; height: 190px; bottom: 10%; right: 8%; }
 .login-orb-3 { width: 130px; height: 130px; top: 14%; right: 12%; }
 .login-orb-4 { width: 110px; height: 110px; bottom: 16%; left: 11%; }
+/* ---- MOBILE: login screen (<=720px) ------------------------------------
+   Just hides the decorative background orb graphic; login form itself is
+   fluid/centered already and doesn't need its own breakpoint. */
 @media (max-width: 720px) {
   .login-orb { display: none; }
 }
@@ -1449,6 +1501,9 @@ label {
   font-size: 16px;
 }
 
+/* ---- MOBILE: document (invoice/quotation) preview panel (<=768px) -----
+   Stacks the sheet header/meta/totals vertically instead of side by side,
+   so the printable-looking document still reads top-to-bottom on a phone. */
 @media (max-width: 768px) {
   .doc-preview-panel { width: 100%; }
   .doc-sheet { padding: 20px; }
@@ -1606,6 +1661,8 @@ label {
   display: none;
 }
 
+/* ---- MOBILE: invoice/quotation editor, tablet width (<=960px) ---------
+   Form + live preview go from side-by-side to stacked (form on top). */
 @media (max-width: 960px) {
   .invoice-editor-body { flex-direction: column; overflow-y: auto; }
   .invoice-editor-form { max-width: 100%; overflow-y: visible; }
@@ -1617,6 +1674,11 @@ label {
    work on screen at once (the sheet's table needs real horizontal room).
    Swap the full live preview for a condensed summary instead of trying to
    shrink a wide table down to fit. */
+/* ---- MOBILE: invoice/quotation editor, phone width (<=640px) ----------
+   The form and the full invoice sheet genuinely can't both work on
+   screen at once (the sheet's table needs real horizontal room), so
+   below this width we hide the live preview and show a simplified
+   mobile-friendly preview instead. */
 @media (max-width: 640px) {
   .invoice-editor-preview { display: none; }
   .invoice-editor-preview-mobile {
@@ -2286,6 +2348,8 @@ label {
   box-shadow: var(--neu-raised);
 }
 
+/* ---- MOBILE: landing page "About" section (<=860px) --------------------
+   Two-column grid collapses to one column. */
 @media (max-width: 860px) {
   .landing-about-grid {
     grid-template-columns: 1fr;
@@ -2317,6 +2381,8 @@ label {
   color: var(--text-dark);
 }
 
+/* ---- MOBILE: landing page nav + hero (<=860px) --------------------------
+   Nav links collapse to just Login/CTA, hero grid drops to one column. */
 @media (max-width: 860px) {
   .landing-nav {
     gap: 14px;
