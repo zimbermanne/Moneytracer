@@ -4,6 +4,11 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 import { buildFlatNav } from './Sidebar.jsx'
 
+// MOBILE ONLY: the fixed bottom tab strip shown on phones. The .bottom-nav
+// class is display:none by default (desktop) and only switched on inside
+// the "MOBILE: main phone breakpoint" @media block in
+// src/styles/globals.css — edit sizing/spacing/scroll behavior there.
+//
 // Shows every destination from the sidebar (groups flattened) as a single
 // horizontally-scrolling row, so nothing on the phone requires opening the
 // drawer just to navigate — the drawer (via "More") stays around only for
