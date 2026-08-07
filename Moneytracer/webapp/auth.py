@@ -1,3 +1,4 @@
+import hashlib
 import os
 import secrets
 import warnings
@@ -71,6 +72,52 @@ def create_access_token(data: dict, expires_minutes: Optional[int] = None) -> st
     expire = datetime.utcnow() + timedelta(minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+PASSWORD_RESET_EXPIRE_MINUTES = 30
+
+
+def create_password_reset_token(user: "User") -> str:
+    """Short-lived, single-purpose token for the forgot-password flow.
+
+    Deliberately separate from create_access_token: it carries "purpose":
+    "password_reset" so it can never be accepted by get_current_user as a
+    login token, even if someone tried to reuse it that way. It also embeds
+    the user's current token_version and hashed_password, so the token is
+    automatically invalidated the moment the password actually changes
+    (either via this same flow or any other route) — a leaked/old reset
+    link can't be replayed after it's been used once.
+    """
+    expire = datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)
+    to_encode = {
+        "sub": user.username,
+        "purpose": "password_reset",
+        "tv": user.token_version,
+        # Bind the token to the current password hash so it can't be
+        # replayed after a successful reset (or any other password change).
+        "pwv": hashlib.sha256(user.hashed_password.encode()).hexdigest()[:16],
+        "exp": expire,
+    }
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_password_reset_token(token: str, db) -> "User":
+    """Decodes a password-reset token and returns the matching User, or
+    raises JWTError/ValueError if it's invalid, expired, wrong-purpose, or
+    already used (password changed since it was issued)."""
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("purpose") != "password_reset":
+        raise ValueError("Not a password reset token")
+    username = payload.get("sub")
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise ValueError("User not found")
+    if user.token_version != payload.get("tv"):
+        raise ValueError("Token no longer valid")
+    current_pwv = hashlib.sha256(user.hashed_password.encode()).hexdigest()[:16]
+    if current_pwv != payload.get("pwv"):
+        raise ValueError("Token already used")
+    return user
 
 
 def set_auth_cookie(response, token: str, expires_minutes: Optional[int] = None):

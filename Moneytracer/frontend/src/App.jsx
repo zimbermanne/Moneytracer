@@ -15,6 +15,8 @@ import Download from './pages/Download.jsx'
 import Legal from './pages/Legal.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import POS from './pages/POS.jsx'
@@ -167,6 +169,8 @@ export default function App() {
           <Route path="/legal" element={<Legal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify/invoice/:id" element={<VerifyDocument kind="invoice" />} />
           <Route path="/verify/receipt/:id" element={<VerifyDocument kind="receipt" />} />
           <Route path="/app/*" element={<PrivateRoutes />} />
