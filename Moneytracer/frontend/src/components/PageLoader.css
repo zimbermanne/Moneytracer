@@ -1,0 +1,29 @@
+.page-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  width: 100%;
+}
+
+.page-loader .dots-loader {
+  color: var(--accent);
+}
+
+.page-loader .dots-loader-dot {
+  width: 12px;
+  height: 12px;
+}
+
+.page-loader .spinner-block {
+  flex-direction: column;
+  gap: 20px;
+  padding: 0;
+}
+
+.page-loader .spinner-block span:last-child {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}

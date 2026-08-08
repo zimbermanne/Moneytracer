@@ -12,7 +12,7 @@ This project was generated from `README4.0.md`. It implements the **"Currently W
 
 * **🏢 Multi-Tenant Architecture:** Isolated workspace environments allowing individual users, small businesses, or multiple shop branches to maintain independent financial ledgers.
 * **📊 Comprehensive Financial Ledger:** Real-time tracking of cash flow, daily expenses, sales revenues, and accounts receivable/payable.
-* **🌐 Multilingual & Localized:** Built-in localization support for 7 African languages, enabling localized user interface interactions and multi-currency formatting.
+* **🌐 Multilingual & Localized:** Built-in localization support for Swahili (`sw`) and English (`en`), enabling localized user interface interactions and multi-currency formatting.
 * **📈 Automated Analytics & Snapshots:** Generate daily, weekly, and monthly financial summaries and profit/loss breakdowns at a glance.
 * **🛡️ Secure Access Control:** Role-based authentication (RBAC) and JWT session handling ensuring workspace data remains strictly private.
 * **⚡ Docker & Cloud Ready:** Containerized setup optimized for quick deployment on cloud platforms like Railway or Docker Compose.
