@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Sale, InventoryItem, Debtor, User, PaymentMode, LedgerStatus, RoleEnum
+from models import Sale, InventoryItem, Debtor, DebtorItem, User, PaymentMode, LedgerStatus, RoleEnum
 from schemas import SaleCreate, SaleOut, CheckoutRequest, CheckoutResponse
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
@@ -76,6 +76,14 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
             note=f"Credit sale: {item_name}",
         )
         db.add(debtor)
+        db.flush()  # need debtor.id before attaching the item line
+        db.add(DebtorItem(
+            debtor_id=debtor.id,
+            item_id=item.id if item else None,
+            description=item_name,
+            quantity=payload.quantity,
+            unit_price=unit_price,
+        ))
 
     db.commit()
     db.refresh(sale)
@@ -148,6 +156,17 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
             note=f"Credit sale receipt {receipt_no}",
         )
         db.add(debtor)
+        db.flush()  # need debtor.id before attaching item lines
+        # One DebtorItem per cart line, so the Debtors page shows the same
+        # itemized breakdown as the receipt, instead of just a lump total.
+        for line, s in zip(payload.lines, sales):
+            db.add(DebtorItem(
+                debtor_id=debtor.id,
+                item_id=line.item_id,
+                description=s.item_name,
+                quantity=s.quantity,
+                unit_price=s.unit_price,
+            ))
 
     db.commit()
     for s in sales:

@@ -61,6 +61,12 @@
      Modern Mono. */
   --font-typewriter:  "Modern Mono", "Courier Prime", "Courier New", monospace;
 
+  /* Numeric-only face for amounts, totals, stats — see globals.css for the
+     @font-face + unicode-range that keeps this scoped to digits/currency
+     symbols only. Falls back to the typewriter face for any non-numeric
+     character it doesn't cover. */
+  --font-numeric: "Micrenc", "Modern Mono", "Courier New", monospace;
+
   /* Type scale — modest 1.25 ratio, generous line-height */
   --text-xs:    0.75rem;   /* 12px — captions, badges */
   --text-sm:    0.8125rem; /* 13px — labels, secondary text */

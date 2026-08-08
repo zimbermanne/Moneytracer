@@ -1,16 +1,25 @@
+import os
 import uuid
+from jose import JWTError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, RoleEnum, Account, AccountType
-from schemas import UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate
+from schemas import (
+    UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate,
+    ForgotPasswordRequest, ResetPasswordConfirmRequest,
+)
 from auth import (
     hash_password, authenticate_user, create_access_token,
     get_current_user, require_admin, require_superadmin, set_auth_cookie, clear_auth_cookie,
+    create_password_reset_token, verify_password_reset_token,
 )
 from activity import log_activity_for_user, log_activity
 from rate_limit import limiter
+import email_utils
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -187,6 +196,67 @@ def reset_password(
     db.commit()
     log_activity_for_user(db, admin, "reset_password", f"Reset password for {username}")
     return {"detail": f"Password reset for {username}"}
+
+
+# ---- Self-service forgot-password (distinct from the admin-only reset
+# above): a locked-out user recovers their own account via an emailed,
+# short-lived link — no admin involved. ----
+
+_FORGOT_PASSWORD_GENERIC_RESPONSE = {
+    "detail": "If an account matches, password reset instructions have been sent to its email address."
+}
+
+
+@router.post("/forgot-password")
+@limiter.limit("5/hour")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Always returns the same generic message whether or not the account
+    exists, and whether or not the account has an email on file — so this
+    endpoint can't be used to enumerate registered usernames/emails."""
+    identifier = payload.username_or_email.strip()
+    user = db.query(User).filter(
+        (User.username == identifier) | (User.email == identifier)
+    ).first()
+
+    if user and not user.is_demo and user.email:
+        token = create_password_reset_token(user)
+        reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+        try:
+            email_utils.send_plain_email(
+                to_email=user.email,
+                subject="Reset your Moneytracer password",
+                body=(
+                    f"Hi {user.full_name or user.username},\n\n"
+                    "We received a request to reset your Moneytracer password. "
+                    f"Click the link below to choose a new one — it expires in 30 minutes:\n\n"
+                    f"{reset_url}\n\n"
+                    "If you didn't request this, you can safely ignore this email; "
+                    "your password will not be changed.\n\n"
+                    "— Moneytracer"
+                ),
+            )
+        except RuntimeError:
+            # SMTP not configured on this deployment. Don't leak that detail
+            # to the caller (same generic response either way) — but do
+            # surface it in server logs so it's visible to whoever's running
+            # the deployment.
+            print(f"[forgot-password] Email not sent for user '{user.username}': SMTP not configured.")
+
+    return _FORGOT_PASSWORD_GENERIC_RESPONSE
+
+
+@router.post("/reset-password-confirm")
+@limiter.limit("10/hour")
+def reset_password_confirm(request: Request, payload: ResetPasswordConfirmRequest, db: Session = Depends(get_db)):
+    try:
+        user = verify_password_reset_token(payload.token, db)
+    except (JWTError, ValueError):
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired. Please request a new one.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    log_activity_for_user(db, user, "reset_password_self_service", "Password reset via emailed link")
+    return {"detail": "Password updated successfully. You can now log in with your new password."}
 
 
 IMPERSONATION_MINUTES = 30

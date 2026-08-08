@@ -10,6 +10,7 @@ export default function POS() {
   const [saleMode, setSaleMode] = useState('pos') // 'pos' = locked prices, 'salesman' = editable
   const [paymentMode, setPaymentMode] = useState('cash')
   const [customerName, setCustomerName] = useState('Walk-in')
+  const [customerPhone, setCustomerPhone] = useState('')
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState(null)
@@ -82,6 +83,7 @@ export default function POS() {
         lines: cart.map((c) => ({ item_id: c.item_id, quantity: c.qty, unit_price: c.price })),
         payment_mode: paymentMode,
         customer_name: customerName || 'Walk-in',
+        customer_phone: paymentMode === 'credit' ? customerPhone : '',
         sale_mode: saleMode,
       })
       setReceipt(res)
@@ -202,6 +204,16 @@ export default function POS() {
                     <option value="mobile_money">Mobile Money</option>
                   </select>
                 </div>
+                {paymentMode === 'credit' && (
+                  <div className="form-row">
+                    <label>Customer phone</label>
+                    <input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="e.g. 255712345678"
+                    />
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 16, marginBottom: 14 }}>
                   <span>Total</span>
                   <span>TZS {total.toLocaleString()}</span>
