@@ -71,7 +71,7 @@ export default function DocumentPreview({ kind, doc, company, onClose }) {
         <div className="doc-preview-header">
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{label}</div>
-            <h2 style={{ margin: 0 }}>{doc[numberKey]}</h2>
+            <h2 style={{ margin: 0 }} className="doc-number">{doc[numberKey]}</h2>
           </div>
           <button className="btn btn-outline" onClick={onClose} aria-label="Close preview">✕</button>
         </div>
@@ -116,7 +116,7 @@ export default function DocumentPreview({ kind, doc, company, onClose }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="doc-sheet-title">{label}</div>
-                <div className="doc-sheet-muted"># {doc[numberKey]}</div>
+                <div className="doc-sheet-muted doc-number"># {doc[numberKey]}</div>
                 <span className={`badge badge-${doc.status}`} style={{ marginTop: 6, display: 'inline-block' }}>
                   {doc.status}
                 </span>

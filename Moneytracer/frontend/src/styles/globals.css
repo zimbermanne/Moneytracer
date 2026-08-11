@@ -62,7 +62,7 @@ html, body, #root {
 }
 
 body {
-  font-family: "Micrenc", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--cream);
   color: var(--text-dark);
 }
@@ -195,6 +195,19 @@ td, .stat-value, input[type="number"] {
 .cheque-number {
   font-family: var(--font-cheque);
   letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Used only for the identifying number on proforma docs (invoices/
+   quotations) and POS receipts -- e.g. "INV-2026-0042", "Receipt #R00931".
+   Not applied anywhere else (amounts, dates, tables) -- see --font-numeric
+   in design-tokens.css for the underlying @font-face, scoped via
+   unicode-range to digits/currency symbols so any letters/prefix in the
+   same string (like "INV-" or "R") fall through to the cheque/typewriter
+   font instead. */
+.doc-number {
+  font-family: var(--font-numeric);
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
 }
 
