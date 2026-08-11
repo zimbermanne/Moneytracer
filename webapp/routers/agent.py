@@ -7,10 +7,19 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import get_db
-from models import Sale, Expense, Purchase, InventoryItem, User
+from models import Sale, Expense, Purchase, InventoryItem, User, RoleEnum
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
+
+
+def get_account_filter(current_user: User):
+    """Return account_id filter for queries. Superadmin gets None (no filter)."""
+    if current_user.role == RoleEnum.superadmin:
+        return None
+    if not current_user.account_id:
+        raise HTTPException(status_code=403, detail="User must belong to an account")
+    return current_user.account_id
 
 
 class ChatRequest(BaseModel):
@@ -27,7 +36,11 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User
     except ImportError:
         raise HTTPException(status_code=503, detail="anthropic package not installed on server")
 
-    sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(50).all()
+    account_id = get_account_filter(current_user)
+    query = db.query(Sale)
+    if account_id is not None:
+        query = query.filter(Sale.account_id == account_id)
+    sales = query.order_by(Sale.created_at.desc()).limit(50).all()
     context = "\n".join(f"{s.created_at}: {s.item_name} x{s.quantity} = {s.total}" for s in sales)
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -45,10 +58,18 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User
 
 @router.get("/analytics")
 def analytics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    sales = db.query(Sale).all()
-    expenses = db.query(Expense).all()
-    purchases = db.query(Purchase).all()
-    items = db.query(InventoryItem).all()
+    account_id = get_account_filter(current_user)
+
+    def scoped(model):
+        q = db.query(model)
+        if account_id is not None:
+            q = q.filter(model.account_id == account_id)
+        return q.all()
+
+    sales = scoped(Sale)
+    expenses = scoped(Expense)
+    purchases = scoped(Purchase)
+    items = scoped(InventoryItem)
     return {
         "total_sales": len(sales),
         "total_revenue": round(sum(s.total for s in sales), 2),
@@ -67,8 +88,13 @@ def compare(db: Session = Depends(get_db), current_user: User = Depends(get_curr
     last_month_end = this_month_start - timedelta(seconds=1)
     last_month_start = last_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    this_month_sales = db.query(Sale).filter(Sale.created_at >= this_month_start).all()
-    last_month_sales = db.query(Sale).filter(
+    account_id = get_account_filter(current_user)
+    base = db.query(Sale)
+    if account_id is not None:
+        base = base.filter(Sale.account_id == account_id)
+
+    this_month_sales = base.filter(Sale.created_at >= this_month_start).all()
+    last_month_sales = base.filter(
         Sale.created_at >= last_month_start, Sale.created_at <= last_month_end
     ).all()
 
@@ -104,6 +130,11 @@ def export_invoice(sale_id: int, db: Session = Depends(get_db), current_user: Us
 
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    account_id = get_account_filter(current_user)
+    if account_id is not None and sale.account_id != account_id:
+        # Same response as "doesn't exist" -- don't reveal that a sale ID
+        # is valid but belongs to another tenant.
         raise HTTPException(status_code=404, detail="Sale not found")
 
     buf = io.BytesIO()
