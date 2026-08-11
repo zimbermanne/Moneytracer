@@ -181,7 +181,7 @@ function BusinessDashboard() {
   }, [])
 
   return (
-    <div className="page">
+    <div className="page page-dashboard-home">
       <div className="page-header">
         <h1>{t('nav.home')}</h1>
       </div>

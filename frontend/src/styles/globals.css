@@ -40,6 +40,19 @@
   font-display: swap;
 }
 
+/* Same file as above, but digit-scoped like Micrenc below — lets us apply
+   it at a container level (doc-sheet totals, dates, quantities) without
+   also monospace-ifying labels and item names, which plain "Modern Mono"
+   would do since it has no unicode-range restriction. */
+@font-face {
+  font-family: "Modern Mono Numeric";
+  src: url('../assets/fonts/Modern_Mono.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0030-0039, U+002C, U+002E, U+002B, U+002D, U+0025, U+0024, U+00A3, U+20AC;
+}
+
 /* Numeric-only face — unicode-range restricts it to digits 0-9 (plus the
    comma/period/minus/plus/percent/currency symbols that show up alongside
    amounts) so setting font-family: "Micrenc" anywhere only ever repaints
@@ -49,6 +62,17 @@
   font-family: "Micrenc";
   src: url('../assets/fonts/micrenc.ttf') format('truetype');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0030-0039, U+002C, U+002E, U+002B, U+002D, U+0025, U+0024, U+00A3, U+20AC;
+}
+
+/* Space Mono Bold — digit-scoped the same way, used for dashboard stat
+   figures (Today's Earnings, Total Revenue, etc). */
+@font-face {
+  font-family: "Space Mono Numeric";
+  src: url('../assets/fonts/Space Mono Bold for Powerline.ttf') format('truetype');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0030-0039, U+002C, U+002E, U+002B, U+002D, U+0025, U+0024, U+00A3, U+20AC;
@@ -152,6 +176,15 @@ button {
   font-weight: 700;
 }
 
+/* Scoped to the Home dashboard only (not every metric-card app-wide) —
+   Space Mono Bold for the stat figures. Digit-scoped face, so it only
+   repaints the numbers even though .value sometimes holds non-numeric
+   text like "No sales yet". */
+.page-dashboard-home .metric-card .value {
+  font-family: "Space Mono Numeric", var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -205,8 +238,12 @@ td, .stat-value, input[type="number"] {
    separate class (.doc-number) applied only directly to the identity
    number itself, not the whole container, or it would visibly space out
    label text ("Subtotal", "Tax") too. */
+/* Font-only, safe to apply at a container level: covers every digit inside
+   a document — amounts, quantities, dates. Uses Modern Mono (digit-scoped
+   variant), NOT Micrenc — Micrenc is reserved for the document's identity
+   number only (.doc-number below). */
 .doc-numerals {
-  font-family: var(--font-numeric);
+  font-family: "Modern Mono Numeric", var(--font-numeric);
   font-variant-numeric: tabular-nums;
 }
 
