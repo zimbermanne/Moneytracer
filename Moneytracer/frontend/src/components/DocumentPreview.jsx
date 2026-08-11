@@ -107,7 +107,7 @@ export default function DocumentPreview({ kind, doc, company, onClose }) {
         {error && <div className="error-text" style={{ padding: '0 20px' }}>{error}</div>}
 
         <div className="doc-preview-body">
-          <div className="doc-sheet">
+          <div className="doc-sheet doc-numerals">
             <div className="doc-sheet-head">
               <div>
                 <div className="doc-sheet-company">{company?.name || 'Your Company'}</div>
