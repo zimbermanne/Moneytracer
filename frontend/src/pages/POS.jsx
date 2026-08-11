@@ -226,8 +226,8 @@ export default function POS() {
           </div>
 
           {receipt && (
-            <div className="card" style={{ marginTop: 16 }}>
-              <h3 style={{ marginTop: 0 }}>Receipt {receipt.receipt_no}</h3>
+            <div className="card doc-numerals" style={{ marginTop: 16 }}>
+              <h3 style={{ marginTop: 0 }}>Receipt <span className="doc-number">{receipt.receipt_no}</span></h3>
               {receipt.sales.map((s) => (
                 <div key={s.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
                   <span>{s.item_name} x{s.quantity}</span>

@@ -62,7 +62,7 @@ html, body, #root {
 }
 
 body {
-  font-family: "Micrenc", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--cream);
   color: var(--text-dark);
 }
@@ -195,6 +195,24 @@ td, .stat-value, input[type="number"] {
 .cheque-number {
   font-family: var(--font-cheque);
   letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font-only, safe to apply at a container level: covers every digit inside
+   a document (invoice/quotation/receipt number, amounts, quantities,
+   dates). Only font-family is unicode-range-scoped to digits/currency —
+   letter-spacing below is NOT scoped the same way, so it's kept in a
+   separate class (.doc-number) applied only directly to the identity
+   number itself, not the whole container, or it would visibly space out
+   label text ("Subtotal", "Tax") too. */
+.doc-numerals {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-number {
+  font-family: var(--font-numeric);
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
 }
 
