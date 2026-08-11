@@ -74,6 +74,9 @@ export default function Login() {
               <label>{t('auth.password')}</label>
               <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
+            <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 4 }}>
+              <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--text-muted)' }}>Forgot password?</Link>
+            </div>
             {error && <div className="error-text">{error}</div>}
             <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} disabled={busy}>
               {busy ? t('auth.signingIn') : t('auth.signIn')}

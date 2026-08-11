@@ -58,6 +58,15 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    username_or_email: str
+
+
+class ResetPasswordConfirmRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 # ---------- Accounts ----------
 class AccountCreate(BaseModel):
     business_structure: BusinessStructure = BusinessStructure.solo
