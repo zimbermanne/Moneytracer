@@ -246,3 +246,54 @@ def customer_statement(customer_id: int, date_from: datetime = None, date_to: da
         balance_due=round(running, 2),
         entries=entries,
     )
+
+
+# ---------- Backfill: link customer names already scattered across Sale/
+# Invoice/Quotation/Debtor (from before the Customer model existed) into
+# real Customer records. Safe to run repeatedly -- only creates records
+# for names that don't already have one (case-insensitive match), never
+# touches or duplicates existing Customer rows. ----------
+
+_IGNORED_NAMES = {"", "walk-in", "walk in", "walkin"}
+
+
+@router.post("/sync-existing")
+def sync_existing_customers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=400, detail="Superadmin cannot sync customers without a target account")
+
+    found_names = set()
+    for model, name_field in [
+        (Sale, Sale.customer_name),
+        (Invoice, Invoice.customer_name),
+        (Quotation, Quotation.customer_name),
+        (Debtor, Debtor.name),
+    ]:
+        rows = db.query(name_field).filter(model.account_id == account_id).distinct().all()
+        for (name,) in rows:
+            if name and name.strip().lower() not in _IGNORED_NAMES:
+                found_names.add(name.strip())
+
+    existing = db.query(Customer.name).filter(Customer.account_id == account_id).all()
+    existing_lower = {n.lower() for (n,) in existing}
+
+    created = []
+    for name in sorted(found_names):
+        if name.lower() in existing_lower:
+            continue
+        customer = Customer(account_id=account_id, name=name)
+        db.add(customer)
+        created.append(name)
+        existing_lower.add(name.lower())  # guard against case-variant duplicates within this same batch
+
+    db.commit()
+    if created:
+        log_activity_for_user(db, current_user, "sync_customers",
+                              f"Imported {len(created)} customer(s) from existing records")
+
+    return {
+        "created_count": len(created),
+        "created_names": created,
+        "skipped_count": len(found_names) - len(created),
+    }

@@ -624,6 +624,7 @@ label {
 }
 
 .error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
+.success-text { color: var(--success); font-size: 13px; margin-top: 6px; }
 
 /* ---------- Sidebar (floating panel) ----------------------------------
    Base rules here are the DESKTOP layout (fixed floating panel, sticky).

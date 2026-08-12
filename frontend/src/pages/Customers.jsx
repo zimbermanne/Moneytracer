@@ -201,6 +201,8 @@ export default function Customers() {
   const [form, setForm] = useState({ name: '', phone: '', address: '', tin_number: '' })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
 
   const load = (keepSelection = true) => api.get('/customers/').then((rows) => {
     setCustomers(rows)
@@ -231,12 +233,37 @@ export default function Customers() {
     }
   }
 
+  const syncExisting = async () => {
+    setSyncing(true)
+    setSyncMessage('')
+    setError('')
+    try {
+      const result = await api.post('/customers/sync-existing', {})
+      setSyncMessage(
+        result.created_count > 0
+          ? `Imported ${result.created_count} customer${result.created_count === 1 ? '' : 's'} from existing sales, invoices, quotations, and debts.`
+          : 'Everything is already imported — no new customers found in your existing records.'
+      )
+      load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   return (
     <div className="page customers-page">
       <div className="page-header">
         <h1>Customers</h1>
-        <button className="btn btn-gold" onClick={() => setShowCreate(true)}>+ New Customer</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={syncExisting} disabled={syncing}>
+            {syncing ? 'Importing…' : 'Import from existing records'}
+          </button>
+          <button className="btn btn-gold" onClick={() => setShowCreate(true)}>+ New Customer</button>
+        </div>
       </div>
+      {syncMessage && <div className="success-text" style={{ marginBottom: 12 }}>{syncMessage}</div>}
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div className={`customers-split${selected ? ' has-selection' : ''}`}>
