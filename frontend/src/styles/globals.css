@@ -2766,3 +2766,100 @@ label {
   .debtor-form-grid { grid-template-columns: 1fr; }
   .debtor-summary-card { flex-wrap: wrap; }
 }
+
+/* ---------- Thermal receipt printing (ThermalReceipt.jsx) ---------- */
+.receipt-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.receipt-controls > label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.receipt-width-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.receipt-width-toggle button {
+  border: none;
+  background: var(--surface);
+  color: var(--text-dark);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.receipt-width-toggle button.active { background: var(--accent); color: #fff; }
+.receipt-disconnect-link {
+  margin-inline-start: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.receipt-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface-alt, #F7F5F0);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+/* On-screen preview: mimics the narrow paper strip so what you see is
+   close to what the thermal printer will produce. */
+.receipt-print-area {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #111;
+  background: #fff;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 14px 12px;
+  margin: 0 auto;
+}
+.receipt-width-58 { width: 58mm; max-width: 100%; }
+.receipt-width-80 { width: 80mm; max-width: 100%; }
+
+.receipt-center { text-align: center; }
+.receipt-bold { font-weight: 700; }
+.receipt-large { font-size: 15px; }
+.receipt-hr {
+  border-top: 1px dashed #999;
+  margin: 6px 0;
+}
+.receipt-line { margin-bottom: 3px; }
+.receipt-row { display: flex; justify-content: space-between; gap: 8px; }
+
+/* Print output: hide the whole app chrome and print only the receipt,
+   sized to the selected thermal paper width with near-zero margins so it
+   lays out correctly on 58mm/80mm rolls (and on plain A4 as a fallback if
+   no thermal printer is targeted — the content still reads fine, just
+   with more surrounding whitespace). */
+@media print {
+  body * { visibility: hidden; }
+  .receipt-print-area, .receipt-print-area * { visibility: visible; }
+  .receipt-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  .receipt-width-58 { width: 58mm; }
+  .receipt-width-80 { width: 80mm; }
+  @page { size: auto; margin: 2mm; }
+}

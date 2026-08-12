@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+import ThermalReceipt from '../components/ThermalReceipt.jsx'
 
 export default function POS() {
   const api = useApi()
+  const { account } = useAuth()
   const [items, setItems] = useState([])
   const [cart, setCart] = useState([]) // [{item_id, name, price, original_price, qty, stock}]
   const [saleMode, setSaleMode] = useState('pos') // 'pos' = locked prices, 'salesman' = editable
@@ -14,6 +17,7 @@ export default function POS() {
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState(null)
+  const [showPrintReceipt, setShowPrintReceipt] = useState(false)
   const [busy, setBusy] = useState(false)
   const { setDirty, setDirtyMessage } = useNavigationGuard()
 
@@ -86,7 +90,7 @@ export default function POS() {
         customer_phone: paymentMode === 'credit' ? customerPhone : '',
         sale_mode: saleMode,
       })
-      setReceipt(res)
+      setReceipt({ ...res, customer_name: customerName || 'Walk-in', payment_mode: paymentMode, created_at: new Date().toISOString() })
       setCart([])
       const refreshed = await api.get('/inventory/')
       setItems(refreshed)
@@ -227,9 +231,14 @@ export default function POS() {
 
           {receipt && (
             <div className="card doc-numerals" style={{ marginTop: 16 }}>
-              <h3 style={{ marginTop: 0 }}>Receipt <span className="doc-number">{receipt.receipt_no}</span></h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0 }}>Receipt <span className="doc-number">{receipt.receipt_no}</span></h3>
+                <button className="btn btn-gold" style={{ padding: '6px 14px' }} onClick={() => setShowPrintReceipt(true)}>
+                  🖨 Print Receipt
+                </button>
+              </div>
               {receipt.sales.map((s) => (
-                <div key={s.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                <div key={s.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
                   <span>{s.item_name} x{s.quantity}</span>
                   <span>TZS {s.total.toLocaleString()}</span>
                 </div>
@@ -249,6 +258,14 @@ export default function POS() {
           )}
         </div>
       </div>
+
+      {showPrintReceipt && receipt && (
+        <ThermalReceipt
+          receipt={receipt}
+          company={account}
+          onClose={() => setShowPrintReceipt(false)}
+        />
+      )}
     </div>
   )
 }

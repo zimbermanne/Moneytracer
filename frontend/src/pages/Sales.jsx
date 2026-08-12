@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import Table from '../components/Table.jsx'
 import SearchBar from '../components/SearchBar.jsx'
+import RowActionsMenu from '../components/RowActionsMenu.jsx'
+import ThermalReceipt from '../components/ThermalReceipt.jsx'
 
 export default function Sales() {
   const api = useApi()
+  const { account } = useAuth()
   const [sales, setSales] = useState([])
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
   const [listLoading, setListLoading] = useState(true)
+  const [printReceipt, setPrintReceipt] = useState(null)
 
   const load = () => {
     setListLoading(true)
@@ -29,6 +34,22 @@ export default function Sales() {
     }
   }
 
+  const openReceipt = (r) => {
+    // A single checkout can produce several line items sharing one
+    // receipt_no — group them back together so the reprint shows the
+    // whole original receipt, not just the clicked row's line.
+    const grouped = r.receipt_no ? sales.filter((s) => s.receipt_no === r.receipt_no) : [r]
+    const total = grouped.reduce((sum, s) => sum + s.total, 0)
+    setPrintReceipt({
+      receipt_no: r.receipt_no || `SALE-${r.id}`,
+      sales: grouped,
+      total,
+      customer_name: r.customer_name,
+      payment_mode: r.payment_mode,
+      created_at: r.created_at,
+    })
+  }
+
   const columns = [
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'item_name', header: 'Item' },
@@ -37,7 +58,15 @@ export default function Sales() {
     { key: 'payment_mode', header: 'Payment' },
     { key: 'customer_name', header: 'Customer' },
     { key: 'receipt_no', header: 'Receipt #' },
-    { key: 'actions', header: '', render: (r) => <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button> },
+    {
+      key: 'actions', header: '', stopRowClick: true,
+      render: (r) => (
+        <RowActionsMenu items={[
+          { label: 'Print Receipt', onClick: () => openReceipt(r) },
+          { label: 'Delete', onClick: () => remove(r.id), danger: true },
+        ]} />
+      ),
+    },
   ]
 
   const { query, setQuery, filtered } = useSearch(sales, [
@@ -79,6 +108,14 @@ export default function Sales() {
         <SearchBar value={query} onChange={setQuery} placeholder="Search by customer, date, or receipt #…" />
       </div>
       <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading sales…" emptyText={query ? 'No sales match your search.' : 'No sales yet.'} />
+
+      {printReceipt && (
+        <ThermalReceipt
+          receipt={printReceipt}
+          company={account}
+          onClose={() => setPrintReceipt(null)}
+        />
+      )}
     </div>
   )
 }
