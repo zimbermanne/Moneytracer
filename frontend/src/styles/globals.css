@@ -2843,6 +2843,19 @@ label {
 .receipt-line { margin-bottom: 3px; }
 .receipt-row { display: flex; justify-content: space-between; gap: 8px; }
 
+.receipt-logo {
+  display: block;
+  max-width: 42mm;
+  max-height: 42mm;
+  margin: 0 auto 6px;
+  object-fit: contain;
+}
+
+.receipt-qr {
+  width: 32mm;
+  height: 32mm;
+}
+
 /* Print output: hide the whole app chrome and print only the receipt,
    sized to the selected thermal paper width with near-zero margins so it
    lays out correctly on 58mm/80mm rolls (and on plain A4 as a fallback if

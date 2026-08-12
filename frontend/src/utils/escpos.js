@@ -106,6 +106,50 @@ export class EscPosBuilder {
     return this
   }
 
+  /**
+   * Native ESC/POS QR code printing (GS ( k), supported by the near-
+   * universal "generic ESC/POS" firmware on these printers. Printed by
+   * the printer's own QR generator -- no image conversion needed, and it
+   * comes out crisp even on cheap 203dpi heads, unlike a rasterized QR
+   * image at receipt width.
+   */
+  qrCode(data, moduleSize = 6) {
+    const bytes = toPrinterBytes(data)
+    const len = bytes.length + 3
+    const pL = len & 0xff
+    const pH = (len >> 8) & 0xff
+
+    // Model 2 (the common default)
+    this.raw([GS, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00])
+    // Module size
+    this.raw([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize])
+    // Error correction level (48 = L)
+    this.raw([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x30])
+    // Store the data
+    this.raw([GS, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...bytes])
+    // Print it
+    this.raw([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30])
+    return this
+  }
+
+  /**
+   * Raster image printing (GS v 0) for the logo — printers don't decode
+   * PNG/JPEG themselves, so this expects a pre-converted 1-bit monochrome
+   * bitmap: { width, height, packedBytes } as produced by
+   * imageElementToMonochromeBitmap() in thermalPrinter.js. Silently no-ops
+   * if bitmap is null (e.g. no logo configured, or conversion failed) so a
+   * missing logo never breaks the rest of the receipt.
+   */
+  image(bitmap) {
+    if (!bitmap) return this
+    const { width, height, packedBytes } = bitmap
+    const widthBytes = Math.ceil(width / 8)
+    this.raw([GS, 0x76, 0x30, 0x00, widthBytes & 0xff, (widthBytes >> 8) & 0xff, height & 0xff, (height >> 8) & 0xff])
+    this.raw(Array.from(packedBytes))
+    this.raw([0x0a])
+    return this
+  }
+
   toBytes() {
     return new Uint8Array(this.bytes)
   }
@@ -113,25 +157,35 @@ export class EscPosBuilder {
 
 /**
  * Build the full byte sequence for a sales receipt.
- * @param {object} receipt - { receipt_no, sales: [{item_name, quantity, unit_price, total}], total, customer_name, payment_mode, created_at }
- * @param {object} company - { name, address, phone }
+ * @param {object} receipt - { receipt_no, sales, total, customer_name, payment_mode, created_at }
+ * @param {object} company - { name, address, phone, tin, vrn, owner_full_name }
  * @param {number} charsPerLine - 32 (58mm) or 48 (80mm)
+ * @param {object} extra - { logoBitmap, customerPhone, customerTin, qrData, landingUrl }
  */
-export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 32) {
+export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 32, extra = {}) {
   const b = new EscPosBuilder(charsPerLine)
   const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const { logoBitmap, customerPhone, customerTin, qrData, landingUrl } = extra
 
-  b.align('center').bold(true).doubleSize(true)
+  b.align('center')
+  if (logoBitmap) b.image(logoBitmap)
+  b.bold(true).doubleSize(true)
   b.line(company.name || 'Moneytracer')
   b.doubleSize(false).bold(false)
-  if (company.address) b.line(company.address)
+  if (landingUrl) b.line(landingUrl)
+  if (company.street_address || company.address) b.line(company.street_address || company.address)
   if (company.phone) b.line(`Tel: ${company.phone}`)
+  if (company.tin) b.line(`TIN: ${company.tin}`)
+  if (company.vrn) b.line(`VRN: ${company.vrn}`)
+  if (company.owner_full_name) b.line(company.owner_full_name)
   b.hr('=')
 
   b.align('left')
   b.line(`Receipt: ${receipt.receipt_no || ''}`)
   b.line(`Date: ${receipt.created_at ? new Date(receipt.created_at).toLocaleString() : new Date().toLocaleString()}`)
   if (receipt.customer_name) b.line(`Customer: ${receipt.customer_name}`)
+  if (customerPhone) b.line(`Client Phone: ${customerPhone}`)
+  if (customerTin) b.line(`Client TIN: ${customerTin}`)
   if (receipt.payment_mode) b.line(`Payment: ${String(receipt.payment_mode).replace('_', ' ')}`)
   b.hr()
 
@@ -150,7 +204,14 @@ export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 32) {
 
   b.align('center')
   b.line('Thank you for your business!')
-  if (receipt.receipt_no) b.line(`Verify: ${receipt.receipt_no}`)
+  if (qrData) {
+    b.feed(1)
+    b.qrCode(qrData)
+    b.feed(1)
+  }
+  b.bold(true)
+  b.line('END OF RECEIPT')
+  b.bold(false)
   b.cut()
 
   return b.toBytes()

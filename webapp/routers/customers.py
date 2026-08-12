@@ -47,6 +47,24 @@ def _related(db: Session, model, name_field, customer_name: str, account_id):
 
 # ---------- Customer directory (a real record: name, phone, address, TIN) ----------
 
+@router.get("/lookup", response_model=CustomerOut)
+def lookup_customer_by_name(name: str, db: Session = Depends(get_db),
+                            current_user: User = Depends(get_current_user)):
+    """Used by the receipt printer to pull a customer's phone/TIN by name
+    at print time, without changing the Sale/checkout schema -- receipts
+    only ever stored customer_name, never phone or TIN."""
+    account_id = get_account_filter(current_user)
+    q = db.query(Customer).filter(Customer.name == name)
+    if account_id is not None:
+        q = q.filter(Customer.account_id == account_id)
+    customer = q.first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="No matching customer record")
+    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone,
+                       address=customer.address, tin_number=customer.tin_number,
+                       notes=customer.notes, created_at=customer.created_at)
+
+
 @router.get("/", response_model=List[CustomerOut])
 def list_customers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)

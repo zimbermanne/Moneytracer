@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
+import { useApi } from '../hooks/useApi.js'
+import { apiUrl } from '../api-config.js'
 import { buildReceiptEscPos } from '../utils/escpos.js'
-import { isBluetoothSupported, connectPrinter, printBytes, getConnectedPrinterName, disconnectPrinter } from '../utils/thermalPrinter.js'
+import {
+  isBluetoothSupported, connectPrinter, printBytes, getConnectedPrinterName,
+  disconnectPrinter, imageElementToMonochromeBitmap,
+} from '../utils/thermalPrinter.js'
 
 const PAPER_WIDTH_KEY = 'moneytracer_receipt_paper_width' // '58' or '80'
+const IGNORED_CUSTOMER_NAMES = new Set(['', 'walk-in', 'walk in', 'walkin'])
 
 function money(n) {
   return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -23,18 +29,36 @@ function money(n) {
  *
  * receipt shape: { receipt_no, sales: [{item_name, quantity, unit_price, total}],
  *                   total, customer_name, payment_mode, created_at }
- * company shape: { name, address, phone }
+ * company shape: the full Account object — name, street_address, phone,
+ *                 tin, vrn, owner_full_name, logo_url.
  */
 export default function ThermalReceipt({ receipt, company, onClose }) {
+  const api = useApi()
   const [paperWidth, setPaperWidth] = useState(() => localStorage.getItem(PAPER_WIDTH_KEY) || '58')
   const [btBusy, setBtBusy] = useState(false)
   const [btPrinterName, setBtPrinterName] = useState(getConnectedPrinterName())
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const [customerInfo, setCustomerInfo] = useState(null)
+
+  const landingUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const qrPngUrl = receipt.receipt_no ? apiUrl(`/api/public/qr/receipt/${receipt.receipt_no}.png`) : null
+  const logoUrl = company?.logo_url || '/icon-512.png'
 
   useEffect(() => {
     localStorage.setItem(PAPER_WIDTH_KEY, paperWidth)
   }, [paperWidth])
+
+  // Receipts only ever stored the customer's name, never their phone/TIN —
+  // look those up from the real Customer record (if one exists with a
+  // matching name) so the printed receipt can show them.
+  useEffect(() => {
+    const name = receipt.customer_name
+    if (!name || IGNORED_CUSTOMER_NAMES.has(name.trim().toLowerCase())) return
+    api.get(`/customers/lookup?name=${encodeURIComponent(name)}`)
+      .then(setCustomerInfo)
+      .catch(() => setCustomerInfo(null)) // no matching record — fine, just skip those lines
+  }, [receipt.customer_name]) // eslint-disable-line
 
   const handleSystemPrint = () => {
     window.print()
@@ -48,7 +72,14 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
         setBtPrinterName(conn.name)
       }
       const charsPerLine = paperWidth === '80' ? 48 : 32
-      const bytes = buildReceiptEscPos(receipt, company, charsPerLine)
+      const logoBitmap = await imageElementToMonochromeBitmap(logoUrl, paperWidth === '80' ? 384 : 280)
+      const bytes = buildReceiptEscPos(receipt, company, charsPerLine, {
+        logoBitmap,
+        customerPhone: customerInfo?.phone,
+        customerTin: customerInfo?.tin_number,
+        qrData: receipt.receipt_no ? `${landingUrl}/verify/receipt/${receipt.receipt_no}` : null,
+        landingUrl,
+      })
       await printBytes(bytes)
       setNotice('Sent to printer.')
     } catch (e) {
@@ -99,14 +130,23 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
       {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
 
       <div className={`receipt-print-area receipt-width-${paperWidth}`}>
+        {logoUrl && <img src={logoUrl} alt="" className="receipt-logo" />}
         <div className="receipt-center receipt-bold receipt-large">{company?.name || 'Moneytracer'}</div>
-        {company?.address && <div className="receipt-center">{company.address}</div>}
+        {landingUrl && <div className="receipt-center">{landingUrl}</div>}
+        {(company?.street_address || company?.address) && (
+          <div className="receipt-center">{company.street_address || company.address}</div>
+        )}
         {company?.phone && <div className="receipt-center">Tel: {company.phone}</div>}
+        {company?.tin && <div className="receipt-center">TIN: {company.tin}</div>}
+        {company?.vrn && <div className="receipt-center">VRN: {company.vrn}</div>}
+        {company?.owner_full_name && <div className="receipt-center">{company.owner_full_name}</div>}
         <div className="receipt-hr" />
 
         <div>Receipt: {receipt.receipt_no}</div>
         <div>Date: {receipt.created_at ? new Date(receipt.created_at).toLocaleString() : new Date().toLocaleString()}</div>
         {receipt.customer_name && <div>Customer: {receipt.customer_name}</div>}
+        {customerInfo?.phone && <div>Client Phone: {customerInfo.phone}</div>}
+        {customerInfo?.tin_number && <div>Client TIN: {customerInfo.tin_number}</div>}
         {receipt.payment_mode && <div>Payment: {String(receipt.payment_mode).replace('_', ' ')}</div>}
         <div className="receipt-hr" />
 
@@ -127,7 +167,12 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
         </div>
 
         <div className="receipt-center" style={{ marginTop: 10 }}>Thank you for your business!</div>
-        {receipt.receipt_no && <div className="receipt-center">Verify: {receipt.receipt_no}</div>}
+        {qrPngUrl && (
+          <div className="receipt-center" style={{ marginTop: 8 }}>
+            <img src={qrPngUrl} alt="Scan to verify" className="receipt-qr" />
+          </div>
+        )}
+        <div className="receipt-center receipt-bold" style={{ marginTop: 6 }}>END OF RECEIPT</div>
       </div>
     </Modal>
   )

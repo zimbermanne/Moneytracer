@@ -111,3 +111,64 @@ export async function printBytes(bytes) {
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
 }
+
+/**
+ * Converts an <img> element into the 1-bit monochrome bitmap shape that
+ * EscPosBuilder.image() expects: { width, height, packedBytes }. Thermal
+ * printers only understand raw black/white raster data (GS v 0), not
+ * PNG/JPEG, so this does the decode-and-threshold step in a canvas before
+ * handing bytes to the printer.
+ *
+ * Resizes to maxWidth (defaults to a safe 384px = 58mm printers at 8
+ * dots/mm) preserving aspect ratio, since printing at native resolution
+ * from a source logo could be far wider than the paper.
+ *
+ * Returns null (rather than throwing) on any failure — a missing or
+ * broken logo should never block printing the rest of the receipt.
+ */
+export async function imageElementToMonochromeBitmap(imgUrl, maxWidth = 384) {
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image()
+      el.crossOrigin = 'anonymous'
+      el.onload = () => resolve(el)
+      el.onerror = reject
+      el.src = imgUrl
+    })
+
+    const scale = Math.min(1, maxWidth / img.naturalWidth)
+    const width = Math.max(1, Math.round(img.naturalWidth * scale))
+    const height = Math.max(1, Math.round(img.naturalHeight * scale))
+    // ESC/POS raster width must be a multiple of 8 (one bit per pixel,
+    // packed 8-to-a-byte) — pad rather than crop so nothing gets cut off.
+    const paddedWidth = Math.ceil(width / 8) * 8
+
+    const canvas = document.createElement('canvas')
+    canvas.width = paddedWidth
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, paddedWidth, height)
+    ctx.drawImage(img, 0, 0, width, height)
+
+    const { data } = ctx.getImageData(0, 0, paddedWidth, height)
+    const widthBytes = paddedWidth / 8
+    const packedBytes = new Uint8Array(widthBytes * height)
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < paddedWidth; x++) {
+        const i = (y * paddedWidth + x) * 4
+        const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+        const isDark = luminance < 160 // simple threshold; good enough for a logo
+        if (isDark) {
+          const byteIndex = y * widthBytes + (x >> 3)
+          packedBytes[byteIndex] |= (0x80 >> (x % 8))
+        }
+      }
+    }
+
+    return { width: paddedWidth, height, packedBytes }
+  } catch {
+    return null
+  }
+}
