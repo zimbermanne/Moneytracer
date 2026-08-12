@@ -2723,3 +2723,46 @@ label {
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ---------- Debtor editor (Debtors.jsx) ---------- */
+.debtor-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+.debtor-form-grid .form-row.span-2 { grid-column: 1 / -1; }
+
+.debtor-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  margin: 22px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.debtor-section-label:first-of-type { margin-top: 4px; padding-top: 0; border-top: none; }
+
+.debtor-summary-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface-alt, #F7F5F0);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+.debtor-summary-item { text-align: left; }
+.debtor-summary-item .label {
+  display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-muted); margin-bottom: 4px;
+}
+.debtor-summary-item .value { font-size: 16px; font-weight: 700; color: var(--text-dark); }
+.debtor-summary-item .value.balance { color: var(--danger); }
+
+@media (max-width: 640px) {
+  .debtor-form-grid { grid-template-columns: 1fr; }
+  .debtor-summary-card { flex-wrap: wrap; }
+}

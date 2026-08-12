@@ -6,6 +6,7 @@ import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import { useSearch } from '../hooks/useSearch.js'
+import { apiUrl } from '../api-config.js'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
@@ -129,6 +130,45 @@ export default function Debtors() {
     }
   }
 
+  const [pdfBusyId, setPdfBusyId] = useState(null)
+
+  const fetchDebitNoteBlob = async (d) => {
+    const res = await fetch(apiUrl(`/api/ledgers/debtors/${d.id}/debit-note/pdf`), { credentials: 'include' })
+    if (!res.ok) throw new Error('Debit note generation failed')
+    return res.blob()
+  }
+
+  const downloadDebitNote = async (d) => {
+    setPdfBusyId(d.id)
+    try {
+      const blob = await fetchDebitNoteBlob(d)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `DebitNote-${d.name.replace(/\s+/g, '-')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPdfBusyId(null)
+    }
+  }
+
+  const printDebitNote = async (d) => {
+    setPdfBusyId(d.id)
+    try {
+      const blob = await fetchDebitNoteBlob(d)
+      const url = URL.createObjectURL(blob)
+      const win = window.open(url, '_blank')
+      if (win) win.onload = () => { try { win.print() } catch {} }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPdfBusyId(null)
+    }
+  }
+
   const columns = [
     { key: 'name', header: 'Client', render: (r) => <strong>{r.name}</strong> },
     { key: 'items', header: 'Items', render: (r) => itemsSummary(r.items) },
@@ -148,6 +188,8 @@ export default function Debtors() {
             onClick: () => { setPayTarget(r); setPayAmount(0) },
             hidden: r.status === 'paid',
           },
+          { label: 'Print Debit Note', onClick: () => printDebitNote(r), disabled: pdfBusyId === r.id },
+          { label: 'Download Debit Note (PDF)', onClick: () => downloadDebitNote(r), disabled: pdfBusyId === r.id },
           { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin },
         ]} />
       ),
@@ -174,27 +216,59 @@ export default function Debtors() {
 
       {open && (
         <Modal
-          title={editingId ? 'Edit Debtor' : 'Add Debtor'}
+          title={editingId ? `Edit Debtor — ${form.name || ''}` : 'Add Debtor'}
           onClose={() => setOpen(false)}
           footer={(<>
+            {editingId && (
+              <button
+                className="btn btn-outline"
+                style={{ marginInlineEnd: 'auto' }}
+                onClick={() => downloadDebitNote({ id: editingId, name: form.name })}
+                disabled={pdfBusyId === editingId}
+              >
+                {pdfBusyId === editingId ? 'Preparing…' : '⬇ Debit Note (PDF)'}
+              </button>
+            )}
             <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>
               {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
             </button>
           </>)}
         >
-          <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
-          <div className="form-row"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
           {editingId && (
-            <div className="form-row">
-              <label>Date Added</label>
-              <input value={new Date(form.created_at).toLocaleString()} disabled />
+            <div className="debtor-summary-card">
+              <div className="debtor-summary-item">
+                <span className="label">Total Owed</span>
+                <span className="value">{money(form.total_owed)}</span>
+              </div>
+              <div className="debtor-summary-item">
+                <span className="label">Status</span>
+                <span className="value">{statusBadge(debtors.find((d) => d.id === editingId)?.status)}</span>
+              </div>
+              <div className="debtor-summary-item">
+                <span className="label">Balance</span>
+                <span className="value balance">
+                  {money(form.total_owed - (debtors.find((d) => d.id === editingId)?.amount_paid || 0))}
+                </span>
+              </div>
             </div>
           )}
 
-          <div className="invoice-editor-section-label">Items (optional — what was bought on credit)</div>
+          <div className="debtor-section-label">Debtor Details</div>
+          <div className="debtor-form-grid">
+            <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client or company name" /></div>
+            <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +255 7XX XXX XXX" /></div>
+            <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
+            {editingId && (
+              <div className="form-row">
+                <label>Date Added</label>
+                <input value={new Date(form.created_at).toLocaleString()} disabled />
+              </div>
+            )}
+            <div className="form-row span-2"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional note about this debt" /></div>
+          </div>
+
+          <div className="debtor-section-label">Items (optional — what was bought on credit)</div>
           {form.items.map((line, idx) => {
             const isCustom = !line.item_id
             return (
