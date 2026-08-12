@@ -42,7 +42,7 @@ function IncomeChart({ series }) {
 
 const TABS = ['Overview', 'Invoices', 'Quotations', 'Debts', 'Statement']
 
-function CustomerDetailPanel({ customer, onClose }) {
+function CustomerDetail({ customer, onBack }) {
   const api = useApi()
   const [tab, setTab] = useState('Overview')
   const [profile, setProfile] = useState(null)
@@ -52,6 +52,9 @@ function CustomerDetailPanel({ customer, onClose }) {
 
   useEffect(() => {
     setLoading(true)
+    setProfile(null)
+    setStatement(null)
+    setTab('Overview')
     api.get(`/customers/${customer.id}/profile`)
       .then(setProfile)
       .catch((e) => setError(e.message))
@@ -94,8 +97,12 @@ function CustomerDetailPanel({ customer, onClose }) {
   ]
 
   return (
-    <Modal title={customer.name} onClose={onClose} wide isDirty={false}
-      footer={<button className="btn btn-outline" onClick={onClose}>Close</button>}>
+    <div className="customer-detail-pane">
+      <div className="customer-detail-header">
+        <button className="btn btn-outline customer-back-btn" onClick={onBack}>← Back</button>
+        <h2 style={{ margin: 0 }}>{customer.name}</h2>
+      </div>
+
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       {loading ? <div style={{ padding: 20, textAlign: 'center' }}>Loading…</div> : profile && (
         <>
@@ -118,13 +125,14 @@ function CustomerDetailPanel({ customer, onClose }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
             {TABS.map((t) => (
               <button key={t}
                 onClick={() => setTab(t)}
                 className="tab-btn"
                 style={{
                   padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                   fontWeight: tab === t ? 700 : 400,
                   borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
                 }}>
@@ -181,7 +189,7 @@ function CustomerDetailPanel({ customer, onClose }) {
           )}
         </>
       )}
-    </Modal>
+    </div>
   )
 }
 
@@ -194,9 +202,16 @@ export default function Customers() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const load = () => api.get('/customers/').then(setCustomers).catch((e) => setError(e.message))
+  const load = (keepSelection = true) => api.get('/customers/').then((rows) => {
+    setCustomers(rows)
+    // Keep the detail pane in sync with any updated totals after a reload,
+    // instead of silently going stale while a customer stays "selected".
+    if (keepSelection) {
+      setSelected((prev) => prev ? rows.find((r) => r.id === prev.id) || null : null)
+    }
+  }).catch((e) => setError(e.message))
 
-  useEffect(() => { load() }, []) // eslint-disable-line
+  useEffect(() => { load(false) }, []) // eslint-disable-line
 
   const { query, setQuery, filtered: filteredCustomers } = useSearch(customers, ['name'])
 
@@ -216,47 +231,52 @@ export default function Customers() {
     }
   }
 
-  const customerColumns = [
-    { key: 'name', header: 'Customer Name' },
-    { key: 'phone', header: 'Phone', render: (r) => r.phone || '—' },
-    { key: 'total_purchased', header: 'Total Purchased', render: (r) => money(r.total_purchased) },
-    { key: 'total_owed', header: 'Owes', render: (r) => money(r.total_owed) },
-    { key: 'last_activity', header: 'Last Activity', render: (r) => r.last_activity ? new Date(r.last_activity).toLocaleDateString() : '—' },
-    { key: 'actions', header: '', render: (r) => (
-      <button className="btn btn-outline" onClick={() => setSelected(r)}>View</button>
-    )},
-  ]
-
   return (
-    <div className="page">
+    <div className="page customers-page">
       <div className="page-header">
         <h1>Customers</h1>
         <button className="btn btn-gold" onClick={() => setShowCreate(true)}>+ New Customer</button>
       </div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
-      <div className="card-grid" style={{ marginBottom: 16 }}>
-        <div className="card metric-card">
-          <div className="label">Total Customers</div>
-          <div className="value">{customers.length}</div>
+      <div className={`customers-split${selected ? ' has-selection' : ''}`}>
+        <div className="customers-list-pane">
+          <div style={{ marginBottom: 10 }}>
+            <SearchBar value={query} onChange={setQuery} placeholder="Search customers…" />
+          </div>
+          {filteredCustomers.length === 0 ? (
+            <div className="customers-list-empty">
+              {query ? 'No customers match your search.' : 'No customers yet — add one to get started.'}
+            </div>
+          ) : (
+            <ul className="customers-list">
+              {filteredCustomers.map((c) => (
+                <li key={c.id}>
+                  <button
+                    className={`customers-list-item${selected?.id === c.id ? ' active' : ''}`}
+                    onClick={() => setSelected(c)}
+                  >
+                    <span className="customers-list-name">{c.name}</span>
+                    <span className="customers-list-sub">
+                      {c.total_owed > 0 ? money(c.total_owed) : money(c.total_purchased)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <div className="card metric-card">
-          <div className="label">Total Purchased (All)</div>
-          <div className="value">{money(customers.reduce((s, c) => s + c.total_purchased, 0))}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">Total Owed (All)</div>
-          <div className="value">{money(customers.reduce((s, c) => s + c.total_owed, 0))}</div>
+
+        <div className="customers-detail-pane">
+          {selected ? (
+            <CustomerDetail customer={selected} onBack={() => setSelected(null)} />
+          ) : (
+            <div className="customers-detail-placeholder">
+              Select a customer on the left to view their profile, invoices, quotations, debts, and statement.
+            </div>
+          )}
         </div>
       </div>
-
-      <div style={{ display: 'flex', marginBottom: 14 }}>
-        <SearchBar value={query} onChange={setQuery} placeholder="Search by customer name…" />
-      </div>
-
-      <Table columns={customerColumns} rows={filteredCustomers} emptyText={query ? 'No customers match your search.' : 'No customers yet — add one to get started.'} />
-
-      {selected && <CustomerDetailPanel customer={selected} onClose={() => setSelected(null)} />}
 
       {showCreate && (
         <Modal title="New Customer" onClose={() => setShowCreate(false)}
