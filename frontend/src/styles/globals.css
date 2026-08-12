@@ -2818,11 +2818,14 @@ label {
 }
 
 /* On-screen preview: mimics the narrow paper strip so what you see is
-   close to what the thermal printer will produce. */
+   close to what the thermal printer will produce. Sized to fit a 58mm
+   printer's actual character width (~32 chars at the small Font B most
+   printers default receipts to) -- 12.5px was too large and pushed
+   longer lines (like the site URL) into wrapping badly. */
 .receipt-print-area {
   font-family: "Courier New", ui-monospace, monospace;
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 10.5px;
+  line-height: 1.4;
   color: #111;
   background: #fff;
   border: 1px dashed var(--border);
@@ -2835,7 +2838,10 @@ label {
 
 .receipt-center { text-align: center; }
 .receipt-bold { font-weight: 700; }
-.receipt-large { font-size: 15px; }
+.receipt-large { font-size: 13px; }
+/* For lines that are naturally long relative to the paper -- currently
+   just the landing-page URL -- rather than any amount/label text. */
+.receipt-small { font-size: 8.5px; }
 .receipt-hr {
   border-top: 1px dashed #999;
   margin: 6px 0;
@@ -2843,17 +2849,19 @@ label {
 .receipt-line { margin-bottom: 3px; }
 .receipt-row { display: flex; justify-content: space-between; gap: 8px; }
 
+/* Roughly a quarter of the previous size, matching the scale of a text
+   line (the owner-name row) rather than dominating the receipt header. */
 .receipt-logo {
   display: block;
-  max-width: 42mm;
-  max-height: 42mm;
-  margin: 0 auto 6px;
+  max-width: 11mm;
+  max-height: 11mm;
+  margin: 0 auto 4px;
   object-fit: contain;
 }
 
 .receipt-qr {
-  width: 32mm;
-  height: 32mm;
+  width: 28mm;
+  height: 28mm;
 }
 
 /* Print output: hide the whole app chrome and print only the receipt,

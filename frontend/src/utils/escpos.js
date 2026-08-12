@@ -63,6 +63,20 @@ export class EscPosBuilder {
     return this
   }
 
+  /**
+   * ESC/POS printers offer two built-in fonts: Font A (~12x24px, the
+   * default, ~32 chars/line on 58mm) and Font B (~9x17px, noticeably
+   * smaller, ~42 chars/line on 58mm). Using Font B for the whole receipt
+   * is what actually lets more text (like the site URL) fit on a line —
+   * CSS font-size only affects the on-screen preview, not the physical
+   * printer, which has its own fixed character cells per font.
+   */
+  font(mode) {
+    // 0 = Font A, 1 = Font B
+    this.raw([ESC, 0x4d, mode === 'B' || mode === 1 ? 1 : 0])
+    return this
+  }
+
   bold(on) {
     this.raw([ESC, 0x45, on ? 1 : 0])
     return this
@@ -162,17 +176,25 @@ export class EscPosBuilder {
  * @param {number} charsPerLine - 32 (58mm) or 48 (80mm)
  * @param {object} extra - { logoBitmap, customerPhone, customerTin, qrData, landingUrl }
  */
-export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 32, extra = {}) {
+export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 42, extra = {}) {
   const b = new EscPosBuilder(charsPerLine)
   const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
   const { logoBitmap, customerPhone, customerTin, qrData, landingUrl } = extra
+  // Font B (smaller) for the whole receipt -- harmonizes sizing and is
+  // what actually lets more characters fit per line on 58mm paper, unlike
+  // a CSS font-size change which only affects the on-screen preview.
+  b.font(1)
+  // Printed compactly (no https:// or trailing slash) so it comfortably
+  // fits one line even on 58mm -- the full URL is still shown on-screen
+  // and used as-is for the QR code data, just not spelled out in text here.
+  const compactUrl = landingUrl ? landingUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') : ''
 
   b.align('center')
   if (logoBitmap) b.image(logoBitmap)
-  b.bold(true).doubleSize(true)
+  b.bold(true)
   b.line(company.name || 'Moneytracer')
-  b.doubleSize(false).bold(false)
-  if (landingUrl) b.line(landingUrl)
+  b.bold(false)
+  if (compactUrl) b.line(compactUrl)
   if (company.street_address || company.address) b.line(company.street_address || company.address)
   if (company.phone) b.line(`Tel: ${company.phone}`)
   if (company.tin) b.line(`TIN: ${company.tin}`)

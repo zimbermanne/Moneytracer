@@ -71,8 +71,8 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
         const conn = await connectPrinter()
         setBtPrinterName(conn.name)
       }
-      const charsPerLine = paperWidth === '80' ? 48 : 32
-      const logoBitmap = await imageElementToMonochromeBitmap(logoUrl, paperWidth === '80' ? 384 : 280)
+      const charsPerLine = paperWidth === '80' ? 64 : 42 // Font B char counts, not Font A's 48/32
+      const logoBitmap = await imageElementToMonochromeBitmap(logoUrl, paperWidth === '80' ? 96 : 72)
       const bytes = buildReceiptEscPos(receipt, company, charsPerLine, {
         logoBitmap,
         customerPhone: customerInfo?.phone,
@@ -132,7 +132,7 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
       <div className={`receipt-print-area receipt-width-${paperWidth}`}>
         {logoUrl && <img src={logoUrl} alt="" className="receipt-logo" />}
         <div className="receipt-center receipt-bold receipt-large">{company?.name || 'Moneytracer'}</div>
-        {landingUrl && <div className="receipt-center">{landingUrl}</div>}
+        {landingUrl && <div className="receipt-center receipt-small">{landingUrl}</div>}
         {(company?.street_address || company?.address) && (
           <div className="receipt-center">{company.street_address || company.address}</div>
         )}
