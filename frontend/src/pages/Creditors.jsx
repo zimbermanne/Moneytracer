@@ -57,6 +57,7 @@ export default function Creditors() {
     setEditingId(c.id)
     setForm({
       name: c.name, phone: c.phone || '', total_owed: c.total_owed, note: c.note || '',
+      created_at: c.created_at,
       items: (c.items || []).map((it) => ({
         item_id: it.item_id, description: it.description, quantity: it.quantity, unit_price: it.unit_price,
       })),
@@ -136,6 +137,7 @@ export default function Creditors() {
     { key: 'balance', header: 'Balance', render: (r) => money(r.total_owed - r.amount_paid) },
     { key: 'status', header: 'Status', render: (r) => statusBadge(r.status) },
     { key: 'phone', header: 'Phone' },
+    { key: 'created_at', header: 'Date Added', render: (r) => new Date(r.created_at).toLocaleString() },
     {
       key: 'actions', header: '', stopRowClick: true,
       render: (r) => (
@@ -152,7 +154,10 @@ export default function Creditors() {
     },
   ]
 
-  const { query, setQuery, filtered } = useSearch(creditors, ['name', 'phone'])
+  const { query, setQuery, filtered } = useSearch(creditors, [
+    'name', 'phone',
+    (r) => new Date(r.created_at).toLocaleDateString(),
+  ])
 
   return (
     <div className="page">
@@ -182,6 +187,12 @@ export default function Creditors() {
           <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
           <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
           <div className="form-row"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
+          {editingId && (
+            <div className="form-row">
+              <label>Date Added</label>
+              <input value={new Date(form.created_at).toLocaleString()} disabled />
+            </div>
+          )}
 
           <div className="invoice-editor-section-label">Items (optional — what was bought on credit from this supplier)</div>
           {form.items.map((line, idx) => {
