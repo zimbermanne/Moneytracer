@@ -147,6 +147,30 @@ class InventoryItem(Base):
     sales = relationship("Sale", back_populates="item")
 
 
+class Customer(Base):
+    """A real customer record — name, contact, address, TIN — distinct from
+    the free-text customer_name field still used on Sale/Invoice/Quotation/
+    Debtor for backward compatibility. Aggregation across those tables is
+    done by matching Customer.name against each record's customer_name
+    (or Debtor.name), scoped to the same account_id — see
+    routers/customers.py. Not a hard foreign-key link, so existing
+    historical records don't need a migration to show up once a Customer
+    record with the matching name is created.
+    """
+    __tablename__ = "customers"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    phone = Column(String(40), default="")
+    address = Column(String(255), default="")
+    tin_number = Column(String(50), default="")
+    notes = Column(String(500), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Sale(Base):
     __tablename__ = "sales"
     __table_args__ = schema_args(SCHEMA_BUSINESS)

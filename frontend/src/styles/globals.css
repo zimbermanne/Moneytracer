@@ -501,6 +501,13 @@ label {
 
 .modal h2 { margin-top: 0; }
 
+/* Wider variant for content-heavy modals (tables, tabs, charts) — the
+   default 420px is sized for forms, not a customer detail view. */
+.modal-wide {
+  width: 760px;
+  max-width: 92vw;
+}
+
 .error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
 
 /* ---------- Sidebar (floating panel) ----------------------------------

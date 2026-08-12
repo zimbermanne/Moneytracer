@@ -9,7 +9,7 @@ import { useState } from 'react'
  * !== '' || form.items.length > 0}) should pass it for a more precise
  * "only ask when there's actually something to lose" experience.
  */
-export default function Modal({ title, onClose, children, footer, isDirty = true }) {
+export default function Modal({ title, onClose, children, footer, isDirty = true, wide = false }) {
   const [confirmingClose, setConfirmingClose] = useState(false)
 
   const handleBackdropClick = () => {
@@ -19,7 +19,7 @@ export default function Modal({ title, onClose, children, footer, isDirty = true
 
   return (
     <div className="modal-overlay" onClick={handleBackdropClick}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal${wide ? ' modal-wide' : ''}`} onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
         {children}
         {footer && <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>{footer}</div>}

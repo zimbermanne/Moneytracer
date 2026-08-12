@@ -67,6 +67,38 @@ class ResetPasswordConfirmRequest(BaseModel):
     new_password: str
 
 
+# ---------- Customers ----------
+class CustomerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    address: Optional[str] = ""
+    tin_number: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tin_number: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class CustomerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    phone: str
+    address: str
+    tin_number: str
+    notes: str
+    created_at: datetime
+    # Computed, not stored columns -- filled in by the router.
+    total_purchased: float = 0
+    total_owed: float = 0
+    last_activity: Optional[datetime] = None
+
+
 # ---------- Accounts ----------
 class AccountCreate(BaseModel):
     business_structure: BusinessStructure = BusinessStructure.solo
@@ -521,6 +553,45 @@ class DebtorOut(BaseModel):
     note: str
     created_at: datetime
     items: List[DebtorItemOut] = []
+
+
+class CustomerMonthlyIncome(BaseModel):
+    month: str          # e.g. "2026-04"
+    total: float
+
+
+class CustomerProfile(BaseModel):
+    customer_name: str
+    phone: str = ""
+    address: str = ""
+    tin: str = ""
+    vrn: str = ""
+    outstanding_receivables: float
+    income_last_6_months: List[CustomerMonthlyIncome]
+    total_income_last_6_months: float
+    invoices: List["InvoiceOut"] = []
+    quotations: List["QuotationOut"] = []
+    debts: List[DebtorOut] = []
+
+
+class CustomerStatementEntry(BaseModel):
+    date: datetime
+    description: str
+    reference: str = ""
+    invoiced: float = 0
+    received: float = 0
+    balance: float
+
+
+class CustomerStatement(BaseModel):
+    customer_name: str
+    date_from: datetime
+    date_to: datetime
+    opening_balance: float
+    invoiced_amount: float
+    amount_received: float
+    balance_due: float
+    entries: List[CustomerStatementEntry]
 
 
 class CreditorItemIn(BaseModel):
