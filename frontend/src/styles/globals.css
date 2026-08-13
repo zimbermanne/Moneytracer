@@ -631,9 +631,9 @@ label {
    On phones this same .sidebar class gets turned into a slide-in drawer —
    see the "MOBILE: main phone breakpoint" block further down. */
 .sidebar {
-  width: 240px;
-  max-width: 22vw;
-  min-width: 200px;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
   flex-shrink: 0;
   position: sticky;
   top: 16px;
@@ -648,65 +648,72 @@ label {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.25s ease;
+  transition: width 0.25s ease, max-width 0.25s ease;
+  z-index: 40;
+}
+
+/* Expands on hover — no click needed. Sticky-positioned so it overlays
+   page content instead of pushing it when it grows. */
+.sidebar:hover {
+  width: 240px;
+  max-width: 240px;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px 14px;
+  padding: 20px 0 14px;
+  justify-content: center;
+  transition: padding 0.2s ease, justify-content 0.2s ease;
 }
+.sidebar:hover .sidebar-brand { padding: 20px 16px 14px; justify-content: flex-start; }
 
 /* ---------- Sidebar collapse-to-icons mode -----------------------------
-   Desktop-only toggle. When .collapsed is added to .sidebar, the panel
-   shrinks to an icon rail and every label fades out via opacity +
-   pointer-events + transition (same pattern as the reference demo), so
-   the rail can grow back smoothly without a layout jump. */
-.sidebar-collapse-btn {
-  margin-left: auto;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
+   Collapsed icon rail is the default state; hovering the sidebar expands
+   it and every label fades in via opacity + pointer-events + transition
+   (same pattern as the reference demo). */
+.sidebar .menu-item,
+.sidebar .group-header { justify-content: center; }
+.sidebar:hover .menu-item,
+.sidebar:hover .group-header { justify-content: flex-start; }
+
+.menu-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  box-shadow: var(--neu-raised-sm);
 }
-.sidebar-collapse-btn:hover { color: var(--accent); }
-
-.sidebar.collapsed { width: 68px; min-width: 68px; }
-
-.sidebar.collapsed .sidebar-brand { padding: 20px 0 14px; justify-content: center; }
-.sidebar.collapsed .sidebar-collapse-btn { margin-left: 0; }
-
-.sidebar.collapsed .menu-item,
-.sidebar.collapsed .group-header { justify-content: center; }
-
-.sidebar.collapsed .menu-icon { font-size: 16px; }
+.menu-icon img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
 
 .sidebar .links_name {
-  opacity: 1;
-  white-space: nowrap;
-  transition: opacity 0.2s ease, width 0.2s ease;
-}
-
-.sidebar.collapsed .links_name {
   opacity: 0;
   width: 0;
   overflow: hidden;
+  white-space: nowrap;
   pointer-events: none;
-  position: absolute;
+  transition: opacity 0.2s ease, width 0.2s ease;
 }
 
-.sidebar.collapsed .sidebar-footer { justify-content: center; padding: 12px 8px; }
-.sidebar.collapsed .group-children { max-height: 0 !important; }
+.sidebar:hover .links_name {
+  opacity: 1;
+  width: auto;
+  pointer-events: auto;
+}
+
+.sidebar-footer { justify-content: center; padding: 12px 8px; }
+.sidebar:hover .sidebar-footer { justify-content: flex-start; padding: 12px 16px; }
+
+/* Sub-menu items never show while collapsed, even if previously toggled
+   open, so there's nothing orphaned in icon-only mode. */
+.sidebar:not(:hover) .group-children { max-height: 0 !important; }
 
 .brand-logo {
   width: 34px;
@@ -900,14 +907,27 @@ label {
   }
   .sidebar.mobile-open { transform: translateX(0); }
 
-  /* Collapse-to-icons is a desktop-only affordance; on the phone drawer
-     always show full labels and hide the toggle button. */
-  .sidebar.collapsed { width: 260px; min-width: 0; }
-  .sidebar-collapse-btn { display: none; }
-  .sidebar .links_name,
-  .sidebar.collapsed .links_name {
-    opacity: 1; width: auto; position: static; pointer-events: auto; overflow: visible;
+  /* Hover-to-expand is a desktop-only affordance (no hover on touch).
+     On the phone drawer, always show full labels and full width. */
+  .sidebar,
+  .sidebar:hover {
+    width: 260px; min-width: 0; max-width: 80vw;
   }
+  .sidebar .links_name,
+  .sidebar:hover .links_name {
+    opacity: 1; width: auto; pointer-events: auto; overflow: visible;
+  }
+  .sidebar .menu-item, .sidebar .group-header,
+  .sidebar:hover .menu-item, .sidebar:hover .group-header {
+    justify-content: flex-start;
+  }
+  .sidebar .sidebar-brand, .sidebar:hover .sidebar-brand {
+    padding: 20px 16px 14px; justify-content: flex-start;
+  }
+  .sidebar .sidebar-footer, .sidebar:hover .sidebar-footer {
+    justify-content: flex-start; padding: 12px 16px;
+  }
+  .sidebar .group-children.open { max-height: 400px !important; }
 
   .hamburger {
     display: block;

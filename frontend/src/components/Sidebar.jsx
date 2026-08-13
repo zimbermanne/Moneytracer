@@ -8,68 +8,74 @@ import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 // active language changes (t comes from the component, not module scope).
 function buildNav(t) {
   return [
-    { type: 'item', label: t('nav.home'), icon: '🏠', path: '/app' },
-    { type: 'item', label: t('nav.pos'), icon: '🧾', path: '/app/pos', accountTypes: ['business', 'community'] },
+    { type: 'item', label: t('nav.home'), icon: 'home', path: '/app' },
+    { type: 'item', label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos', accountTypes: ['business', 'community'] },
     {
       type: 'group', label: t('nav.salesGroup'), key: 'sales', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.salesHistory'), icon: '📜', path: '/app/sales' },
-        { label: t('nav.customers'), icon: '👥', path: '/app/customers' },
+        { label: t('nav.salesHistory'), icon: 'sales-history', path: '/app/sales' },
+        { label: t('nav.customers'), icon: 'customers', path: '/app/customers' },
       ],
     },
-    { type: 'item', label: t('nav.clientsDebtors'), icon: '📒', path: '/app/debtors' },
+    { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
     {
       type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.purchasesLedger'), icon: '📦', path: '/app/purchases' },
-        { label: t('nav.purchaseOrders'), icon: '📝', path: '/app/purchase-orders' },
+        { label: t('nav.purchasesLedger'), icon: 'purchases-ledger', path: '/app/purchases' },
+        { label: t('nav.purchaseOrders'), icon: 'purchase-order', path: '/app/purchase-orders' },
       ],
     },
-    { type: 'item', label: t('nav.creditorsLedger'), icon: '🏦', path: '/app/creditors' },
+    { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
     {
       type: 'group', label: t('nav.proformaGroup'), key: 'proforma', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.invoices'), icon: '🧾', path: '/app/invoices' },
-        { label: t('nav.quotations'), icon: '📑', path: '/app/quotations' },
+        { label: t('nav.invoices'), icon: 'invoice', path: '/app/invoices' },
+        { label: t('nav.quotations'), icon: 'quotation', path: '/app/quotations' },
       ],
     },
     {
       type: 'group', label: t('nav.inventoryGroup'), key: 'inventory', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.inventoryLedger'), icon: '📋', path: '/app/inventory' },
+        { label: t('nav.inventoryLedger'), icon: 'inventory-ledger', path: '/app/inventory' },
       ],
     },
     {
       type: 'group', label: t('nav.accountingGroup'), key: 'accounting', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.chartOfAccounts'), icon: '🗂️', path: '/app/accounting/chart-of-accounts' },
-        { label: t('nav.generalLedger'), icon: '📖', path: '/app/accounting/general-ledger' },
-        { label: t('nav.trialBalance'), icon: '⚖️', path: '/app/reports/trial-balance' },
-        { label: t('nav.balanceSheet'), icon: '🧮', path: '/app/reports/balance-sheet' },
-        { label: t('nav.vatReturn'), icon: '🧾', path: '/app/reports/vat-return' },
+        { label: t('nav.chartOfAccounts'), icon: 'chart-of-accounts', path: '/app/accounting/chart-of-accounts' },
+        { label: t('nav.generalLedger'), icon: 'trialbalance', path: '/app/accounting/general-ledger' },
+        { label: t('nav.trialBalance'), icon: 'trial-balance', path: '/app/reports/trial-balance' },
+        { label: t('nav.balanceSheet'), icon: 'balance-sheet', path: '/app/reports/balance-sheet' },
+        { label: t('nav.vatReturn'), icon: 'vat', path: '/app/reports/vat-return' },
       ],
     },
     {
       type: 'group', label: t('nav.reportsGroup'), key: 'reports', accountTypes: ['business', 'community'],
       children: [
-        { label: t('nav.profitLoss'), icon: '📈', path: '/app/reports/profit-loss' },
-        { label: t('nav.financialSummary'), icon: '💰', path: '/app/reports/financial-summary' },
-        { label: t('nav.cashFlow'), icon: '💵', path: '/app/reports/cashflow' },
-        { label: t('nav.debtorsReport'), icon: '📒', path: '/app/reports/debtors' },
-        { label: t('nav.creditorsReport'), icon: '🏦', path: '/app/reports/creditors' },
-        { label: t('nav.inventoryValuation'), icon: '📦', path: '/app/reports/inventory-valuation' },
+        { label: t('nav.profitLoss'), icon: 'profit-asn-loss', path: '/app/reports/profit-loss' },
+        { label: t('nav.financialSummary'), icon: 'financial-samary', path: '/app/reports/financial-summary' },
+        { label: t('nav.cashFlow'), icon: 'moneyflow', path: '/app/reports/cashflow' },
+        { label: t('nav.debtorsReport'), icon: 'debts', path: '/app/reports/debtors' },
+        { label: t('nav.creditorsReport'), icon: 'creditors', path: '/app/reports/creditors' },
+        { label: t('nav.inventoryValuation'), icon: 'inventory', path: '/app/reports/inventory-valuation' },
       ],
     },
-    { type: 'item', label: t('nav.expensesItem'), icon: '💸', path: '/app/expenses' },
-    { type: 'item', label: t('nav.bankLoans'), icon: '🏦', path: '/app/bank-loans' },
-    { type: 'item', label: t('nav.assets'), icon: '🏠', path: '/app/assets' },
-    { type: 'item', label: t('nav.payroll'), icon: '👔', path: '/app/payroll', accountTypes: ['business', 'community'] },
-    { type: 'item', label: t('nav.budgets'), icon: '🎯', path: '/app/budgets', accountTypes: ['business', 'community'] },
-    { type: 'item', label: t('nav.personal'), icon: '💰', path: '/app/personal' },
-    { type: 'item', label: t('nav.deadlines'), icon: '⏰', path: '/app/deadlines' },
-    { type: 'item', label: t('nav.activityLogsItem'), icon: '🕵️', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
-    { type: 'item', label: t('nav.settingsItem'), icon: '⚙️', path: '/app/settings' },
+    { type: 'item', label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses' },
+    { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans' },
+    { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets' },
+    { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business', 'community'] },
+    { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'community'] },
+    { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal' },
+    { type: 'item', label: t('nav.deadlines'), icon: 'deadline', path: '/app/deadlines' },
+    { type: 'item', label: t('nav.activityLogsItem'), icon: 'activity-logs', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
+    { type: 'item', label: t('nav.settingsItem'), icon: 'settings', path: '/app/settings' },
   ]
+}
+
+// Every nav icon is now a slug that maps to /public/icons/<slug>.gif —
+// see ICON_SRC below for the actual file lookup used at render time.
+function iconSrc(slug) {
+  return `/icons/${slug}.gif`
 }
 
 // Static path -> translation key map, used by App.jsx to resolve page titles
@@ -125,17 +131,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const { guardedNavigate } = useNavigationGuard()
   const { user, account, logout } = useAuth()
   const [openGroups, setOpenGroups] = useState({})
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === '1')
   const { t } = useTranslation()
   const NAV = buildNav(t)
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev
-      localStorage.setItem('sidebarCollapsed', next ? '1' : '0')
-      return next
-    })
-  }
 
   useEffect(() => {
     NAV.forEach((entry) => {
@@ -159,18 +156,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
     .toUpperCase()
 
   return (
-    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''} ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-logo">M</div>
         <div className="brand-text links_name">Moneytracer</div>
-        <button
-          type="button"
-          className="sidebar-collapse-btn"
-          onClick={toggleCollapsed}
-          title={collapsed ? t('nav.expand', 'Expand') : t('nav.collapse', 'Collapse')}
-        >
-          {collapsed ? '»' : '«'}
-        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -184,9 +173,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 key={entry.path}
                 className={`menu-item ${active ? 'active' : ''}`}
                 onClick={() => go(entry.path)}
-                title={collapsed ? entry.label : undefined}
+                title={entry.label}
               >
-                <span className="menu-icon">{entry.icon}</span>
+                <span className="menu-icon"><img src={iconSrc(entry.icon)} alt="" loading="lazy" /></span>
                 <span className="links_name">{entry.label}</span>
               </div>
             )
@@ -196,16 +185,13 @@ export default function Sidebar({ mobileOpen, onClose }) {
             <div key={entry.key}>
               <div
                 className="group-header"
-                onClick={() => {
-                  if (collapsed) { toggleCollapsed(); }
-                  setOpenGroups((p) => ({ ...p, [entry.key]: !p[entry.key] }))
-                }}
-                title={collapsed ? entry.label : undefined}
+                onClick={() => setOpenGroups((p) => ({ ...p, [entry.key]: !p[entry.key] }))}
+                title={entry.label}
               >
                 <span className="group-label links_name">{entry.label}</span>
                 <span className={`chevron links_name ${open ? 'open' : ''}`}>›</span>
               </div>
-              <div className={`group-children ${open && !collapsed ? 'open' : ''}`}>
+              <div className={`group-children ${open ? 'open' : ''}`}>
                 {entry.children.map((child) => {
                   const active = location.pathname === child.path
                   return (
@@ -213,9 +199,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
                       key={child.path}
                       className={`menu-item child ${active ? 'active' : ''}`}
                       onClick={() => go(child.path)}
-                      title={collapsed ? child.label : undefined}
+                      title={child.label}
                     >
-                      <span className="menu-icon">{child.icon}</span>
+                      <span className="menu-icon"><img src={iconSrc(child.icon)} alt="" loading="lazy" /></span>
                       <span className="links_name">{child.label}</span>
                     </div>
                   )
@@ -227,7 +213,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="avatar" title={collapsed ? (user?.full_name || user?.username) : undefined}>{initials}</div>
+        <div className="avatar" title={user?.full_name || user?.username}>{initials}</div>
         <div className="links_name" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{user?.full_name || user?.username}</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role}</div>
