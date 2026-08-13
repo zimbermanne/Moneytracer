@@ -658,6 +658,56 @@ label {
   padding: 20px 16px 14px;
 }
 
+/* ---------- Sidebar collapse-to-icons mode -----------------------------
+   Desktop-only toggle. When .collapsed is added to .sidebar, the panel
+   shrinks to an icon rail and every label fades out via opacity +
+   pointer-events + transition (same pattern as the reference demo), so
+   the rail can grow back smoothly without a layout jump. */
+.sidebar-collapse-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: var(--neu-raised-sm);
+}
+.sidebar-collapse-btn:hover { color: var(--accent); }
+
+.sidebar.collapsed { width: 68px; min-width: 68px; }
+
+.sidebar.collapsed .sidebar-brand { padding: 20px 0 14px; justify-content: center; }
+.sidebar.collapsed .sidebar-collapse-btn { margin-left: 0; }
+
+.sidebar.collapsed .menu-item,
+.sidebar.collapsed .group-header { justify-content: center; }
+
+.sidebar.collapsed .menu-icon { font-size: 16px; }
+
+.sidebar .links_name {
+  opacity: 1;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, width 0.2s ease;
+}
+
+.sidebar.collapsed .links_name {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+}
+
+.sidebar.collapsed .sidebar-footer { justify-content: center; padding: 12px 8px; }
+.sidebar.collapsed .group-children { max-height: 0 !important; }
+
 .brand-logo {
   width: 34px;
   height: 34px;
@@ -849,6 +899,15 @@ label {
     box-shadow: var(--shadow-lg);
   }
   .sidebar.mobile-open { transform: translateX(0); }
+
+  /* Collapse-to-icons is a desktop-only affordance; on the phone drawer
+     always show full labels and hide the toggle button. */
+  .sidebar.collapsed { width: 260px; min-width: 0; }
+  .sidebar-collapse-btn { display: none; }
+  .sidebar .links_name,
+  .sidebar.collapsed .links_name {
+    opacity: 1; width: auto; position: static; pointer-events: auto; overflow: visible;
+  }
 
   .hamburger {
     display: block;

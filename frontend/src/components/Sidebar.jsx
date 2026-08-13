@@ -125,8 +125,17 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const { guardedNavigate } = useNavigationGuard()
   const { user, account, logout } = useAuth()
   const [openGroups, setOpenGroups] = useState({})
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === '1')
   const { t } = useTranslation()
   const NAV = buildNav(t)
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem('sidebarCollapsed', next ? '1' : '0')
+      return next
+    })
+  }
 
   useEffect(() => {
     NAV.forEach((entry) => {
@@ -150,10 +159,18 @@ export default function Sidebar({ mobileOpen, onClose }) {
     .toUpperCase()
 
   return (
-    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''} ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-logo">M</div>
-        <div className="brand-text">Moneytracer</div>
+        <div className="brand-text links_name">Moneytracer</div>
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapsed}
+          title={collapsed ? t('nav.expand', 'Expand') : t('nav.collapse', 'Collapse')}
+        >
+          {collapsed ? '»' : '«'}
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -167,9 +184,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 key={entry.path}
                 className={`menu-item ${active ? 'active' : ''}`}
                 onClick={() => go(entry.path)}
+                title={collapsed ? entry.label : undefined}
               >
-                <span>{entry.icon}</span>
-                <span>{entry.label}</span>
+                <span className="menu-icon">{entry.icon}</span>
+                <span className="links_name">{entry.label}</span>
               </div>
             )
           }
@@ -178,12 +196,16 @@ export default function Sidebar({ mobileOpen, onClose }) {
             <div key={entry.key}>
               <div
                 className="group-header"
-                onClick={() => setOpenGroups((p) => ({ ...p, [entry.key]: !p[entry.key] }))}
+                onClick={() => {
+                  if (collapsed) { toggleCollapsed(); }
+                  setOpenGroups((p) => ({ ...p, [entry.key]: !p[entry.key] }))
+                }}
+                title={collapsed ? entry.label : undefined}
               >
-                <span className="group-label">{entry.label}</span>
-                <span className={`chevron ${open ? 'open' : ''}`}>›</span>
+                <span className="group-label links_name">{entry.label}</span>
+                <span className={`chevron links_name ${open ? 'open' : ''}`}>›</span>
               </div>
-              <div className={`group-children ${open ? 'open' : ''}`}>
+              <div className={`group-children ${open && !collapsed ? 'open' : ''}`}>
                 {entry.children.map((child) => {
                   const active = location.pathname === child.path
                   return (
@@ -191,9 +213,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
                       key={child.path}
                       className={`menu-item child ${active ? 'active' : ''}`}
                       onClick={() => go(child.path)}
+                      title={collapsed ? child.label : undefined}
                     >
-                      <span>{child.icon}</span>
-                      <span>{child.label}</span>
+                      <span className="menu-icon">{child.icon}</span>
+                      <span className="links_name">{child.label}</span>
                     </div>
                   )
                 })}
@@ -204,14 +227,15 @@ export default function Sidebar({ mobileOpen, onClose }) {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="avatar">{initials}</div>
-        <div style={{ flex: 1 }}>
+        <div className="avatar" title={collapsed ? (user?.full_name || user?.username) : undefined}>{initials}</div>
+        <div className="links_name" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{user?.full_name || user?.username}</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role}</div>
         </div>
         <button
           onClick={logout}
           title={t('nav.logOut')}
+          className="links_name"
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '4px 6px',
                    color: 'var(--text-muted)', borderRadius: 6 }}
           onMouseEnter={(e) => e.currentTarget.style.color='var(--danger)'}
