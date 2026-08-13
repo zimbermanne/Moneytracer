@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Sale, Invoice, Quotation, Debtor, Customer, User, RoleEnum
+from models import Sale, Invoice, Quotation, Debtor, Customer, User, RoleEnum, DocumentStatus
 from auth import get_current_user
 from schemas import (
     CustomerCreate, CustomerUpdate, CustomerOut,
@@ -219,21 +219,40 @@ def customer_statement(customer_id: int, date_from: datetime = None, date_to: da
     invoices = _related(db, Invoice, Invoice.customer_name, customer.name, account_id)
     debts = _related(db, Debtor, Debtor.name, customer.name, account_id)
 
-    # Opening balance: everything before the period start.
+    # Opening balance: everything before the period start. An invoice that
+    # was marked paid before the period start nets to zero here — it was
+    # invoiced and settled entirely before this statement's window, so it
+    # shouldn't inflate the opening balance. paid_at falls back to
+    # created_at for invoices paid before this column existed, which still
+    # nets correctly since both dates land in the same "before/after
+    # date_from" bucket for those older records.
     opening_balance = 0.0
     for i in invoices:
         if i.created_at < date_from:
             opening_balance += i.total
+            if i.status == DocumentStatus.paid:
+                paid_date = i.paid_at or i.created_at
+                if paid_date < date_from:
+                    opening_balance -= i.total
     for d in debts:
         if d.created_at < date_from:
             opening_balance += d.total_owed
             opening_balance -= d.amount_paid
 
-    # In-period events.
+    # In-period events. A paid invoice contributes both the original
+    # "invoiced" line (if raised in-period) and a separate "received" line
+    # dated at the moment it was actually paid — mirroring how Debtor
+    # payments are already netted below. Without this, a fully-paid
+    # invoice would stay counted as outstanding forever, since nothing
+    # here previously offset it (see the comment on Invoice.paid_at).
     events = []
     for i in invoices:
         if date_from <= i.created_at <= date_to:
             events.append((i.created_at, f"Invoice {i.invoice_no}", i.invoice_no, i.total, 0.0))
+        if i.status == DocumentStatus.paid:
+            paid_date = i.paid_at or i.created_at
+            if date_from <= paid_date <= date_to:
+                events.append((paid_date, f"Payment received — Invoice {i.invoice_no}", i.invoice_no, 0.0, i.total))
     for d in debts:
         if date_from <= d.created_at <= date_to:
             events.append((d.created_at, d.note or "Credit sale", "", d.total_owed, 0.0))

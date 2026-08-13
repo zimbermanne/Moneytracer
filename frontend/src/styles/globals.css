@@ -667,13 +667,12 @@ label {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
+  font-size: 17px;
+  line-height: 1;
 }
-.menu-icon img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  border-radius: 4px;
-}
+/* Mobile-first default: emoji only, GIF never renders/downloads. */
+.menu-icon-gif { display: none; }
+.menu-icon-emoji { display: inline; }
 
 .sidebar .links_name {
   opacity: 1;
@@ -689,6 +688,17 @@ label {
    Everything below only ever applies at >=769px, so touch devices are
    completely unaffected — no hover pseudo-class guesswork on mobile. */
 @media (min-width: 769px) {
+  /* Desktop swaps to the animated-GIF icon pack; emoji fallback (mobile)
+     is hidden here so only one icon renders per item. */
+  .menu-icon-gif {
+    display: block;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .menu-icon-emoji { display: none; }
+
   .sidebar {
     width: 68px;
     min-width: 68px;
