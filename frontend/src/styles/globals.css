@@ -627,13 +627,14 @@ label {
 .success-text { color: var(--success); font-size: 13px; margin-top: 6px; }
 
 /* ---------- Sidebar (floating panel) ----------------------------------
-   Base rules here are the DESKTOP layout (fixed floating panel, sticky).
-   On phones this same .sidebar class gets turned into a slide-in drawer —
-   see the "MOBILE: main phone breakpoint" block further down. */
+   Base rules here are the safe, MOBILE-FIRST layout: full width, full
+   labels always visible — exactly how the slide-in drawer should look
+   on a phone (no hover exists on touch, so nothing here should depend
+   on it). The collapsed icon-rail + hover-to-expand behaviour is
+   DESKTOP-ONLY and lives in the min-width:769px block further below,
+   so it can never leak onto mobile via selector specificity/ordering. */
 .sidebar {
-  width: 68px;
-  min-width: 68px;
-  max-width: 68px;
+  width: 260px;
   flex-shrink: 0;
   position: sticky;
   top: 16px;
@@ -652,31 +653,12 @@ label {
   z-index: 40;
 }
 
-/* Expands on hover — no click needed. Sticky-positioned so it overlays
-   page content instead of pushing it when it grows. */
-.sidebar:hover {
-  width: 240px;
-  max-width: 240px;
-}
-
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 0 14px;
-  justify-content: center;
-  transition: padding 0.2s ease, justify-content 0.2s ease;
+  padding: 20px 16px 14px;
 }
-.sidebar:hover .sidebar-brand { padding: 20px 16px 14px; justify-content: flex-start; }
-
-/* ---------- Sidebar collapse-to-icons mode -----------------------------
-   Collapsed icon rail is the default state; hovering the sidebar expands
-   it and every label fades in via opacity + pointer-events + transition
-   (same pattern as the reference demo). */
-.sidebar .menu-item,
-.sidebar .group-header { justify-content: center; }
-.sidebar:hover .menu-item,
-.sidebar:hover .group-header { justify-content: flex-start; }
 
 .menu-icon {
   display: flex;
@@ -694,22 +676,61 @@ label {
 }
 
 .sidebar .links_name {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
+  opacity: 1;
   white-space: nowrap;
-  pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: opacity 0.2s ease, width 0.2s ease;
 }
 
-.sidebar:hover .links_name {
-  opacity: 1;
-  width: auto;
-  pointer-events: auto;
-}
+.sidebar-footer { padding: 12px 16px; }
 
-.sidebar-footer { justify-content: center; padding: 12px 8px; }
-.sidebar:hover .sidebar-footer { justify-content: flex-start; padding: 12px 16px; }
+/* ---------- DESKTOP-ONLY: collapse-to-icons + hover-to-expand ----------
+   Everything below only ever applies at >=769px, so touch devices are
+   completely unaffected — no hover pseudo-class guesswork on mobile. */
+@media (min-width: 769px) {
+  .sidebar {
+    width: 68px;
+    min-width: 68px;
+    max-width: 68px;
+  }
+
+  .sidebar:hover {
+    width: 240px;
+    max-width: 240px;
+  }
+
+  .sidebar-brand {
+    padding: 20px 0 14px;
+    justify-content: center;
+    transition: padding 0.2s ease, justify-content 0.2s ease;
+  }
+  .sidebar:hover .sidebar-brand { padding: 20px 16px 14px; justify-content: flex-start; }
+
+  .sidebar .menu-item,
+  .sidebar .group-header { justify-content: center; }
+  .sidebar:hover .menu-item,
+  .sidebar:hover .group-header { justify-content: flex-start; }
+
+  .sidebar .links_name {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .sidebar:hover .links_name {
+    opacity: 1;
+    width: auto;
+    pointer-events: auto;
+  }
+
+  .sidebar-footer { justify-content: center; padding: 12px 8px; }
+  .sidebar:hover .sidebar-footer { justify-content: flex-start; padding: 12px 16px; }
+
+  /* Sub-menu items never show while collapsed, even if previously
+     toggled open, so there's nothing orphaned in icon-only mode. */
+  .sidebar:not(:hover) .group-children { max-height: 0 !important; }
+}
 
 /* Sub-menu items never show while collapsed, even if previously toggled
    open, so there's nothing orphaned in icon-only mode. */
@@ -906,28 +927,6 @@ label {
     box-shadow: var(--shadow-lg);
   }
   .sidebar.mobile-open { transform: translateX(0); }
-
-  /* Hover-to-expand is a desktop-only affordance (no hover on touch).
-     On the phone drawer, always show full labels and full width. */
-  .sidebar,
-  .sidebar:hover {
-    width: 260px; min-width: 0; max-width: 80vw;
-  }
-  .sidebar .links_name,
-  .sidebar:hover .links_name {
-    opacity: 1; width: auto; pointer-events: auto; overflow: visible;
-  }
-  .sidebar .menu-item, .sidebar .group-header,
-  .sidebar:hover .menu-item, .sidebar:hover .group-header {
-    justify-content: flex-start;
-  }
-  .sidebar .sidebar-brand, .sidebar:hover .sidebar-brand {
-    padding: 20px 16px 14px; justify-content: flex-start;
-  }
-  .sidebar .sidebar-footer, .sidebar:hover .sidebar-footer {
-    justify-content: flex-start; padding: 12px 16px;
-  }
-  .sidebar .group-children.open { max-height: 400px !important; }
 
   .hamburger {
     display: block;
@@ -1153,10 +1152,8 @@ label {
    Sidebar stays a fixed side panel (not a drawer yet) but narrows, and
    sidebar text shrinks slightly so labels don't wrap. */
 @media (min-width: 769px) and (max-width: 1100px) {
-  .sidebar {
-    width: 190px;
-    min-width: 170px;
-  }
+  .sidebar { width: 68px; min-width: 68px; max-width: 68px; }
+  .sidebar:hover { width: 190px; max-width: 190px; }
   .brand-text { font-size: 14px; }
   .menu-item, .group-header { font-size: 12.5px; }
 }
