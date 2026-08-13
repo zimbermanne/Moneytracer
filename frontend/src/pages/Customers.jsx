@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
+import ThermalStatement from '../components/ThermalStatement.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
 function money(n) {
@@ -44,26 +46,48 @@ const TABS = ['Overview', 'Invoices', 'Quotations', 'Debts', 'Statement']
 
 function CustomerDetail({ customer, onBack }) {
   const api = useApi()
+  const { account } = useAuth()
   const [tab, setTab] = useState('Overview')
   const [profile, setProfile] = useState(null)
   const [statement, setStatement] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [printStatement, setPrintStatement] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
     setLoading(true)
     setProfile(null)
     setStatement(null)
     setTab('Overview')
+    setDateFrom('')
+    setDateTo('')
     api.get(`/customers/${customer.id}/profile`)
       .then(setProfile)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [customer.id]) // eslint-disable-line
 
+  const loadStatement = (fromOverride, toOverride) => {
+    const from = fromOverride !== undefined ? fromOverride : dateFrom
+    const to = toOverride !== undefined ? toOverride : dateTo
+    const params = new URLSearchParams()
+    if (from) params.set('date_from', new Date(from).toISOString())
+    if (to) {
+      // Include the whole end day, not just its midnight.
+      const end = new Date(to)
+      end.setHours(23, 59, 59, 999)
+      params.set('date_to', end.toISOString())
+    }
+    const qs = params.toString()
+    setStatement(null)
+    api.get(`/customers/${customer.id}/statement${qs ? `?${qs}` : ''}`).then(setStatement).catch((e) => setError(e.message))
+  }
+
   useEffect(() => {
     if (tab !== 'Statement' || statement) return
-    api.get(`/customers/${customer.id}/statement`).then(setStatement).catch((e) => setError(e.message))
+    loadStatement()
   }, [tab]) // eslint-disable-line
 
   const invoiceColumns = [
@@ -165,6 +189,26 @@ function CustomerDetail({ customer, onBack }) {
           {tab === 'Statement' && (
             statement ? (
               <div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>From</label>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>To</label>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  </div>
+                  <button className="btn btn-outline" onClick={loadStatement}>Apply</button>
+                  {(dateFrom || dateTo) && (
+                    <button className="btn btn-outline" onClick={() => { setDateFrom(''); setDateTo(''); loadStatement('', '') }}>
+                      Reset to this month
+                    </button>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  <button className="btn btn-outline" onClick={() => setPrintStatement(true)}>
+                    🖨 Print Statement
+                  </button>
+                </div>
                 <div className="card-grid" style={{ marginBottom: 16 }}>
                   <div className="card metric-card">
                     <div className="label">Opening Balance</div>
@@ -188,6 +232,14 @@ function CustomerDetail({ customer, onBack }) {
             ) : <div style={{ padding: 20, textAlign: 'center' }}>Loading…</div>
           )}
         </>
+      )}
+
+      {printStatement && statement && (
+        <ThermalStatement
+          statement={statement}
+          company={account}
+          onClose={() => setPrintStatement(false)}
+        />
       )}
     </div>
   )
