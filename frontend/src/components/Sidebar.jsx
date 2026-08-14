@@ -4,6 +4,60 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
+// Emoji fallback icon pack — used on MOBILE ONLY (drawer + bottom nav).
+// Phones get this instead of the animated-GIF pack because loading 30+
+// animated GIFs at once (the whole flattened bottom nav renders in one
+// go) is wasteful over mobile data and heavier on low-end devices than
+// a hover-revealed desktop rail ever is. Keyed by the same slug used for
+// the desktop icon file (see iconSrc below), so both packs stay in sync
+// automatically when a nav entry is added.
+export const EMOJI_ICONS = {
+  home: '🏠',
+  'point-of-sale': '🧾',
+  'sales-history': '📜',
+  customers: '👥',
+  debtors: '📒',
+  'purchases-ledger': '📦',
+  'purchase-order': '📝',
+  creditors: '🏦',
+  invoice: '🧾',
+  quotation: '📑',
+  'inventory-ledger': '📋',
+  'chart-of-accounts': '🗂️',
+  trialbalance: '📖',
+  'trial-balance': '⚖️',
+  'balance-sheet': '🧮',
+  vat: '🧾',
+  'profit-asn-loss': '📈',
+  'financial-samary': '💰',
+  moneyflow: '💵',
+  debts: '📒',
+  inventory: '📦',
+  expenses: '💸',
+  'bank-loans': '🏦',
+  assets: '🏠',
+  payrol: '👔',
+  budgeting: '🎯',
+  'personal-accounting': '💰',
+  deadline: '⏰',
+  'activity-logs': '🕵️',
+  settings: '⚙️',
+}
+
+// Renders BOTH icon packs and lets CSS decide which one is visible per
+// breakpoint (mobile-first default = emoji, desktop media query in
+// globals.css swaps to the GIF). This avoids any JS breakpoint-detection
+// flicker and means the GIF <img> never even downloads on a phone —
+// display:none images never enter the network/lazy-load queue.
+export function NavIcon({ slug }) {
+  return (
+    <span className="menu-icon">
+      <img className="menu-icon-gif" src={iconSrc(slug)} alt="" loading="lazy" />
+      <span className="menu-icon-emoji" aria-hidden="true">{EMOJI_ICONS[slug] || '•'}</span>
+    </span>
+  )
+}
+
 // NAV is built from a function so labels re-translate whenever the
 // active language changes (t comes from the component, not module scope).
 function buildNav(t) {
@@ -175,7 +229,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 onClick={() => go(entry.path)}
                 title={entry.label}
               >
-                <span className="menu-icon"><img src={iconSrc(entry.icon)} alt="" loading="lazy" /></span>
+                <NavIcon slug={entry.icon} />
                 <span className="links_name">{entry.label}</span>
               </div>
             )
@@ -201,7 +255,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                       onClick={() => go(child.path)}
                       title={child.label}
                     >
-                      <span className="menu-icon"><img src={iconSrc(child.icon)} alt="" loading="lazy" /></span>
+                      <NavIcon slug={child.icon} />
                       <span className="links_name">{child.label}</span>
                     </div>
                   )
