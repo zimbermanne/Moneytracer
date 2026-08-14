@@ -17,7 +17,7 @@
   --border:           #E4DED3;   /* hairline borders */
   --border-strong:    #D8CFBF;   /* input borders, dividers that need more presence */
 
-  --text-dark:        #2B2622;   /* primary text — warm charcoal, not pure black */
+  --text-dark:        #000000;   /* primary text — pure black */
   --text-muted:       #6B6258;   /* secondary text, labels, captions */
   --text-faint:       #A79D8E;   /* placeholder, disabled text */
 
@@ -29,7 +29,7 @@
   /* ---- Legacy alias so existing navy/gold references still resolve ----
      (point old brand vars at the new palette rather than rewriting every
      component; remove once all components are migrated) */
-  --navy:             #2B2622;
+  --navy:             var(--text-dark);
   --gold:             var(--accent);
 
   /* ---- Status colors (muted, kept in-family — not saturated system colors) ---- */
