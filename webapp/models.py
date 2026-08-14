@@ -164,6 +164,7 @@ class Customer(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
     phone = Column(String(40), default="")
+    email = Column(String(150), default="")
     address = Column(String(255), default="")
     tin_number = Column(String(50), default="")
     notes = Column(String(500), default="")
@@ -389,6 +390,12 @@ class Invoice(Base):
     # the moment it's marked paid — see routers/invoices.py update_status).
     # Prevents double-booking sales if the status is toggled paid more than once.
     converted_to_sale = Column(Boolean, default=False)
+    # When this invoice's status actually flipped to "paid" — distinct from
+    # created_at, and needed so the customer statement can net out a paid
+    # invoice's balance at the moment payment was received, not leave it
+    # permanently outstanding. Null for invoices that were paid before this
+    # column existed or that are still unpaid.
+    paid_at = Column(DateTime, nullable=True)
     created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 

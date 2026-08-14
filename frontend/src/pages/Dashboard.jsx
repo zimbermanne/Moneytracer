@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
+import MetricCarousel from '../components/MetricCarousel.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
@@ -71,7 +72,17 @@ function CommunityDashboard() {
 
       {error && <div className="error-text">{error}</div>}
 
-      <div className="card-grid">
+      <MetricCarousel
+        sectionLabel={t('nav.home')}
+        items={[
+          { key: 'members', label: t('dashboard.members'), value: summary ? summary.member_count : '—', tone: 'blue', badge: '👥' },
+          { key: 'contrib', label: t('dashboard.totalContributionsAllTime'), value: summary ? money(summary.total_contributions) : '—', tone: 'green', badge: '💰' },
+          { key: 'payouts', label: t('dashboard.totalPayoutsAllTime'), value: summary ? money(summary.total_payouts) : '—', tone: 'orange', badge: '💵' },
+          { key: 'loans', label: t('dashboard.loansOutstanding'), value: summary ? money(summary.total_loans_outstanding) : '—', tone: 'red', badge: '🏦' },
+        ]}
+      />
+
+      <div className="card-grid dashboard-grid-desktop">
         <div className="card metric-card">
           <div className="label">{t('dashboard.members')}</div>
           <div className="value">{summary ? summary.member_count : '—'}</div>
@@ -205,7 +216,20 @@ function BusinessDashboard() {
         </div>
       )}
 
-      <div className="card-grid">
+      <MetricCarousel
+        sectionLabel="Today"
+        items={[
+          { key: 'earnings', label: t('dashboard.todaysEarnings'), value: daily ? `TZS ${daily.earnings.toLocaleString()}` : '—', tone: 'blue', badge: '💰' },
+          { key: 'itemsSold', label: t('dashboard.itemsSoldToday'), value: daily ? daily.items_sold : '—', tone: 'green', badge: '📦' },
+          { key: 'topProduct', label: t('dashboard.topProductToday'), value: daily?.top_product || t('dashboard.noSalesYet'), valueFontSize: 19, tone: 'purple', badge: '⭐' },
+          {
+            key: 'lowStock', label: t('dashboard.lowStockItems'), value: daily ? daily.low_stock_count : '—',
+            tone: 'red', badge: '⚠️', onClick: () => navigate('/app/inventory'),
+          },
+        ]}
+      />
+
+      <div className="card-grid dashboard-grid-desktop">
         <div className="card metric-card">
           <div className="label">{t('dashboard.todaysEarnings')}</div>
           <div className="value">TZS {daily ? daily.earnings.toLocaleString() : '—'}</div>
@@ -224,7 +248,27 @@ function BusinessDashboard() {
         </div>
       </div>
 
-      <div className="card-grid">
+      <MetricCarousel
+        sectionLabel="Overall"
+        items={[
+          { key: 'invValue', label: t('dashboard.inventoryValue'), value: inv ? `TZS ${inv.total_value.toLocaleString()}` : '—', tone: 'navy', badge: '🏬' },
+          { key: 'stockUnits', label: t('dashboard.totalStockUnits'), value: inv ? inv.total_units : '—', tone: 'blue', badge: '📦' },
+          { key: 'netProfit', label: t('dashboard.netProfitAllTime'), value: fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—', tone: 'orange', badge: '📊' },
+          { key: 'revenue', label: t('dashboard.totalRevenueAllTime'), value: fin ? `TZS ${fin.revenue.toLocaleString()}` : '—', tone: 'green', badge: '💵' },
+          {
+            key: 'mostSold', label: t('dashboard.mostSoldItemAllTime'),
+            value: salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet'),
+            valueFontSize: 18, tone: 'blue', badge: '🏆',
+          },
+          {
+            key: 'topRevenue', label: t('dashboard.topRevenueItemAllTime'),
+            value: salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet'),
+            valueFontSize: 18, tone: 'green', badge: '💵',
+          },
+        ]}
+      />
+
+      <div className="card-grid dashboard-grid-desktop">
         <div className="card metric-card">
           <div className="label">{t('dashboard.inventoryValue')}</div>
           <div className="value">TZS {inv ? inv.total_value.toLocaleString() : '—'}</div>
@@ -243,7 +287,7 @@ function BusinessDashboard() {
         </div>
       </div>
 
-      <div className="card-grid">
+      <div className="card-grid dashboard-grid-desktop">
         <div className="card metric-card">
           <div className="label">{t('dashboard.mostSoldItemAllTime')}</div>
           <div className="value" style={{ fontSize: 16 }}>
