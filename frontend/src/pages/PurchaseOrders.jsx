@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
+import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
@@ -152,20 +153,8 @@ export default function PurchaseOrders() {
     } catch (e) { setError(e.message) }
   }
 
-  const downloadPdf = async (doc) => {
-    setPdfLoading(doc.id)
-    try {
-      const res = await fetch(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), { credentials: 'include' })
-      if (!res.ok) throw new Error('PDF generation failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `PurchaseOrder-${doc.po_no}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) { setError(e.message) }
-    finally { setPdfLoading(null) }
+  const downloadPdf = (doc) => {
+    downloadFile(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), `PurchaseOrder-${doc.po_no}.pdf`)
   }
 
   const columns = [

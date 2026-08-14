@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
+import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
 import DocumentPreview from '../components/DocumentPreview.jsx'
 import InvoiceEditor from '../components/InvoiceEditor.jsx'
@@ -135,21 +136,15 @@ export default function Documents({ kind }) {
     } catch (e) { setError(e.message) }
   }
 
-  const downloadPdf = async (doc, variant = 'pdf', filenamePrefix = isInvoice ? 'Invoice' : 'Quotation') => {
-    setPdfLoading(`${doc.id}:${variant}`)
-    try {
-      const path = variant === 'pdf' ? `/${kind}/${doc.id}/pdf` : `/${kind}/${doc.id}/${variant}/pdf`
-      const res = await fetch(apiUrl(`/api${path}`), { credentials: 'include' })
-      if (!res.ok) throw new Error('PDF generation failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${filenamePrefix}-${doc[numberKey]}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) { setError(e.message) }
-    finally { setPdfLoading(null) }
+  // No fetch/blob here on purpose — see utils/download.js for why the
+  // blob approach silently fails on mobile. This is now a synchronous,
+  // instant handoff to the browser, so there's nothing to await and no
+  // loading state needed; setPdfLoading stays only so the button can
+  // show a brief "opening" flicker isn't needed but the prop is still
+  // wired to RowActionsMenu below, so leave it settable/clearable.
+  const downloadPdf = (doc, variant = 'pdf', filenamePrefix = isInvoice ? 'Invoice' : 'Quotation') => {
+    const path = variant === 'pdf' ? `/${kind}/${doc.id}/pdf` : `/${kind}/${doc.id}/${variant}/pdf`
+    downloadFile(apiUrl(`/api${path}`), `${filenamePrefix}-${doc[numberKey]}.pdf`)
   }
 
   const columns = [
