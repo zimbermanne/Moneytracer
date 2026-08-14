@@ -2696,6 +2696,62 @@ label {
   margin: 0 0 10px;
 }
 
+.legal-clause ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  color: var(--text-muted);
+  line-height: var(--leading-loose);
+  font-size: var(--text-sm);
+}
+
+.legal-clause li {
+  margin-bottom: 6px;
+}
+
+/* Document switcher — separate from the language switcher below it, since
+   only the original beta disclaimer is translated so far. */
+.legal-doc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-doc-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+
+.legal-doc-tab:hover {
+  background: var(--surface-sunken);
+}
+
+.legal-doc-tab.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+.legal-draft-notice {
+  display: inline-block;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+}
+
 .landing-cta-band {
   padding-bottom: 96px;
 }

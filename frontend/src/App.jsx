@@ -167,6 +167,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/download" element={<Download />} />
           <Route path="/legal" element={<Legal />} />
+          <Route path="/legal/:doc" element={<Legal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
