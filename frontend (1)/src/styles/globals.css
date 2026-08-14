@@ -703,15 +703,8 @@ label {
 .customer-detail-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.customer-detail-header h2 {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Back button only makes sense in the single-column mobile layout, where
@@ -804,6 +797,22 @@ label {
    Everything below only ever applies at >=769px, so touch devices are
    completely unaffected — no hover pseudo-class guesswork on mobile. */
 @media (min-width: 769px) {
+  /* Dashboard: desktop keeps the plain metric grid, the swipeable
+     carousel is mobile-only (see .dashboard-carousel above). */
+  .dashboard-carousel { display: none; }
+  .dashboard-grid-desktop { display: grid; }
+
+  /* Desktop swaps to the animated-GIF icon pack; emoji fallback (mobile)
+     is hidden here so only one icon renders per item. */
+  .menu-icon-gif {
+    display: block;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .menu-icon-emoji { display: none; }
+
   .sidebar {
     width: 68px;
     min-width: 68px;
