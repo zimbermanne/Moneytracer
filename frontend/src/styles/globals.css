@@ -283,6 +283,14 @@ button {
 .metric-card .value {
   font-size: 24px;
   font-weight: 700;
+  /* .metric-card defaults to white text (color:#fff) for the mobile
+     gradient carousel cards (tone-blue/green/etc). The plain desktop
+     grid version has no tone class, so it falls back to .card's
+     near-white background — meaning without this override the value
+     text is effectively invisible (white on white). Force it black here;
+     doesn't affect the mobile carousel, which uses the separate
+     .metric-value class, not this one. */
+  color: #000;
 }
 
 /* Scoped to the Home dashboard only (not every metric-card app-wide) —
