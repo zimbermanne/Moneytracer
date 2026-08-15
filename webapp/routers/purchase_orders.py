@@ -12,7 +12,7 @@ from models import (
     Account, InventoryItem, Purchase,
 )
 from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
-from auth import get_current_user
+from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
 
@@ -135,6 +135,8 @@ def update_purchase_order(po_id: int, payload: PurchaseOrderUpdate, db: Session 
     if not po: raise HTTPException(404, "Purchase order not found")
     if po.status == PurchaseOrderStatus.received:
         raise HTTPException(400, "Cannot edit a purchase order that's already been received")
+    if po.status == PurchaseOrderStatus.approved:
+        raise HTTPException(400, "Cannot edit a purchase order that's already approved — reject or reset it to draft first, then re-approve")
 
     data = payload.model_dump(exclude_unset=True, exclude={"items"})
     for k, v in data.items():
@@ -213,6 +215,34 @@ def _convert_po_to_purchases(db: Session, po: PurchaseOrder, current_user: User)
     return created
 
 
+@router.post("/{po_id}/approve", response_model=PurchaseOrderOut)
+def approve_purchase_order(po_id: int, db: Session = Depends(get_db),
+                           current_user: User = Depends(require_manager_up)):
+    """Authorizes a PO — a manager/admin signing off that it's OK to buy.
+    Deliberately does NOT touch stock or the ledger: that only happens once
+    goods physically arrive (see update_po_status's "received" handling).
+    Keeping these separate means an order can be approved today and only
+    affect inventory/books once it's actually received, possibly much later
+    or not at all if the supplier falls through.
+    """
+    q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(PurchaseOrder.account_id == account_id)
+    po = q.first()
+    if not po: raise HTTPException(404, "Purchase order not found")
+
+    if po.status not in (PurchaseOrderStatus.draft, PurchaseOrderStatus.sent):
+        raise HTTPException(400, f"Cannot approve a PO that is already {po.status.value}.")
+
+    po.status = PurchaseOrderStatus.approved
+    po.approved_by = current_user.username
+    po.approved_at = datetime.utcnow()
+    db.commit(); db.refresh(po)
+    log_activity_for_user(db, current_user, "po_approved", f"{po.po_no} approved by {current_user.username}")
+    return po
+
+
 @router.patch("/{po_id}/status", response_model=PurchaseOrderOut)
 def update_po_status(po_id: int, status: PurchaseOrderStatus,
                      db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -222,6 +252,19 @@ def update_po_status(po_id: int, status: PurchaseOrderStatus,
         q = q.filter(PurchaseOrder.account_id == account_id)
     po = q.first()
     if not po: raise HTTPException(404, "Purchase order not found")
+
+    # "approved" has its own endpoint (POST /approve) because it needs the
+    # manager/admin gate and sets the approved_by/approved_at audit fields —
+    # routing it through here too would let any employee bypass that check.
+    if status == PurchaseOrderStatus.approved:
+        raise HTTPException(400, "Use POST /purchase-orders/{id}/approve to approve a PO.")
+
+    # Goods can't be "received" before someone has actually authorized the
+    # purchase — without this, an employee could skip approval entirely and
+    # go straight from draft/sent to received, silently adding stock and
+    # posting the ledger for a purchase nobody signed off on.
+    if status == PurchaseOrderStatus.received and po.status != PurchaseOrderStatus.approved:
+        raise HTTPException(400, "This PO must be approved before it can be marked received.")
 
     po.status = status
     if status == PurchaseOrderStatus.received and not po.converted_to_purchase:

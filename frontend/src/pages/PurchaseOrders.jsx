@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
@@ -17,6 +18,8 @@ const emptyForm = () => ({
 
 export default function PurchaseOrders() {
   const api = useApi()
+  const { user } = useAuth()
+  const canApprove = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager'
 
   const [docs, setDocs] = useState([])
   const [error, setError] = useState('')
@@ -29,7 +32,12 @@ export default function PurchaseOrders() {
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
 
-  const isLocked = (doc) => doc.status === 'received'
+  // Received POs have real stock/ledger movements and can't be touched.
+  // Approved POs are locked too — a manager signed off on these exact
+  // numbers, so changing quantities/prices afterwards would silently
+  // invalidate that approval. Reset to draft (via the status action) if
+  // it genuinely needs edits, then re-approve.
+  const isLocked = (doc) => doc.status === 'received' || doc.status === 'approved'
 
   const load = () => {
     setListLoading(true)
@@ -106,6 +114,14 @@ export default function PurchaseOrders() {
     try { await api.del(`/purchase-orders/${id}`); load() } catch (e) { setError(e.message) }
   }
 
+  const approvePO = async (doc) => {
+    if (!confirm(`Approve ${doc.po_no}? This authorizes the purchase but does not add stock yet — you'll still need to "Mark as Received" once the goods actually arrive.`)) return
+    try {
+      await api.post(`/purchase-orders/${doc.id}/approve`, {})
+      load()
+    } catch (e) { setError(e.message) }
+  }
+
   const markReceived = async (doc) => {
     if (!confirm(`Mark ${doc.po_no} as received? This adds the items to inventory and records the purchase — it can't be undone.`)) return
     try {
@@ -142,16 +158,17 @@ export default function PurchaseOrders() {
       render: (r) => (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {isLocked(r) && (
-            <span title="A received purchase order cannot be edited"
+            <span title={r.status === 'received' ? 'A received purchase order cannot be edited' : 'An approved purchase order cannot be edited — reset to draft first if changes are needed'}
                   style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               🔒 Locked
             </span>
           )}
           <RowActionsMenu items={[
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
-            { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status === 'received' || r.status === 'cancelled' },
+            { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
+            { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
             { label: pdfLoading === r.id ? 'Downloading…' : 'PDF', icon: '⬇', onClick: () => downloadPdf(r), disabled: pdfLoading === r.id },
-            { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true, hidden: isLocked(r) },
+            { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true, hidden: r.status === 'received' },
           ]} />
         </div>
       ),

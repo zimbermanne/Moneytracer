@@ -796,6 +796,8 @@ class PurchaseOrderOut(BaseModel):
     notes: str
     status: PurchaseOrderStatus
     converted_to_purchase: bool = False
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []

@@ -585,12 +585,12 @@ label {
   box-shadow: var(--neu-raised-sm);
 }
 
-.badge-paid, .badge-accepted, .badge-cash, .badge-active { background: var(--success-bg); color: var(--success); }
+.badge-paid, .badge-accepted, .badge-cash, .badge-active, .badge-received { background: var(--success-bg); color: var(--success); }
 .badge-partial, .badge-expired, .badge-mobile_money      { background: var(--warning-bg); color: var(--warning); }
-.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive { background: var(--danger-bg); color: var(--danger); }
+.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive, .badge-cancelled { background: var(--danger-bg); color: var(--danger); }
 .badge-sent, .badge-manager                               { background: var(--info-bg); color: var(--info); }
 .badge-draft, .badge-employee                             { background: var(--surface-sunken); color: var(--text-muted); }
-.badge-admin                                              { background: var(--accent-soft); color: var(--accent-hover); }
+.badge-admin, .badge-approved                             { background: var(--accent-soft); color: var(--accent-hover); }
 
 .modal-overlay {
   position: fixed;

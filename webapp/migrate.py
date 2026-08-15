@@ -97,6 +97,12 @@ _SCHEMA_MIGRATIONS = {
         # contact fields.
         ("email", "VARCHAR(150)", "''"),
     ],
+    ("business", "purchase_orders"): [
+        # See models.PurchaseOrder.approved_by/approved_at — audit trail
+        # for the new "approved" status, distinct from goods being received.
+        ("approved_by", "VARCHAR(80)", None),
+        ("approved_at", "TIMESTAMP", None),
+    ],
 }
 
 
@@ -125,6 +131,39 @@ def _migrate_inventory_sku_constraint(engine: Engine, inspector, is_sqlite: bool
             f'ALTER TABLE {schema}.{table} ADD CONSTRAINT uq_inventory_account_sku UNIQUE (account_id, sku)'
         ))
         print(f"[migrate] added composite unique constraint on {table}(account_id, sku)")
+
+
+def _migrate_po_approved_enum_value(engine: Engine, is_sqlite: bool):
+    """PurchaseOrderStatus gained a new member, "approved", inserted between
+    "sent" and "received". On Postgres, SQLAlchemy's Enum() creates a native
+    ENUM type (named after the Python class, lowercased: purchaseorderstatus)
+    — adding a value to the Python enum does NOT retroactively add it to that
+    already-created Postgres type. Without this, setting status='approved' on
+    a live database throws `invalid input value for enum`.
+    ALTER TYPE ... ADD VALUE cannot run inside a transaction block in
+    Postgres, so this uses autocommit rather than engine.begin().
+    SQLite has no native enum type (Enum() becomes a plain VARCHAR there),
+    so nothing to migrate — a fresh dev DB already accepts any string.
+    """
+    if is_sqlite:
+        return
+    with engine.connect() as conn:
+        conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+        exists = conn.execute(text(
+            "SELECT 1 FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid "
+            "WHERE t.typname = 'purchaseorderstatus' AND e.enumlabel = 'approved'"
+        )).first()
+        if exists:
+            return
+        type_exists = conn.execute(text(
+            "SELECT 1 FROM pg_type WHERE typname = 'purchaseorderstatus'"
+        )).first()
+        if not type_exists:
+            return  # create_all() will create the type with all values fresh
+        conn.execute(text(
+            "ALTER TYPE purchaseorderstatus ADD VALUE IF NOT EXISTS 'approved' BEFORE 'received'"
+        ))
+        print("[migrate] added 'approved' value to purchaseorderstatus enum")
 
 
 def run_migrations(engine: Engine):
@@ -162,3 +201,4 @@ def run_migrations(engine: Engine):
                 print(f"[migrate] added missing column {qualified_table}.{col_name}")
 
     _migrate_inventory_sku_constraint(engine, inspector, is_sqlite)
+    _migrate_po_approved_enum_value(engine, is_sqlite)

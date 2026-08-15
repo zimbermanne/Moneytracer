@@ -87,8 +87,16 @@ class PurchaseOrderStatus(str, enum.Enum):
     # settled separately later. Defined here (rather than next to
     # DocumentStatus further down) because PurchaseOrder itself is defined
     # right after Purchase, well before DocumentStatus's usual spot.
+    #
+    # "approved" is a distinct step from "received": approving authorizes
+    # the order (a manager/admin signing off that it's OK to buy) but does
+    # NOT touch stock or the ledger yet — that only happens once goods
+    # physically arrive and someone marks it received. Keeping these
+    # separate means a PO can be approved today and received next week
+    # without prematurely inflating inventory before the goods exist.
     draft = "draft"
     sent = "sent"
+    approved = "approved"
     received = "received"
     cancelled = "cancelled"
 
@@ -239,6 +247,12 @@ class PurchaseOrder(Base):
     total = Column(Float, default=0)
     notes = Column(String(500), default="")
     status = Column(Enum(PurchaseOrderStatus), default=PurchaseOrderStatus.draft)
+    # Who authorized this PO and when — set the moment status first
+    # transitions to "approved". Distinct from created_by/created_at
+    # (who wrote the PO) since the same person doesn't always approve
+    # their own order, and a paper trail matters here.
+    approved_by = Column(String(80), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
     # Set once this PO has generated its Purchase rows (on first transition
     # to "received"). Prevents double-booking stock if received is set twice.
     converted_to_purchase = Column(Boolean, default=False)
