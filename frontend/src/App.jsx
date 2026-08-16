@@ -23,8 +23,6 @@ import Clock from './Clock.jsx'
 // mobile data.
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
-import Landing from './pages/Landing.jsx'
-import Login from './pages/Login.jsx'
 
 const Download = lazy(() => import('./pages/Download.jsx'))
 const Legal = lazy(() => import('./pages/Legal.jsx'))
