@@ -72,6 +72,7 @@ function buildNav(t) {
       ],
     },
     { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
+    { type: 'item', label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard', accountTypes: ['business', 'community'] },
     {
       type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business', 'community'],
       children: [
@@ -153,6 +154,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/sales': 'nav.salesHistory',
   '/app/customers': 'nav.customers',
   '/app/debtors': 'nav.clientsDebtors',
+  '/app/ar-dashboard': 'nav.arDashboard',
   '/app/purchases': 'nav.purchasesLedger',
   '/app/purchase-orders': 'nav.purchaseOrders',
   '/app/suppliers': 'nav.suppliers',

@@ -59,7 +59,8 @@
     "purchaseOrders": "Maagizo ya Ununuzi",
     "bankLoans": "Mikopo ya Benki",
     "deadlines": "Muda wa Uzingatiaji Sheria",
-    "suppliers": "Wasambazaji"
+    "suppliers": "Wasambazaji",
+    "arDashboard": "Dashibodi ya Madeni ya Wateja"
   },
   "auth": {
     "login": "Ingia",

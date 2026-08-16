@@ -38,6 +38,7 @@ const Purchases = lazy(() => import('./pages/Purchases.jsx'))
 const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders.jsx'))
 const Expenses = lazy(() => import('./pages/Expenses.jsx'))
 const Debtors = lazy(() => import('./pages/Debtors.jsx'))
+const ARDashboard = lazy(() => import('./pages/ARDashboard.jsx'))
 const Creditors = lazy(() => import('./pages/Creditors.jsx'))
 const Reports = lazy(() => import('./pages/Reports.jsx'))
 const Documents = lazy(() => import('./pages/Documents.jsx'))
@@ -148,6 +149,7 @@ function PrivateRoutes() {
         <Route path="/purchase-orders" element={<PurchaseOrders />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
+        <Route path="/ar-dashboard" element={<ARDashboard />} />
         <Route path="/creditors" element={<Creditors />} />
         <Route path="/reports/profit-loss" element={<Reports key="profit-loss" view="profit-loss" />} />
         <Route path="/reports/financial-summary" element={<Reports key="financial-summary" view="financial-summary" />} />
