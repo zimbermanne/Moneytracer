@@ -102,43 +102,6 @@ class CustomerOut(BaseModel):
     last_activity: Optional[datetime] = None
 
 
-class SupplierCreate(BaseModel):
-    name: str
-    phone: Optional[str] = ""
-    email: Optional[str] = ""
-    address: Optional[str] = ""
-    tin_number: Optional[str] = ""
-    vrn_number: Optional[str] = ""
-    notes: Optional[str] = ""
-
-
-class SupplierUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[str] = None
-    tin_number: Optional[str] = None
-    vrn_number: Optional[str] = None
-    notes: Optional[str] = None
-
-
-class SupplierOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    name: str
-    phone: str
-    email: str = ""
-    address: str
-    tin_number: str
-    vrn_number: str = ""
-    notes: str
-    created_at: datetime
-    # Computed, not stored columns -- filled in by the router.
-    total_spent: float = 0
-    total_owed: float = 0
-    last_activity: Optional[datetime] = None
-
-
 # ---------- Accounts ----------
 class AccountCreate(BaseModel):
     business_structure: BusinessStructure = BusinessStructure.solo
@@ -622,33 +585,6 @@ class CustomerProfile(BaseModel):
     debts: List[DebtorOut] = []
 
 
-class SupplierMonthlySpend(BaseModel):
-    month: str          # e.g. "2026-04"
-    total: float
-
-
-class SupplierProfile(BaseModel):
-    supplier_id: int
-    supplier_name: str
-    phone: str = ""
-    email: str = ""
-    address: str = ""
-    tin: str = ""
-    vrn: str = ""
-    notes: str = ""
-    # total_spent is what the business has paid this supplier (received
-    # Purchase totals); outstanding_payables is what the business still
-    # owes them (unpaid Creditor balance) — the supplier-side mirror of
-    # CustomerProfile's total_purchased/outstanding_receivables.
-    total_spent: float = 0
-    outstanding_payables: float
-    spend_last_6_months: List[SupplierMonthlySpend]
-    total_spend_last_6_months: float
-    purchase_orders: List["PurchaseOrderOut"] = []
-    purchases: List[PurchaseOut] = []
-    payables: List["CreditorOut"] = []
-
-
 class CustomerStatementEntry(BaseModel):
     date: datetime
     description: str
@@ -832,7 +768,6 @@ class InvoiceUpdate(BaseModel):
 class PurchaseOrderCreate(BaseModel):
     supplier_name: str = ""
     supplier_phone: Optional[str] = ""
-    supplier_email: Optional[str] = ""
     supplier_address: Optional[str] = ""
     supplier_tin: Optional[str] = ""
     supplier_vrn: Optional[str] = ""
@@ -849,7 +784,6 @@ class PurchaseOrderOut(BaseModel):
     po_no: str
     supplier_name: str
     supplier_phone: str
-    supplier_email: Optional[str] = ""
     supplier_address: str
     supplier_tin: Optional[str] = ""
     supplier_vrn: Optional[str] = ""
@@ -862,8 +796,6 @@ class PurchaseOrderOut(BaseModel):
     notes: str
     status: PurchaseOrderStatus
     converted_to_purchase: bool = False
-    approved_by: Optional[str] = None
-    approved_at: Optional[datetime] = None
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []
@@ -872,7 +804,6 @@ class PurchaseOrderOut(BaseModel):
 class PurchaseOrderUpdate(BaseModel):
     supplier_name: Optional[str] = None
     supplier_phone: Optional[str] = None
-    supplier_email: Optional[str] = None
     supplier_address: Optional[str] = None
     supplier_tin: Optional[str] = None
     supplier_vrn: Optional[str] = None

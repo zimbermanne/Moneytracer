@@ -585,12 +585,12 @@ label {
   box-shadow: var(--neu-raised-sm);
 }
 
-.badge-paid, .badge-accepted, .badge-cash, .badge-active, .badge-received { background: var(--success-bg); color: var(--success); }
+.badge-paid, .badge-accepted, .badge-cash, .badge-active { background: var(--success-bg); color: var(--success); }
 .badge-partial, .badge-expired, .badge-mobile_money      { background: var(--warning-bg); color: var(--warning); }
-.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive, .badge-cancelled { background: var(--danger-bg); color: var(--danger); }
+.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive { background: var(--danger-bg); color: var(--danger); }
 .badge-sent, .badge-manager                               { background: var(--info-bg); color: var(--info); }
 .badge-draft, .badge-employee                             { background: var(--surface-sunken); color: var(--text-muted); }
-.badge-admin, .badge-approved                             { background: var(--accent-soft); color: var(--accent-hover); }
+.badge-admin                                              { background: var(--accent-soft); color: var(--accent-hover); }
 
 .modal-overlay {
   position: fixed;
@@ -1040,24 +1040,23 @@ label {
    breakpoint below. Fixed to the viewport bottom with safe-area padding so
    it clears the home-indicator on notched iPhones instead of sitting under
    it. */
+/* ── Bottom nav: hidden on desktop, pill-rail on mobile ───────────────────
+   The rail uses a two-tap interaction: first tap expands the pill and
+   reveals the label; second tap on the same pill navigates. Tapping
+   outside collapses all pills. Logic lives in BottomNav.jsx. */
 .bottom-nav {
   display: none;
 }
 
 /* ---- MOBILE: main phone breakpoint (<=768px) --------------------------
    Sidebar -> slide-in drawer, hamburger + .mobile-topbar appear,
-   .desktop-topbar hides, and the .bottom-nav scrolling tab strip
-   appears fixed to the viewport bottom (with clearance so it never
-   overlaps the drawer's footer/logout row). This is the block to
-   edit for "how does the whole app frame look on a phone". */
+   .desktop-topbar hides, and the .bottom-nav pill-rail appears fixed
+   to the viewport bottom. */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
     top: 68px;
-    /* Leave room for the fixed bottom tab bar (its own height plus the
-       safe-area inset) so the drawer's last items and footer/logout button
-       never end up hidden behind it. */
-    bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px) + 10px);
+    bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 10px);
     left: 12px;
     height: auto;
     max-width: 80vw;
@@ -1068,13 +1067,8 @@ label {
   }
   .sidebar.mobile-open { transform: translateX(0); }
 
-  .hamburger {
-    display: block;
-  }
-
-  .mobile-topbar {
-    display: flex;
-  }
+  .hamburger { display: block; }
+  .mobile-topbar { display: flex; }
 
   .mobile-info-row {
     display: block;
@@ -1083,9 +1077,7 @@ label {
     z-index: 49;
   }
 
-  .desktop-topbar {
-    display: none;
-  }
+  .desktop-topbar { display: none; }
 
   .mobile-backdrop.open {
     display: block;
@@ -1095,83 +1087,151 @@ label {
     z-index: 55;
   }
 
-  /* While the drawer is open, hide the bottom tab bar entirely rather than
-     letting two fixed, overlapping bottom elements fight for the same
-     screen space — this is what caused menus to render on top of each
-     other and made the bottom of the drawer unreachable. */
-  .mobile-backdrop.open ~ .bottom-nav {
-    display: none;
-  }
+  /* Hide the rail while the drawer is open so they don't fight */
+  .mobile-backdrop.open ~ .bottom-nav { display: none; }
 
   .app-shell { flex-direction: column; padding: 0; gap: 0; }
 
-  /* Leave room at the bottom of the scrollable content so the fixed tab
-     bar never overlaps the last row of a form or table. */
+  /* Content padding so last table row / form field isn't hidden behind the rail */
   .main-content {
-    padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px));
   }
 
+  /* ── Rail shell ── */
   .bottom-nav {
-    display: flex;
+    display: block;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 58;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding: 0;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    /* Fade the page content up into the rail so it feels floating */
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, var(--surface) 55%, transparent);
   }
 
-  /* The actual scroller: every sidebar destination lives here in one row.
-     Scrolls horizontally instead of squeezing icons to fit, per the ask
-     to "cover all side menu icons, even if scrolling to see all". */
+  /* Fade-edge wrapper — soft vignette on left/right so
+     partially-visible pills look intentional, not clipped */
+  .bottom-nav-rail-outer {
+    position: relative;
+  }
+  .bottom-nav-rail-outer::before,
+  .bottom-nav-rail-outer::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 22px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .bottom-nav-rail-outer::before {
+    left: 0;
+    background: linear-gradient(to right, var(--surface), transparent);
+    border-radius: 999px 0 0 999px;
+  }
+  .bottom-nav-rail-outer::after {
+    right: 0;
+    background: linear-gradient(to left, var(--surface), transparent);
+    border-radius: 0 999px 999px 0;
+  }
+
+  /* ── Scrollable pill row ── */
   .bottom-nav-scroll {
     display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     width: 100%;
     overflow-x: auto;
+    scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* max(), not +, so the safe-area inset and the base padding don't
-       stack — stacking is what left a visible empty gap below the
-       labels on devices that already report a safe-area inset. */
-    padding: 6px 4px max(6px, env(safe-area-inset-bottom, 0px));
+    /* Frosted glass pill container */
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 999px;
+    padding: 8px;
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
   }
-
   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
 
+  /* ── Individual pill ── */
   .bottom-nav-item {
     flex: 0 0 auto;
-    width: 64px;
+    scroll-snap-align: start;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-height: 48px;
-    background: none;
+    gap: 0.55rem;
+    /* Collapsed: icon-only circle */
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
     border: none;
+    padding: 0 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     color: var(--text-muted);
-    font-size: 10px;
-    line-height: 1.2;
-    padding: 4px 2px;
-    border-radius: 10px;
+    font-family: var(--font-body);
+    /* Smooth expand */
+    transition:
+      width .38s cubic-bezier(.22, 1, .36, 1),
+      background .25s ease,
+      box-shadow .25s ease,
+      color .2s ease;
   }
 
+  /* First-tap expanded state */
+  .bottom-nav-item.is-open {
+    width: 152px;
+    background: rgba(255,255,255,0.13);
+    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.22);
+    color: var(--text-dark);
+  }
+
+  /* Active (current route) */
   .bottom-nav-item.active {
+    background: var(--accent-soft);
     color: var(--accent);
   }
-
-  .bottom-nav-icon {
-    font-size: 19px;
+  .bottom-nav-item.active.is-open {
+    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.3);
   }
 
+  /* ── Icon ── */
+  .bottom-nav-icon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  /* ── Label: hidden when collapsed, slides in when expanded ── */
   .bottom-nav-label {
-    max-width: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    opacity: 0;
+    max-width: 0;
     white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transform: translateX(-6px);
+    transition:
+      opacity .2s ease,
+      max-width .38s ease,
+      transform .28s ease;
+    overflow: hidden;
+  }
+  .bottom-nav-item.is-open .bottom-nav-label {
+    opacity: 1;
+    max-width: 110px;
+    transform: translateX(0);
   }
 
   /* Touch targets: anything tappable should meet the ~44px minimum touch

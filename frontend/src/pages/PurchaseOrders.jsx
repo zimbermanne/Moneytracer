@@ -1,27 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
-import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
-import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
-import PurchaseOrderPreview from '../components/PurchaseOrderPreview.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
 const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0, item_id: null })
 const emptyForm = () => ({
-  supplier_name: '', supplier_phone: '', supplier_email: '', supplier_address: '',
+  supplier_name: '', supplier_phone: '', supplier_address: '',
   supplier_tin: '', supplier_vrn: '', expected_date: '',
   tax_rate: 0, discount: 0, notes: '', items: [emptyLine()],
 })
 
 export default function PurchaseOrders() {
   const api = useApi()
-  const { user } = useAuth()
-  const canApprove = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager'
 
   const [docs, setDocs] = useState([])
   const [error, setError] = useState('')
@@ -33,16 +28,8 @@ export default function PurchaseOrders() {
   const [editingPoNo, setEditingPoNo] = useState('')
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
-  const [previewDoc, setPreviewDoc] = useState(null)
-  const [company, setCompany] = useState(null)
-  const [suppliers, setSuppliers] = useState([])
 
-  // Received POs have real stock/ledger movements and can't be touched.
-  // Approved POs are locked too — a manager signed off on these exact
-  // numbers, so changing quantities/prices afterwards would silently
-  // invalidate that approval. Reset to draft (via the status action) if
-  // it genuinely needs edits, then re-approve.
-  const isLocked = (doc) => doc.status === 'received' || doc.status === 'approved'
+  const isLocked = (doc) => doc.status === 'received'
 
   const load = () => {
     setListLoading(true)
@@ -50,23 +37,6 @@ export default function PurchaseOrders() {
   }
   useEffect(() => { load() }, []) // eslint-disable-line
   useEffect(() => { api.get('/inventory/').then(setInventoryItems).catch(() => {}) }, []) // eslint-disable-line
-  useEffect(() => { api.get('/accounts/company-info').then(setCompany).catch(() => {}) }, []) // eslint-disable-line
-  useEffect(() => { api.get('/suppliers/').then(setSuppliers).catch(() => {}) }, []) // eslint-disable-line
-
-  // Selecting a known supplier pre-fills their contact details — the same
-  // "pick from directory instead of retyping" shortcut inventory items get.
-  const selectSupplier = (name) => {
-    const match = suppliers.find((s) => s.name === name)
-    setForm((f) => ({
-      ...f,
-      supplier_name: name,
-      supplier_phone: match?.phone || f.supplier_phone,
-      supplier_email: match?.email || f.supplier_email,
-      supplier_address: match?.address || f.supplier_address,
-      supplier_tin: match?.tin_number || f.supplier_tin,
-      supplier_vrn: match?.vrn_number || f.supplier_vrn,
-    }))
-  }
 
   const updateLine = (idx, field, value) => {
     setForm((f) => ({ ...f, items: f.items.map((l, i) => i === idx ? { ...l, [field]: value } : l) }))
@@ -100,7 +70,6 @@ export default function PurchaseOrders() {
     setEditingPoNo(doc.po_no)
     setForm({
       supplier_name: doc.supplier_name || '', supplier_phone: doc.supplier_phone || '',
-      supplier_email: doc.supplier_email || '',
       supplier_address: doc.supplier_address || '', supplier_tin: doc.supplier_tin || '',
       supplier_vrn: doc.supplier_vrn || '',
       expected_date: doc.expected_date ? doc.expected_date.slice(0, 10) : '',
@@ -137,14 +106,6 @@ export default function PurchaseOrders() {
     try { await api.del(`/purchase-orders/${id}`); load() } catch (e) { setError(e.message) }
   }
 
-  const approvePO = async (doc) => {
-    if (!confirm(`Approve ${doc.po_no}? This authorizes the purchase but does not add stock yet — you'll still need to "Mark as Received" once the goods actually arrive.`)) return
-    try {
-      await api.post(`/purchase-orders/${doc.id}/approve`, {})
-      load()
-    } catch (e) { setError(e.message) }
-  }
-
   const markReceived = async (doc) => {
     if (!confirm(`Mark ${doc.po_no} as received? This adds the items to inventory and records the purchase — it can't be undone.`)) return
     try {
@@ -153,8 +114,20 @@ export default function PurchaseOrders() {
     } catch (e) { setError(e.message) }
   }
 
-  const downloadPdf = (doc) => {
-    downloadFile(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), `PurchaseOrder-${doc.po_no}.pdf`)
+  const downloadPdf = async (doc) => {
+    setPdfLoading(doc.id)
+    try {
+      const res = await fetch(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), { credentials: 'include' })
+      if (!res.ok) throw new Error('PDF generation failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `PurchaseOrder-${doc.po_no}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { setError(e.message) }
+    finally { setPdfLoading(null) }
   }
 
   const columns = [
@@ -169,18 +142,16 @@ export default function PurchaseOrders() {
       render: (r) => (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {isLocked(r) && (
-            <span title={r.status === 'received' ? 'A received purchase order cannot be edited' : 'An approved purchase order cannot be edited — reset to draft first if changes are needed'}
+            <span title="A received purchase order cannot be edited"
                   style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               🔒 Locked
             </span>
           )}
           <RowActionsMenu items={[
-            { label: 'Preview', icon: '👁', onClick: () => setPreviewDoc(r) },
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
-            { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
-            { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
+            { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status === 'received' || r.status === 'cancelled' },
             { label: pdfLoading === r.id ? 'Downloading…' : 'PDF', icon: '⬇', onClick: () => downloadPdf(r), disabled: pdfLoading === r.id },
-            { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true, hidden: r.status === 'received' },
+            { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true, hidden: isLocked(r) },
           ]} />
         </div>
       ),
@@ -208,8 +179,7 @@ export default function PurchaseOrders() {
         <SearchBar value={query} onChange={setQuery} placeholder="Search by supplier, number, or date…" />
       </div>
       <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading purchase orders…"
-        emptyText={query ? 'No purchase orders match your search.' : 'No purchase orders yet.'}
-        onRowClick={(row) => setPreviewDoc(row)} />
+        emptyText={query ? 'No purchase orders match your search.' : 'No purchase orders yet.'} />
 
       {open && (
         <div className="invoice-editor-overlay">
@@ -222,16 +192,10 @@ export default function PurchaseOrders() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
                 {editingId && (
-                  <>
-                    <button className="btn btn-outline"
-                            onClick={() => setPreviewDoc(docs.find((d) => d.id === editingId))}>
-                      👁 Preview
-                    </button>
-                    <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
-                            disabled={pdfLoading === editingId}>
-                      {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
-                    </button>
-                  </>
+                  <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
+                          disabled={pdfLoading === editingId}>
+                    {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
+                  </button>
                 )}
                 <button className="btn btn-primary" onClick={save} disabled={saving}>
                   {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
@@ -245,17 +209,9 @@ export default function PurchaseOrders() {
               <div className="invoice-editor-form">
             <div className="invoice-editor-section-label">Supplier</div>
             <div className="form-row"><label>Supplier Name *</label>
-              <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
-                list="po-supplier-list" placeholder="Type or pick a known supplier" />
-              <datalist id="po-supplier-list">
-                {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-              </datalist>
-            </div>
+              <input value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} /></div>
             <div className="form-row"><label>Phone</label>
               <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} /></div>
-            <div className="form-row"><label>Email</label>
-              <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })}
-                placeholder="For easy PO delivery from the preview screen" /></div>
             <div className="form-row"><label>Address</label>
               <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} /></div>
             <div className="form-row"><label>Supplier TIN</label>
@@ -315,10 +271,6 @@ export default function PurchaseOrders() {
             </div>
           </div>
         </div>
-      )}
-
-      {previewDoc && (
-        <PurchaseOrderPreview doc={previewDoc} company={company} onClose={() => setPreviewDoc(null)} />
       )}
     </div>
   )

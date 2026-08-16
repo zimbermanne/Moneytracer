@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
-import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
@@ -45,8 +44,15 @@ export default function Inventory() {
     finally { setImporting(false); e.target.value = '' }
   }
 
-  const handleExport = () => {
-    downloadFile(apiUrl('/api/inventory/export/spreadsheet'), 'inventory-export.xlsx')
+  const handleExport = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/inventory/export/spreadsheet'), { credentials: 'include' })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'inventory-export.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { setError(e.message) }
   }
 
   const save = async () => {

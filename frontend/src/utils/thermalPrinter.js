@@ -51,35 +51,13 @@ async function findWritableCharacteristic(server) {
  */
 export async function connectPrinter() {
   if (!isBluetoothSupported()) {
-    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent)
-    throw new Error(
-      isIOS
-        ? "iPhones/iPads can't do Bluetooth printing — iOS Safari (and every browser on iOS, since they all use the same engine) doesn't support the Web Bluetooth feature this needs. Use the regular \"Print\" button instead, which works with an AirPrint-capable printer or the system print dialog."
-        : 'This browser doesn\'t support Bluetooth printing. Use Chrome or Edge (desktop or Android), or print via a system-installed printer instead.'
-    )
+    throw new Error('This browser does not support Bluetooth printing. Use Chrome or Edge on desktop or Android, or print via a system-installed printer instead.')
   }
 
-  let device
-  try {
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: KNOWN_PRINTER_SERVICES,
-    })
-  } catch (e) {
-    // On Android, Chrome's BLE scan silently returns zero devices (so the
-    // picker looks "empty" and the user just cancels it) if the phone's
-    // system-level Location permission isn't granted to Chrome — BLE
-    // scanning is gated behind that permission at the OS level, not
-    // anything this app controls. That's the single most common reason
-    // this fails on Android in practice, so surface it directly instead
-    // of a generic "cancelled" message.
-    if (e && e.name === 'NotFoundError') {
-      throw new Error(
-        'No printer was selected. If your printer didn\'t show up in the list: on Android, check that Chrome has Location permission enabled (Settings → Apps → Chrome → Permissions → Location) — Android requires it for Bluetooth device scanning to work at all. Also make sure the printer is powered on and not already connected to another phone.'
-      )
-    }
-    throw e
-  }
+  const device = await navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: KNOWN_PRINTER_SERVICES,
+  })
 
   const server = await device.gatt.connect()
   const characteristic = await findWritableCharacteristic(server)
