@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -15,6 +16,7 @@ from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
+from email_utils import send_email_with_attachment
 
 # Reuse the invoice module's PDF renderer, account-details lookup, and totals
 # calculator rather than duplicating ~150 lines of ReportLab layout code —
@@ -46,6 +48,7 @@ class _PdfDocAdapter:
         self.invoice_no = po.po_no
         self.customer_name = po.supplier_name or "Supplier"
         self.customer_phone = po.supplier_phone or ""
+        self.customer_email = po.supplier_email or ""
         self.customer_address = po.supplier_address or ""
         self.customer_tin = po.supplier_tin or ""
         self.customer_vrn = po.supplier_vrn or ""
@@ -104,6 +107,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         po_no=po_no,
         supplier_name=payload.supplier_name or "",
         supplier_phone=payload.supplier_phone or "",
+        supplier_email=payload.supplier_email or "",
         supplier_address=payload.supplier_address or "",
         supplier_tin=payload.supplier_tin or "",
         supplier_vrn=payload.supplier_vrn or "",
@@ -293,3 +297,49 @@ def purchase_order_pdf(po_id: int, db: Session = Depends(get_db), current_user: 
     log_activity_for_user(db, current_user, "po_pdf", f"Exported {po.po_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="PurchaseOrder-{po.po_no}.pdf"'})
+
+
+class EmailPORequest(BaseModel):
+    to_email: EmailStr
+    message: Optional[str] = ""
+
+
+@router.post("/{po_id}/email")
+def email_purchase_order(po_id: int, payload: EmailPORequest, db: Session = Depends(get_db),
+                         current_user: User = Depends(get_current_user)):
+    """Sends the PO PDF straight to the supplier's inbox — the main point of
+    a purchase order being 'previewable' at all: reviewing it before it goes
+    out, then handing it to the supplier without a manual export-then-attach
+    step."""
+    q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        q = q.filter(PurchaseOrder.account_id == account_id)
+    po = q.first()
+    if not po: raise HTTPException(404, "Purchase order not found")
+
+    account = get_account_details(db, po.account_id)
+    buf = _render_pdf(_PdfDocAdapter(po), "PURCHASE ORDER", account, party_label="Supplier", is_payable=False)
+    company = (account or {}).get("name") or "Our company"
+    supplier_name = po.supplier_name or "there"
+    body = payload.message or (
+        f"Dear {supplier_name},\n\n"
+        f"Please find attached Purchase Order {po.po_no} for your review and fulfillment.\n\n"
+        f"Regards,\n{company}"
+    )
+
+    try:
+        send_email_with_attachment(
+            to_email=payload.to_email,
+            subject=f"Purchase Order {po.po_no} from {company}",
+            body=body,
+            attachment_bytes=buf.getvalue(),
+            attachment_filename=f"PurchaseOrder-{po.po_no}.pdf",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(502, f"Failed to send email: {exc}")
+
+    log_activity_for_user(db, current_user, "po_email", f"Emailed {po.po_no} to {payload.to_email}")
+    return {"detail": f"Purchase order emailed to {payload.to_email}"}

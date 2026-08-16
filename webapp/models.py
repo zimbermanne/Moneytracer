@@ -177,6 +177,29 @@ class Customer(Base):
     tin_number = Column(String(50), default="")
     notes = Column(String(500), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Supplier(Base):
+    """The supplier-side mirror of Customer — a real, addressable supplier
+    record (name, contact, address, TIN/VRN) distinct from the free-text
+    supplier/supplier_name fields still used on Purchase/PurchaseOrder/
+    Creditor. Same non-FK, name-matching aggregation approach as Customer
+    (see routers/suppliers.py) so existing historical purchase records show
+    up under a Supplier record the moment one with a matching name exists —
+    no backfill migration needed."""
+    __tablename__ = "suppliers"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    phone = Column(String(40), default="")
+    email = Column(String(150), default="")
+    address = Column(String(255), default="")
+    tin_number = Column(String(50), default="")
+    vrn_number = Column(String(50), default="")
+    notes = Column(String(500), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -236,6 +259,7 @@ class PurchaseOrder(Base):
     po_no = Column(String(30), default="")
     supplier_name = Column(String(150), default="")
     supplier_phone = Column(String(50), default="")
+    supplier_email = Column(String(150), default="")
     supplier_address = Column(String(255), default="")
     supplier_tin = Column(String(50), default="")
     supplier_vrn = Column(String(50), default="")

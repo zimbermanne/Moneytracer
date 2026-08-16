@@ -77,6 +77,7 @@ function buildNav(t) {
       children: [
         { label: t('nav.purchasesLedger'), icon: 'purchases-ledger', path: '/app/purchases' },
         { label: t('nav.purchaseOrders'), icon: 'purchase-order', path: '/app/purchase-orders' },
+        { label: t('nav.suppliers'), icon: 'customers', path: '/app/suppliers' },
       ],
     },
     { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
@@ -154,6 +155,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/debtors': 'nav.clientsDebtors',
   '/app/purchases': 'nav.purchasesLedger',
   '/app/purchase-orders': 'nav.purchaseOrders',
+  '/app/suppliers': 'nav.suppliers',
   '/app/creditors': 'nav.creditorsLedger',
   '/app/invoices': 'nav.invoices',
   '/app/quotations': 'nav.quotations',

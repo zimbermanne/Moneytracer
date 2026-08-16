@@ -30,6 +30,7 @@ import Creditors from './pages/Creditors.jsx'
 import Reports from './pages/Reports.jsx'
 import Documents from './pages/Documents.jsx'
 import Customers from './pages/Customers.jsx'
+import Suppliers from './pages/Suppliers.jsx'
 import Settings from './pages/Settings.jsx'
 import ActivityLogs from './pages/ActivityLogs.jsx'
 import VerifyDocument from './pages/VerifyDocument.jsx'
@@ -147,6 +148,7 @@ function PrivateRoutes() {
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/suppliers" element={<Suppliers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/activity" element={<ActivityLogs />} />
         <Route path="/bank-loans" element={<BankLoans />} />

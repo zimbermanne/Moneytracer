@@ -5,13 +5,14 @@ import { apiUrl } from '../api-config.js'
 import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
+import PurchaseOrderPreview from '../components/PurchaseOrderPreview.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
 const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0, item_id: null })
 const emptyForm = () => ({
-  supplier_name: '', supplier_phone: '', supplier_address: '',
+  supplier_name: '', supplier_phone: '', supplier_email: '', supplier_address: '',
   supplier_tin: '', supplier_vrn: '', expected_date: '',
   tax_rate: 0, discount: 0, notes: '', items: [emptyLine()],
 })
@@ -31,6 +32,9 @@ export default function PurchaseOrders() {
   const [editingPoNo, setEditingPoNo] = useState('')
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
+  const [previewDoc, setPreviewDoc] = useState(null)
+  const [company, setCompany] = useState(null)
+  const [suppliers, setSuppliers] = useState([])
 
   // Received POs have real stock/ledger movements and can't be touched.
   // Approved POs are locked too — a manager signed off on these exact
@@ -45,6 +49,23 @@ export default function PurchaseOrders() {
   }
   useEffect(() => { load() }, []) // eslint-disable-line
   useEffect(() => { api.get('/inventory/').then(setInventoryItems).catch(() => {}) }, []) // eslint-disable-line
+  useEffect(() => { api.get('/accounts/company-info').then(setCompany).catch(() => {}) }, []) // eslint-disable-line
+  useEffect(() => { api.get('/suppliers/').then(setSuppliers).catch(() => {}) }, []) // eslint-disable-line
+
+  // Selecting a known supplier pre-fills their contact details — the same
+  // "pick from directory instead of retyping" shortcut inventory items get.
+  const selectSupplier = (name) => {
+    const match = suppliers.find((s) => s.name === name)
+    setForm((f) => ({
+      ...f,
+      supplier_name: name,
+      supplier_phone: match?.phone || f.supplier_phone,
+      supplier_email: match?.email || f.supplier_email,
+      supplier_address: match?.address || f.supplier_address,
+      supplier_tin: match?.tin_number || f.supplier_tin,
+      supplier_vrn: match?.vrn_number || f.supplier_vrn,
+    }))
+  }
 
   const updateLine = (idx, field, value) => {
     setForm((f) => ({ ...f, items: f.items.map((l, i) => i === idx ? { ...l, [field]: value } : l) }))
@@ -78,6 +99,7 @@ export default function PurchaseOrders() {
     setEditingPoNo(doc.po_no)
     setForm({
       supplier_name: doc.supplier_name || '', supplier_phone: doc.supplier_phone || '',
+      supplier_email: doc.supplier_email || '',
       supplier_address: doc.supplier_address || '', supplier_tin: doc.supplier_tin || '',
       supplier_vrn: doc.supplier_vrn || '',
       expected_date: doc.expected_date ? doc.expected_date.slice(0, 10) : '',
@@ -164,6 +186,7 @@ export default function PurchaseOrders() {
             </span>
           )}
           <RowActionsMenu items={[
+            { label: 'Preview', icon: '👁', onClick: () => setPreviewDoc(r) },
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
             { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
             { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
@@ -196,7 +219,8 @@ export default function PurchaseOrders() {
         <SearchBar value={query} onChange={setQuery} placeholder="Search by supplier, number, or date…" />
       </div>
       <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading purchase orders…"
-        emptyText={query ? 'No purchase orders match your search.' : 'No purchase orders yet.'} />
+        emptyText={query ? 'No purchase orders match your search.' : 'No purchase orders yet.'}
+        onRowClick={(row) => setPreviewDoc(row)} />
 
       {open && (
         <div className="invoice-editor-overlay">
@@ -209,10 +233,16 @@ export default function PurchaseOrders() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
                 {editingId && (
-                  <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
-                          disabled={pdfLoading === editingId}>
-                    {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
-                  </button>
+                  <>
+                    <button className="btn btn-outline"
+                            onClick={() => setPreviewDoc(docs.find((d) => d.id === editingId))}>
+                      👁 Preview
+                    </button>
+                    <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
+                            disabled={pdfLoading === editingId}>
+                      {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
+                    </button>
+                  </>
                 )}
                 <button className="btn btn-primary" onClick={save} disabled={saving}>
                   {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
@@ -226,9 +256,17 @@ export default function PurchaseOrders() {
               <div className="invoice-editor-form">
             <div className="invoice-editor-section-label">Supplier</div>
             <div className="form-row"><label>Supplier Name *</label>
-              <input value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} /></div>
+              <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
+                list="po-supplier-list" placeholder="Type or pick a known supplier" />
+              <datalist id="po-supplier-list">
+                {suppliers.map((s) => <option key={s.id} value={s.name} />)}
+              </datalist>
+            </div>
             <div className="form-row"><label>Phone</label>
               <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} /></div>
+            <div className="form-row"><label>Email</label>
+              <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })}
+                placeholder="For easy PO delivery from the preview screen" /></div>
             <div className="form-row"><label>Address</label>
               <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} /></div>
             <div className="form-row"><label>Supplier TIN</label>
@@ -288,6 +326,10 @@ export default function PurchaseOrders() {
             </div>
           </div>
         </div>
+      )}
+
+      {previewDoc && (
+        <PurchaseOrderPreview doc={previewDoc} company={company} onClose={() => setPreviewDoc(null)} />
       )}
     </div>
   )

@@ -102,6 +102,9 @@ _SCHEMA_MIGRATIONS = {
         # for the new "approved" status, distinct from goods being received.
         ("approved_by", "VARCHAR(80)", None),
         ("approved_at", "TIMESTAMP", None),
+        # Lets the PO preview pre-fill "Send to Supplier" instead of the
+        # user having to look the address up and type it in every time.
+        ("supplier_email", "VARCHAR(150)", "''"),
     ],
 }
 
