@@ -9,6 +9,10 @@ Two small services that work together:
 2. **`broadcast.py`** — sends an approved marketing message template to
    everyone in `recipients.json`, either once or on a repeating schedule.
 
+Recipient data is persisted to `/data/recipients.json`, which should be
+backed by a Railway volume mounted at `/data` so opt-ins survive
+redeploys and restarts.
+
 ## Why it works this way (please read before setup)
 
 - **WhatsApp Channels have no official API in 2026.** The Telegram-style

@@ -51,7 +51,10 @@ TEMPLATE_NAME = os.getenv("TEMPLATE_NAME", "moneytracer_promo_intro")
 TEMPLATE_LANGUAGE = os.getenv("TEMPLATE_LANGUAGE", "en")
 BROADCAST_INTERVAL_HOURS = float(os.getenv("BROADCAST_INTERVAL_HOURS", "168"))  # weekly by default
 SEND_DELAY_SECONDS = float(os.getenv("SEND_DELAY_SECONDS", "1.0"))  # spacing between sends
-RECIPIENTS_FILE = Path(__file__).parent / "recipients.json"
+
+DATA_DIR = Path("/data")
+os.makedirs(DATA_DIR, exist_ok=True)
+RECIPIENTS_FILE = DATA_DIR / "recipients.json"
 
 if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
     raise SystemExit(

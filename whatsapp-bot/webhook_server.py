@@ -47,7 +47,10 @@ VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN", "")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID", "")
 GRAPH_API_VERSION = os.getenv("GRAPH_API_VERSION", "v20.0")
-RECIPIENTS_FILE = Path(__file__).parent / "recipients.json"
+
+DATA_DIR = Path("/data")
+os.makedirs(DATA_DIR, exist_ok=True)
+RECIPIENTS_FILE = DATA_DIR / "recipients.json"
 
 app = FastAPI(title="Moneytracer WhatsApp Bot Webhook")
 
