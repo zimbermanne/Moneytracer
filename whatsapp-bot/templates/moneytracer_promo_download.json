@@ -1,0 +1,16 @@
+{
+  "_comment": "Category: Marketing. Name it 'moneytracer_promo_download' or update TEMPLATE_NAME in .env to switch broadcast.py to this one.",
+  "name": "moneytracer_promo_download",
+  "category": "MARKETING",
+  "language": "en",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Moneytracer is on Android. 📱\n\nDownload the app and run your business from your pocket — sales, inventory, invoices, and bookkeeping, all in one place.\n\nDownload: https://moneytracer.up.railway.app/download"
+    },
+    {
+      "type": "FOOTER",
+      "text": "Reply STOP to unsubscribe"
+    }
+  ]
+}
