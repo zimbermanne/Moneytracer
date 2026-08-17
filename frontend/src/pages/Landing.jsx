@@ -84,10 +84,20 @@ export default function Landing() {
         .lg-page {
           min-height: 100vh;
           font-family: var(--font-body);
-          color: #fff;
+          color: var(--lg-fg-strong);
           overflow-x: hidden;
-          background: #0a0a1a;
+          background: #262436;
           position: relative;
+          /* Adaptive glass theme: defaults are the dark-glass look. The
+             prefers-color-scheme:light block near the end of this stylesheet
+             overrides these for people whose OS/browser is set to light,
+             swapping text to dark and brightening the backdrop instead of
+             forcing one look on everyone. */
+          --lg-fg: 255,255,255;
+          --lg-fg-strong: #fff;
+          --lg-h1-grad: linear-gradient(135deg, #fff 30%, rgba(255,196,140,0.9) 70%, #ffd699);
+          --lg-h2-grad: linear-gradient(135deg, #fff 40%, rgba(255,196,140,0.85));
+          --lg-stat-grad: linear-gradient(135deg, #fff, #ffb28f);
         }
         /* Sahel dusk illustration as a fixed full-page backdrop (glassmorphism
            reference style: one wallpaper behind every card/section, rather
@@ -99,12 +109,12 @@ export default function Landing() {
           inset: 0;
           z-index: 0;
           background:
-            linear-gradient(180deg, rgba(6,8,20,0.74) 0%, rgba(6,8,20,0.86) 55%, rgba(6,8,20,0.94) 100%),
+            linear-gradient(180deg, rgba(20,22,36,0.5) 0%, rgba(20,22,36,0.62) 55%, rgba(20,22,36,0.72) 100%),
             url(${heroBg});
           background-size: cover;
           background-position: center 30%;
           background-repeat: no-repeat;
-          filter: blur(2px) saturate(115%);
+          filter: blur(2px) saturate(125%) brightness(1.08);
           transform: scale(1.02);
         }
 
@@ -138,24 +148,24 @@ export default function Landing() {
 
         /* ── Glass surface utility ── */
         .lg-glass {
-          background: rgba(255,255,255,0.10);
+          background: rgba(255,255,255,0.16);
           backdrop-filter: blur(28px) saturate(180%);
           -webkit-backdrop-filter: blur(28px) saturate(180%);
-          border: 1px solid rgba(255,255,255,0.16);
+          border: 1px solid rgba(255,255,255,0.26);
         }
         .lg-glass-card {
-          background: rgba(255,255,255,0.09);
-          backdrop-filter: blur(22px) saturate(150%);
-          -webkit-backdrop-filter: blur(22px) saturate(150%);
-          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.16);
+          backdrop-filter: blur(22px) saturate(160%);
+          -webkit-backdrop-filter: blur(22px) saturate(160%);
+          border: 1px solid rgba(255,255,255,0.28);
           border-radius: 18px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.16);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.3);
           transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
         .lg-glass-card:hover {
           transform: translateY(-3px);
-          background: rgba(255,255,255,0.12);
-          box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.21);
+          box-shadow: 0 16px 48px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.36);
         }
 
         /* ── Header ── */
@@ -166,11 +176,11 @@ export default function Landing() {
           transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .lg-header.scrolled {
-          background: rgba(10,10,26,0.72);
+          background: rgba(28,26,38,0.55);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-          box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+          border-bottom: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.18);
         }
         .lg-header-inner {
           max-width: 1200px;
@@ -185,7 +195,7 @@ export default function Landing() {
           align-items: center;
           gap: 10px;
           text-decoration: none;
-          color: #fff;
+          color: var(--lg-fg-strong);
         }
         .lg-brand-mark {
           width: 36px; height: 36px;
@@ -201,13 +211,13 @@ export default function Landing() {
           font-size: 14px;
         }
         .lg-nav a {
-          color: rgba(255,255,255,0.75);
+          color: rgba(var(--lg-fg), 0.75);
           text-decoration: none;
           transition: color 0.15s;
         }
-        .lg-nav a:hover { color: #fff; }
+        .lg-nav a:hover { color: var(--lg-fg-strong); }
         .lg-nav-login {
-          color: rgba(255,255,255,0.9) !important;
+          color: rgba(var(--lg-fg), 0.9) !important;
           font-weight: 600;
         }
         .lg-nav-cta {
@@ -256,7 +266,7 @@ export default function Landing() {
           font-weight: 900;
           line-height: 1.1;
           margin: 0 0 24px;
-          background: linear-gradient(135deg, #fff 30%, rgba(255,196,140,0.9) 70%, #ffd699);
+          background: var(--lg-h1-grad);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -264,7 +274,7 @@ export default function Landing() {
         }
         .lg-hero-sub {
           font-size: clamp(1rem, 2vw, 1.2rem);
-          color: rgba(255,255,255,0.65);
+          color: rgba(var(--lg-fg), 0.65);
           line-height: 1.7;
           margin: 0 auto 40px;
           max-width: 580px;
@@ -286,7 +296,7 @@ export default function Landing() {
           padding: 10px 22px;
           border-radius: 999px;
           font-size: 13px; font-weight: 600;
-          color: rgba(255,255,255,0.55);
+          color: rgba(var(--lg-fg), 0.55);
           cursor: pointer;
           transition: all 0.25s ease;
         }
@@ -321,7 +331,7 @@ export default function Landing() {
           display: inline-flex; align-items: center;
           background: rgba(255,255,255,0.08);
           border: 1px solid rgba(255,255,255,0.2);
-          color: rgba(255,255,255,0.85);
+          color: rgba(var(--lg-fg), 0.85);
           text-decoration: none;
           font-weight: 600; font-size: 15px;
           padding: 14px 28px;
@@ -331,7 +341,7 @@ export default function Landing() {
         }
         .lg-btn-secondary:hover {
           background: rgba(255,255,255,0.14);
-          color: #fff;
+          color: var(--lg-fg-strong);
         }
 
         /* ── Android download pill ── */
@@ -339,7 +349,7 @@ export default function Landing() {
           display: inline-flex; align-items: center; gap: 10px;
           background: rgba(255,255,255,0.07);
           border: 1px solid rgba(255,255,255,0.15);
-          color: rgba(255,255,255,0.8);
+          color: rgba(var(--lg-fg), 0.8);
           text-decoration: none;
           font-size: 14px; font-weight: 600;
           padding: 11px 22px;
@@ -347,7 +357,7 @@ export default function Landing() {
           backdrop-filter: blur(10px);
           transition: background 0.15s;
         }
-        .lg-app-download:hover { background: rgba(255,255,255,0.14); color: #fff; }
+        .lg-app-download:hover { background: rgba(255,255,255,0.14); color: var(--lg-fg-strong); }
 
         /* ── Floating stat pills (hero) ── */
         .lg-hero-stats {
@@ -365,12 +375,12 @@ export default function Landing() {
         }
         .lg-stat-value {
           font-size: 2rem; font-weight: 900;
-          background: linear-gradient(135deg, #fff, #ffb28f);
+          background: var(--lg-stat-grad);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
           line-height: 1;
         }
         .lg-stat-label {
-          font-size: 12px; color: rgba(255,255,255,0.55);
+          font-size: 12px; color: rgba(var(--lg-fg), 0.55);
           margin-top: 6px; text-align: center; line-height: 1.3;
         }
 
@@ -387,20 +397,20 @@ export default function Landing() {
           padding-left: 0; padding-right: 0;
         }
         .lg-section-alt {
-          background: rgba(0,0,0,0.16);
-          border-top: 1px solid rgba(255,255,255,0.08);
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          border-top: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .lg-section h2 {
           font-size: clamp(1.8rem, 4vw, 2.8rem);
           font-weight: 900;
           margin: 0 0 14px;
-          background: linear-gradient(135deg, #fff 40%, rgba(255,196,140,0.85));
+          background: var(--lg-h2-grad);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
           letter-spacing: -0.5px;
         }
         .lg-section-sub {
-          color: rgba(255,255,255,0.55);
+          color: rgba(var(--lg-fg), 0.55);
           max-width: 560px;
           margin: 0 auto 48px;
           line-height: 1.7;
@@ -416,8 +426,8 @@ export default function Landing() {
         }
         .lg-feature-card { padding: 28px; }
         .lg-feature-icon { font-size: 30px; margin-bottom: 14px; }
-        .lg-feature-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; color: #fff; }
-        .lg-feature-text { color: rgba(255,255,255,0.55); font-size: 13px; line-height: 1.65; }
+        .lg-feature-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; color: var(--lg-fg-strong); }
+        .lg-feature-text { color: rgba(var(--lg-fg), 0.55); font-size: 13px; line-height: 1.65; }
 
         /* ── 3-column account type cards ── */
         .lg-grid-3 {
@@ -438,7 +448,7 @@ export default function Landing() {
           align-items: start;
         }
         .lg-about-copy p {
-          color: rgba(255,255,255,0.6);
+          color: rgba(var(--lg-fg), 0.6);
           line-height: 1.75; margin: 0 0 16px; font-size: 15px;
         }
         .lg-about-stats {
@@ -451,7 +461,7 @@ export default function Landing() {
           line-height: 1; margin-bottom: 6px;
         }
         .lg-about-stat-label {
-          color: rgba(255,255,255,0.5); font-size: 13px; max-width: 120px; line-height: 1.4;
+          color: rgba(var(--lg-fg), 0.5); font-size: 13px; max-width: 120px; line-height: 1.4;
         }
         .lg-about-values { display: flex; flex-direction: column; gap: 16px; }
         .lg-about-value-card { padding: 22px; }
@@ -469,15 +479,15 @@ export default function Landing() {
           padding: 5px 14px; border-radius: 999px;
         }
         .lg-beta-notice p {
-          color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.6; margin: 0;
+          color: rgba(var(--lg-fg), 0.6); font-size: 13px; line-height: 1.6; margin: 0;
         }
 
         /* ── Disclaimer ── */
         .lg-disclaimer { max-width: none; }
         .lg-disclaimer-text { max-width: 720px; margin: 0 auto; text-align: left; }
-        .lg-disclaimer-text p { color: rgba(255,255,255,0.5); font-size: 13px; line-height: 1.75; margin: 0 0 16px; }
+        .lg-disclaimer-text p { color: rgba(var(--lg-fg), 0.5); font-size: 13px; line-height: 1.75; margin: 0 0 16px; }
         .lg-disclaimer-note { font-style: italic; opacity: 0.7; }
-        .lg-legal-link { display: inline-block; color: #a78bfa; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
+        .lg-legal-link { display: inline-block; color: #F2872E; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
         .lg-legal-link:hover { text-decoration: underline; }
 
         /* ── CTA band ── */
@@ -495,19 +505,90 @@ export default function Landing() {
           justify-content: space-between;
           flex-wrap: wrap;
           gap: 16px;
-          color: rgba(255,255,255,0.4);
+          color: rgba(var(--lg-fg), 0.4);
           font-size: 13px;
           border-top: 1px solid rgba(255,255,255,0.08);
         }
         .lg-footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
-        .lg-footer-links a { color: rgba(255,255,255,0.4); text-decoration: none; }
-        .lg-footer-links a:hover { color: rgba(255,255,255,0.8); }
+        .lg-footer-links a { color: rgba(var(--lg-fg), 0.4); text-decoration: none; }
+        .lg-footer-links a:hover { color: var(--lg-fg-strong); }
 
         /* ── Language switcher overrides ── */
         .lg-page .language-switcher {
           background: rgba(255,255,255,0.08);
-          border-color: rgba(255,255,255,0.18);
-          color: rgba(255,255,255,0.8);
+          border-color: rgba(var(--lg-fg), 0.18);
+          color: rgba(var(--lg-fg), 0.8);
+        }
+
+        /* ── Light mode (prefers-color-scheme) ──
+           Same glass structure, inverted for legibility: dark text instead
+           of white, a much lighter backdrop wash so the hero photo reads
+           bright instead of moody, and warm-white glass surfaces so cards
+           still look like glass rather than plain white boxes. */
+        @media (prefers-color-scheme: light) {
+          .lg-page {
+            --lg-fg: 40,36,48;
+            --lg-fg-strong: #241f2e;
+            --lg-h1-grad: linear-gradient(135deg, #241f2e 35%, #C15F3C 75%, #EC4F18);
+            --lg-h2-grad: linear-gradient(135deg, #241f2e 45%, #C15F3C);
+            --lg-stat-grad: linear-gradient(135deg, #241f2e, #C15F3C);
+            background: #f4ede2;
+          }
+          .lg-page::before {
+            background:
+              linear-gradient(180deg, rgba(255,250,240,0.55) 0%, rgba(255,250,240,0.68) 55%, rgba(255,250,240,0.78) 100%),
+              url(${heroBg});
+            background-size: cover;
+            background-position: center 30%;
+            background-repeat: no-repeat;
+            filter: blur(2px) saturate(115%) brightness(1.02);
+          }
+          .lg-glass-card {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(36,31,46,0.14);
+            box-shadow: 0 8px 28px rgba(60,45,30,0.14), inset 0 1px 0 rgba(255,255,255,0.6);
+          }
+          .lg-glass-card:hover {
+            background: rgba(255,255,255,0.62);
+            box-shadow: 0 16px 40px rgba(60,45,30,0.18), inset 0 1px 0 rgba(255,255,255,0.7);
+          }
+          .lg-glass {
+            background: rgba(255,255,255,0.55);
+            border: 1px solid rgba(36,31,46,0.14);
+          }
+          .lg-header.scrolled {
+            background: rgba(255,250,240,0.72);
+            border-bottom: 1px solid rgba(36,31,46,0.1);
+            box-shadow: 0 4px 20px rgba(60,45,30,0.1);
+          }
+          .lg-section-alt {
+            background: rgba(36,31,46,0.04);
+            border-top: 1px solid rgba(36,31,46,0.1);
+            border-bottom: 1px solid rgba(36,31,46,0.1);
+          }
+          .lg-track-switch {
+            background: rgba(255,255,255,0.4);
+            border: 1px solid rgba(36,31,46,0.14);
+          }
+          .lg-btn-secondary {
+            background: rgba(255,255,255,0.45);
+            border: 1px solid rgba(36,31,46,0.18);
+          }
+          .lg-app-download {
+            background: rgba(255,255,255,0.4);
+            border: 1px solid rgba(36,31,46,0.14);
+          }
+          .lg-stat-pill {
+            background: rgba(255,255,255,0.4);
+            border: 1px solid rgba(36,31,46,0.14);
+          }
+          .lg-page .language-switcher {
+            background: rgba(255,255,255,0.4);
+            border-color: rgba(36,31,46,0.18);
+          }
+          .lg-footer {
+            border-top: 1px solid rgba(36,31,46,0.1);
+          }
         }
 
         /* ── Responsive ── */
@@ -694,7 +775,7 @@ export default function Landing() {
           </Link>
           <GlassCard className="lg-beta-notice">
             <div className="lg-beta-badge">{t('landing.betaBadge')}</div>
-            <p>{t('landing.betaNoticeP1')} <strong style={{ color: '#fff' }}>{t('landing.betaNoticeDays')}</strong> {t('landing.betaNoticeP2')}</p>
+            <p>{t('landing.betaNoticeP1')} <strong style={{ color: 'var(--lg-fg-strong)' }}>{t('landing.betaNoticeDays')}</strong> {t('landing.betaNoticeP2')}</p>
           </GlassCard>
         </div>
       </section>
