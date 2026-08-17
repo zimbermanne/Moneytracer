@@ -2260,12 +2260,7 @@ label {
   width: 32px;
   height: 32px;
   border-radius: var(--radius);
-  background: var(--accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+  display: block;
   box-shadow: var(--neu-accent-raised);
 }
 

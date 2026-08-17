@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import heroBg from '../assets/hero-bg.jpg'
+import logoMark from '../assets/logo-mark.png'
 
 /* ── Animated blob background ─────────────────────────────────────────────── */
 function BlobBackground() {
@@ -189,10 +190,8 @@ export default function Landing() {
         .lg-brand-mark {
           width: 36px; height: 36px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 900; font-size: 18px; color: #fff;
-          box-shadow: 0 4px 16px rgba(124,92,252,0.5);
+          display: block;
+          box-shadow: 0 4px 16px rgba(236,79,24,0.5);
         }
         .lg-brand-name {
           font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
@@ -212,12 +211,12 @@ export default function Landing() {
           font-weight: 600;
         }
         .lg-nav-cta {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6) !important;
+          background: linear-gradient(135deg, #EC4F18, #F2872E) !important;
           color: #fff !important;
           padding: 9px 20px;
           border-radius: 12px;
           font-weight: 700;
-          box-shadow: 0 4px 20px rgba(124,92,252,0.45);
+          box-shadow: 0 4px 20px rgba(236,79,24,0.45);
           transition: opacity 0.15s, transform 0.15s !important;
         }
         .lg-nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -236,8 +235,8 @@ export default function Landing() {
         .lg-hero-inner { max-width: 780px; margin: 0 auto; }
         .lg-hero-badge {
           display: inline-flex; align-items: center; gap: 8px;
-          background: rgba(124,92,252,0.2);
-          border: 1px solid rgba(124,92,252,0.4);
+          background: rgba(236,79,24,0.2);
+          border: 1px solid rgba(236,79,24,0.4);
           border-radius: 999px;
           padding: 6px 16px;
           font-size: 13px; font-weight: 600; color: #c4aaff;
@@ -246,8 +245,8 @@ export default function Landing() {
         }
         .lg-hero-badge-dot {
           width: 7px; height: 7px; border-radius: 50%;
-          background: #7c5cfc;
-          box-shadow: 0 0 8px #7c5cfc;
+          background: #EC4F18;
+          box-shadow: 0 0 8px #EC4F18;
           animation: lg-pulse 2s infinite;
         }
         @keyframes lg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.3)} }
@@ -257,7 +256,7 @@ export default function Landing() {
           font-weight: 900;
           line-height: 1.1;
           margin: 0 0 24px;
-          background: linear-gradient(135deg, #fff 30%, rgba(180,160,255,0.85) 70%, #7cf4ff);
+          background: linear-gradient(135deg, #fff 30%, rgba(255,196,140,0.9) 70%, #ffd699);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -292,9 +291,9 @@ export default function Landing() {
           transition: all 0.25s ease;
         }
         .lg-track-switch button.active {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: linear-gradient(135deg, #EC4F18, #F2872E);
           color: #fff;
-          box-shadow: 0 4px 16px rgba(124,92,252,0.45);
+          box-shadow: 0 4px 16px rgba(236,79,24,0.45);
         }
 
         /* ── CTA buttons ── */
@@ -304,18 +303,18 @@ export default function Landing() {
         }
         .lg-btn-primary {
           display: inline-flex; align-items: center; gap: 8px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: linear-gradient(135deg, #EC4F18, #F2872E);
           color: #fff;
           text-decoration: none;
           font-weight: 700; font-size: 16px;
           padding: 14px 32px;
           border-radius: 14px;
-          box-shadow: 0 6px 28px rgba(124,92,252,0.45);
+          box-shadow: 0 6px 28px rgba(236,79,24,0.45);
           transition: transform 0.15s, box-shadow 0.15s;
         }
         .lg-btn-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 36px rgba(124,92,252,0.55);
+          box-shadow: 0 12px 36px rgba(236,79,24,0.55);
           color: #fff;
         }
         .lg-btn-secondary {
@@ -396,7 +395,7 @@ export default function Landing() {
           font-size: clamp(1.8rem, 4vw, 2.8rem);
           font-weight: 900;
           margin: 0 0 14px;
-          background: linear-gradient(135deg, #fff 40%, rgba(180,160,255,0.8));
+          background: linear-gradient(135deg, #fff 40%, rgba(255,196,140,0.85));
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
           letter-spacing: -0.5px;
         }
@@ -447,7 +446,7 @@ export default function Landing() {
         }
         .lg-about-stat-value {
           font-size: 2.4rem; font-weight: 900;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: linear-gradient(135deg, #EC4F18, #F2872E);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
           line-height: 1; margin-bottom: 6px;
         }
@@ -465,7 +464,7 @@ export default function Landing() {
         }
         .lg-beta-badge {
           flex: 0 0 auto;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: linear-gradient(135deg, #EC4F18, #F2872E);
           color: #fff; font-size: 12px; font-weight: 700;
           padding: 5px 14px; border-radius: 999px;
         }
@@ -537,7 +536,7 @@ export default function Landing() {
       <header className={`lg-header${scrolled ? ' scrolled' : ''}`}>
         <div className="lg-header-inner">
           <Link to="/" className="lg-brand">
-            <div className="lg-brand-mark">M</div>
+            <img src={logoMark} alt="Moneytracer" className="lg-brand-mark" />
             <span className="lg-brand-name">Moneytracer</span>
           </Link>
           <nav className="lg-nav">
@@ -629,7 +628,7 @@ export default function Landing() {
               <div className="lg-feature-title">{t('landing.accountBusinessTitle')}</div>
               <div className="lg-feature-text">{t('landing.accountBusinessText')}</div>
             </GlassCard>
-            <GlassCard className="lg-feature-card" style={{ border: '1px solid rgba(124,92,252,0.45)', background: 'rgba(124,92,252,0.12)' }}>
+            <GlassCard className="lg-feature-card" style={{ border: '1px solid rgba(236,79,24,0.45)', background: 'rgba(236,79,24,0.12)' }}>
               <div className="lg-feature-icon">🌿</div>
               <div className="lg-feature-title">{t('landing.accountCommunityTitle')}</div>
               <div className="lg-feature-text">{t('landing.accountCommunityText')}</div>
