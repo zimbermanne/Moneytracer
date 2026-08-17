@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import heroBg from '../assets/hero-bg.jpg'
 
 /* ── Animated blob background ─────────────────────────────────────────────── */
 function BlobBackground() {
@@ -211,6 +212,15 @@ export default function Landing() {
           justify-content: center;
           text-align: center;
           padding: 120px 24px 80px;
+          /* Sahel dusk illustration (baobabs + mudbrick mosque), dark-washed
+             to match the page's dark theme so hero text stays legible while
+             the blob accents drift on top. */
+          background:
+            linear-gradient(rgba(10,10,26,0.78), rgba(10,10,26,0.88)),
+            url(${heroBg});
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
         }
         .lg-hero-inner { max-width: 780px; margin: 0 auto; }
         .lg-hero-badge {
