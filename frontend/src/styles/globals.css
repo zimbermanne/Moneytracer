@@ -3282,9 +3282,36 @@ label {
   }
   .btn-outline:hover { background: var(--surface-sunken); }
 
-  /* ── Login screen ── */
-  .login-screen { background: var(--cream); }
-  .login-screen::before { opacity: 0.12; }
+  /* ── App shell background — swap to dark hero image ── */
+  .app-shell {
+    background:
+      linear-gradient(rgba(10, 10, 20, 0.78), rgba(10, 10, 20, 0.78)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  /* ── Login screen — swap to dark hero image ── */
+  .login-screen {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.55), rgba(5, 8, 20, 0.55)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  /* ── Landing hero — swap to dark hero image ── */
+  .landing-hero {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.52), rgba(5, 8, 20, 0.52)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
   .login-card {
     background: rgba(26, 29, 39, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.08);
