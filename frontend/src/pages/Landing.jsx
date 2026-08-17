@@ -86,6 +86,25 @@ export default function Landing() {
           color: #fff;
           overflow-x: hidden;
           background: #0a0a1a;
+          position: relative;
+        }
+        /* Sahel dusk illustration as a fixed full-page backdrop (glassmorphism
+           reference style: one wallpaper behind every card/section, rather
+           than confined to the hero). Blurred + dark-washed so glass cards
+           read clearly on top at any scroll position. */
+        .lg-page::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          background:
+            linear-gradient(180deg, rgba(6,8,20,0.74) 0%, rgba(6,8,20,0.86) 55%, rgba(6,8,20,0.94) 100%),
+            url(${heroBg});
+          background-size: cover;
+          background-position: center 30%;
+          background-repeat: no-repeat;
+          filter: blur(2px) saturate(115%);
+          transform: scale(1.02);
         }
 
         /* ── Animated blob backdrop ── */
@@ -99,8 +118,8 @@ export default function Landing() {
         .lg-blob {
           position: absolute;
           border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.55;
+          filter: blur(90px);
+          opacity: 0.22;
           animation: lg-drift 18s ease-in-out infinite alternate;
         }
         .lg-blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, #6c3bfa, #3b1fa8); top: -150px; left: -100px; animation-duration: 20s; }
@@ -118,23 +137,24 @@ export default function Landing() {
 
         /* ── Glass surface utility ── */
         .lg-glass {
-          background: rgba(255,255,255,0.08);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border: 1px solid rgba(255,255,255,0.18);
+          background: rgba(255,255,255,0.10);
+          backdrop-filter: blur(28px) saturate(180%);
+          -webkit-backdrop-filter: blur(28px) saturate(180%);
+          border: 1px solid rgba(255,255,255,0.16);
         }
         .lg-glass-card {
-          background: rgba(255,255,255,0.07);
-          backdrop-filter: blur(20px) saturate(160%);
-          -webkit-backdrop-filter: blur(20px) saturate(160%);
-          border: 1px solid rgba(255,255,255,0.15);
-          border-radius: 20px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          background: rgba(255,255,255,0.09);
+          backdrop-filter: blur(22px) saturate(150%);
+          -webkit-backdrop-filter: blur(22px) saturate(150%);
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 18px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.16);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
         .lg-glass-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 16px 48px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.12);
+          box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.22);
         }
 
         /* ── Header ── */
@@ -212,15 +232,6 @@ export default function Landing() {
           justify-content: center;
           text-align: center;
           padding: 120px 24px 80px;
-          /* Sahel dusk illustration (baobabs + mudbrick mosque), dark-washed
-             to match the page's dark theme so hero text stays legible while
-             the blob accents drift on top. */
-          background:
-            linear-gradient(rgba(10,10,26,0.78), rgba(10,10,26,0.88)),
-            url(${heroBg});
-          background-size: cover;
-          background-position: center;
-          background-repeat: no-repeat;
         }
         .lg-hero-inner { max-width: 780px; margin: 0 auto; }
         .lg-hero-badge {
@@ -377,7 +388,7 @@ export default function Landing() {
           padding-left: 0; padding-right: 0;
         }
         .lg-section-alt {
-          background: rgba(255,255,255,0.03);
+          background: rgba(0,0,0,0.16);
           border-top: 1px solid rgba(255,255,255,0.08);
           border-bottom: 1px solid rgba(255,255,255,0.08);
         }
