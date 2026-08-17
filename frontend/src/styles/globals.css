@@ -879,12 +879,7 @@ label {
   width: 34px;
   height: 34px;
   border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
+  display: block;
   box-shadow: var(--neu-raised-sm);
 }
 
@@ -1428,14 +1423,7 @@ label {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
+  display: block;
   flex-shrink: 0;
   box-shadow: var(--neu-accent-raised);
 }

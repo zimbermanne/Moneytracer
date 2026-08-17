@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+import logoMark from '../assets/logo-mark.png'
 
 // Emoji fallback icon pack — used on MOBILE ONLY (drawer + bottom nav).
 // Phones get this instead of the animated-GIF pack because loading 30+
@@ -212,7 +213,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   return (
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
-        <div className="brand-logo">M</div>
+        <img src={logoMark} alt="Moneytracer" className="brand-logo" />
         <div className="brand-text links_name">Moneytracer</div>
       </div>
 

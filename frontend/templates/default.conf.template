@@ -13,6 +13,25 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # index.html is unhashed and references the current build's hashed
+    # asset filenames (e.g. index-<hash>.js). If a browser or intermediate
+    # cache holds onto a stale index.html, it keeps loading assets from a
+    # previous deploy indefinitely — this is what causes changes to appear
+    # "not applied" even after a successful redeploy. Force revalidation on
+    # every request for this one file.
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        expires 0;
+    }
+
+    # Hashed build assets (JS/CSS/images with a content hash in the
+    # filename) are safe to cache aggressively — a new deploy always
+    # produces a new filename, so there's no staleness risk.
+    location ~* \.(?:js|css|png|jpg|jpeg|webp|svg|woff2?|ttf|otf)$ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
     # SPA fallback: any path that isn't a real file goes to index.html
     # so client-side routing (react-router) handles it.
     location / {

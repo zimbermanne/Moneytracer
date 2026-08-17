@@ -239,7 +239,7 @@ export default function Landing() {
           border: 1px solid rgba(236,79,24,0.4);
           border-radius: 999px;
           padding: 6px 16px;
-          font-size: 13px; font-weight: 600; color: #c4aaff;
+          font-size: 13px; font-weight: 600; color: #ffb28f;
           margin-bottom: 28px;
           backdrop-filter: blur(8px);
         }
@@ -365,7 +365,7 @@ export default function Landing() {
         }
         .lg-stat-value {
           font-size: 2rem; font-weight: 900;
-          background: linear-gradient(135deg, #fff, #b4a0ff);
+          background: linear-gradient(135deg, #fff, #ffb28f);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
           line-height: 1;
         }
