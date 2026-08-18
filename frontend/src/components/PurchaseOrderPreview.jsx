@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
+import { downloadFile, openPdfForPrint } from '../utils/download.js'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -23,35 +24,14 @@ export default function PurchaseOrderPreview({ doc, company, onClose }) {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
 
-  const fetchPdfBlob = async () => {
-    const res = await fetch(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), { credentials: 'include' })
-    if (!res.ok) throw new Error('PDF generation failed')
-    return res.blob()
+  const pdfUrl = apiUrl(`/api/purchase-orders/${doc.id}/pdf`)
+
+  const handleExportPdf = () => {
+    downloadFile(pdfUrl, `PurchaseOrder-${doc.po_no}.pdf`)
   }
 
-  const handleExportPdf = async () => {
-    setError(''); setPdfLoading(true)
-    try {
-      const blob = await fetchPdfBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `PurchaseOrder-${doc.po_no}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) { setError(e.message) }
-    finally { setPdfLoading(false) }
-  }
-
-  const handlePrint = async () => {
-    setError(''); setPdfLoading(true)
-    try {
-      const blob = await fetchPdfBlob()
-      const url = URL.createObjectURL(blob)
-      const win = window.open(url, '_blank')
-      if (win) win.onload = () => { try { win.print() } catch {} }
-    } catch (e) { setError(e.message) }
-    finally { setPdfLoading(false) }
+  const handlePrint = () => {
+    openPdfForPrint(pdfUrl)
   }
 
   const handleSendEmail = async () => {

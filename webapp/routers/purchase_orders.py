@@ -91,8 +91,10 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     if not payload.items:
         raise HTTPException(status_code=400, detail="Purchase order must have at least one line item")
 
-    account = db.query(Account).filter(Account.id == account_id).first()
-    prefix = f"PO-{account.invoice_prefix}" if account and account.invoice_prefix else "PO"
+    # A dedicated "PO" prefix, not the account's invoice_prefix — combining
+    # them produced numbers like "PO-INV-0001", which reads like a typo.
+    # Purchase orders are numbered in their own sequence either way.
+    prefix = "PO"
 
     existing_count = db.query(PurchaseOrder).filter(PurchaseOrder.account_id == account_id).count()
     po_no = f"{prefix}-{existing_count + 1:04d}"
