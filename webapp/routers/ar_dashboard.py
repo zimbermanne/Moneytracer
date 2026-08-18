@@ -154,7 +154,23 @@ def ar_dashboard(
         key = i.paid_at.strftime("%Y-%m")
         if key in trend_totals:
             trend_totals[key] += i.total
-    paid_last_12_months = [{"month": m, "amount": trend_totals[m]} for m in months]
+
+    # Same rolling 12-month window, but every invoice raised (regardless of
+    # paid status) rather than only paid ones -- lets the trend chart show
+    # "raised vs collected" side by side instead of paid in isolation.
+    raised_q = _scoped(db, current_user).filter(Invoice.created_at >= twelve_months_ago)
+    if customer:
+        raised_q = raised_q.filter(Invoice.customer_name == customer)
+    raised_invoices = raised_q.all()
+    raised_totals = {m: 0.0 for m in months}
+    for i in raised_invoices:
+        key = i.created_at.strftime("%Y-%m")
+        if key in raised_totals:
+            raised_totals[key] += i.total
+
+    paid_last_12_months = [
+        {"month": m, "paid": trend_totals[m], "raised": raised_totals[m]} for m in months
+    ]
 
     return {
         "summary": summary,
