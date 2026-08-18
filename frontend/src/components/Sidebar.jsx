@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+import logoMark from '../assets/logo-mark.png'
 
 // Emoji fallback icon pack — used on MOBILE ONLY (drawer + bottom nav).
 // Phones get this instead of the animated-GIF pack because loading 30+
@@ -72,13 +73,11 @@ function buildNav(t) {
       ],
     },
     { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
-    { type: 'item', label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard', accountTypes: ['business', 'community'] },
     {
       type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business', 'community'],
       children: [
         { label: t('nav.purchasesLedger'), icon: 'purchases-ledger', path: '/app/purchases' },
         { label: t('nav.purchaseOrders'), icon: 'purchase-order', path: '/app/purchase-orders' },
-        { label: t('nav.suppliers'), icon: 'customers', path: '/app/suppliers' },
       ],
     },
     { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
@@ -154,10 +153,8 @@ export const PAGE_TITLE_KEYS = {
   '/app/sales': 'nav.salesHistory',
   '/app/customers': 'nav.customers',
   '/app/debtors': 'nav.clientsDebtors',
-  '/app/ar-dashboard': 'nav.arDashboard',
   '/app/purchases': 'nav.purchasesLedger',
   '/app/purchase-orders': 'nav.purchaseOrders',
-  '/app/suppliers': 'nav.suppliers',
   '/app/creditors': 'nav.creditorsLedger',
   '/app/invoices': 'nav.invoices',
   '/app/quotations': 'nav.quotations',
@@ -216,7 +213,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   return (
     <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
-        <div className="brand-logo">M</div>
+        <img src={logoMark} alt="Moneytracer" className="brand-logo" />
         <div className="brand-text links_name">Moneytracer</div>
       </div>
 

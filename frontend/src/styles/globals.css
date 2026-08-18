@@ -311,7 +311,7 @@ table {
 th, td {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 1px solid #ece7dc;
+  border-bottom: 1px solid var(--border);
 }
 
 th {
@@ -585,12 +585,12 @@ label {
   box-shadow: var(--neu-raised-sm);
 }
 
-.badge-paid, .badge-accepted, .badge-cash, .badge-active, .badge-received { background: var(--success-bg); color: var(--success); }
+.badge-paid, .badge-accepted, .badge-cash, .badge-active { background: var(--success-bg); color: var(--success); }
 .badge-partial, .badge-expired, .badge-mobile_money      { background: var(--warning-bg); color: var(--warning); }
-.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive, .badge-cancelled { background: var(--danger-bg); color: var(--danger); }
+.badge-unpaid, .badge-rejected, .badge-credit, .badge-inactive { background: var(--danger-bg); color: var(--danger); }
 .badge-sent, .badge-manager                               { background: var(--info-bg); color: var(--info); }
 .badge-draft, .badge-employee                             { background: var(--surface-sunken); color: var(--text-muted); }
-.badge-admin, .badge-approved                             { background: var(--accent-soft); color: var(--accent-hover); }
+.badge-admin                                              { background: var(--accent-soft); color: var(--accent-hover); }
 
 .modal-overlay {
   position: fixed;
@@ -879,12 +879,7 @@ label {
   width: 34px;
   height: 34px;
   border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
+  display: block;
   box-shadow: var(--neu-raised-sm);
 }
 
@@ -1040,24 +1035,23 @@ label {
    breakpoint below. Fixed to the viewport bottom with safe-area padding so
    it clears the home-indicator on notched iPhones instead of sitting under
    it. */
+/* ── Bottom nav: hidden on desktop, pill-rail on mobile ───────────────────
+   The rail uses a two-tap interaction: first tap expands the pill and
+   reveals the label; second tap on the same pill navigates. Tapping
+   outside collapses all pills. Logic lives in BottomNav.jsx. */
 .bottom-nav {
   display: none;
 }
 
 /* ---- MOBILE: main phone breakpoint (<=768px) --------------------------
    Sidebar -> slide-in drawer, hamburger + .mobile-topbar appear,
-   .desktop-topbar hides, and the .bottom-nav scrolling tab strip
-   appears fixed to the viewport bottom (with clearance so it never
-   overlaps the drawer's footer/logout row). This is the block to
-   edit for "how does the whole app frame look on a phone". */
+   .desktop-topbar hides, and the .bottom-nav pill-rail appears fixed
+   to the viewport bottom. */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
     top: 68px;
-    /* Leave room for the fixed bottom tab bar (its own height plus the
-       safe-area inset) so the drawer's last items and footer/logout button
-       never end up hidden behind it. */
-    bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px) + 10px);
+    bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 10px);
     left: 12px;
     height: auto;
     max-width: 80vw;
@@ -1068,13 +1062,8 @@ label {
   }
   .sidebar.mobile-open { transform: translateX(0); }
 
-  .hamburger {
-    display: block;
-  }
-
-  .mobile-topbar {
-    display: flex;
-  }
+  .hamburger { display: block; }
+  .mobile-topbar { display: flex; }
 
   .mobile-info-row {
     display: block;
@@ -1083,9 +1072,7 @@ label {
     z-index: 49;
   }
 
-  .desktop-topbar {
-    display: none;
-  }
+  .desktop-topbar { display: none; }
 
   .mobile-backdrop.open {
     display: block;
@@ -1095,83 +1082,151 @@ label {
     z-index: 55;
   }
 
-  /* While the drawer is open, hide the bottom tab bar entirely rather than
-     letting two fixed, overlapping bottom elements fight for the same
-     screen space — this is what caused menus to render on top of each
-     other and made the bottom of the drawer unreachable. */
-  .mobile-backdrop.open ~ .bottom-nav {
-    display: none;
-  }
+  /* Hide the rail while the drawer is open so they don't fight */
+  .mobile-backdrop.open ~ .bottom-nav { display: none; }
 
   .app-shell { flex-direction: column; padding: 0; gap: 0; }
 
-  /* Leave room at the bottom of the scrollable content so the fixed tab
-     bar never overlaps the last row of a form or table. */
+  /* Content padding so last table row / form field isn't hidden behind the rail */
   .main-content {
-    padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px));
   }
 
+  /* ── Rail shell ── */
   .bottom-nav {
-    display: flex;
+    display: block;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 58;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding: 0;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    /* Fade the page content up into the rail so it feels floating */
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, var(--surface) 55%, transparent);
   }
 
-  /* The actual scroller: every sidebar destination lives here in one row.
-     Scrolls horizontally instead of squeezing icons to fit, per the ask
-     to "cover all side menu icons, even if scrolling to see all". */
+  /* Fade-edge wrapper — soft vignette on left/right so
+     partially-visible pills look intentional, not clipped */
+  .bottom-nav-rail-outer {
+    position: relative;
+  }
+  .bottom-nav-rail-outer::before,
+  .bottom-nav-rail-outer::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 22px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .bottom-nav-rail-outer::before {
+    left: 0;
+    background: linear-gradient(to right, var(--surface), transparent);
+    border-radius: 999px 0 0 999px;
+  }
+  .bottom-nav-rail-outer::after {
+    right: 0;
+    background: linear-gradient(to left, var(--surface), transparent);
+    border-radius: 0 999px 999px 0;
+  }
+
+  /* ── Scrollable pill row ── */
   .bottom-nav-scroll {
     display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     width: 100%;
     overflow-x: auto;
+    scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* max(), not +, so the safe-area inset and the base padding don't
-       stack — stacking is what left a visible empty gap below the
-       labels on devices that already report a safe-area inset. */
-    padding: 6px 4px max(6px, env(safe-area-inset-bottom, 0px));
+    /* Frosted glass pill container */
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 999px;
+    padding: 8px;
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
   }
-
   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
 
+  /* ── Individual pill ── */
   .bottom-nav-item {
     flex: 0 0 auto;
-    width: 64px;
+    scroll-snap-align: start;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-height: 48px;
-    background: none;
+    gap: 0.55rem;
+    /* Collapsed: icon-only circle */
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
     border: none;
+    padding: 0 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     color: var(--text-muted);
-    font-size: 10px;
-    line-height: 1.2;
-    padding: 4px 2px;
-    border-radius: 10px;
+    font-family: var(--font-body);
+    /* Smooth expand */
+    transition:
+      width .38s cubic-bezier(.22, 1, .36, 1),
+      background .25s ease,
+      box-shadow .25s ease,
+      color .2s ease;
   }
 
+  /* First-tap expanded state */
+  .bottom-nav-item.is-open {
+    width: 152px;
+    background: rgba(255,255,255,0.13);
+    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.22);
+    color: var(--text-dark);
+  }
+
+  /* Active (current route) */
   .bottom-nav-item.active {
+    background: var(--accent-soft);
     color: var(--accent);
   }
-
-  .bottom-nav-icon {
-    font-size: 19px;
+  .bottom-nav-item.active.is-open {
+    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.3);
   }
 
+  /* ── Icon ── */
+  .bottom-nav-icon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  /* ── Label: hidden when collapsed, slides in when expanded ── */
   .bottom-nav-label {
-    max-width: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    opacity: 0;
+    max-width: 0;
     white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transform: translateX(-6px);
+    transition:
+      opacity .2s ease,
+      max-width .38s ease,
+      transform .28s ease;
+    overflow: hidden;
+  }
+  .bottom-nav-item.is-open .bottom-nav-label {
+    opacity: 1;
+    max-width: 110px;
+    transform: translateX(0);
   }
 
   /* Touch targets: anything tappable should meet the ~44px minimum touch
@@ -1368,14 +1423,7 @@ label {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
+  display: block;
   flex-shrink: 0;
   box-shadow: var(--neu-accent-raised);
 }
@@ -1654,7 +1702,7 @@ label {
 .form-row select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #d1c9b8;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   font-size: 14px;
   font-family: inherit;
@@ -1835,7 +1883,7 @@ label {
   align-items: flex-start;
   gap: 16px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #eee7d8;
+  border-bottom: 1px solid var(--border);
 }
 
 .doc-sheet-company {
@@ -1888,7 +1936,7 @@ label {
 
 .doc-sheet-items td {
   padding: 8px 10px;
-  border-bottom: 1px solid #f0ece1;
+  border-bottom: 1px solid var(--border);
 }
 
 .doc-sheet-totals {
@@ -1905,7 +1953,7 @@ label {
 }
 
 .doc-sheet-total-row {
-  border-top: 1px solid #e0ddd4;
+  border-top: 1px solid var(--border);
   margin-top: 6px;
   padding-top: 8px !important;
   font-weight: 700;
@@ -2200,12 +2248,7 @@ label {
   width: 32px;
   height: 32px;
   border-radius: var(--radius);
-  background: var(--accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+  display: block;
   box-shadow: var(--neu-accent-raised);
 }
 
@@ -3118,7 +3161,7 @@ label {
    just the landing-page URL -- rather than any amount/label text. */
 .receipt-small { font-size: 8.5px; }
 .receipt-hr {
-  border-top: 1px dashed #999;
+  border-top: 1px dashed var(--border-strong);
   margin: 6px 0;
 }
 .receipt-line { margin-bottom: 3px; }
@@ -3158,4 +3201,168 @@ label {
   .receipt-width-58 { width: 58mm; }
   .receipt-width-80 { width: 80mm; }
   @page { size: auto; margin: 2mm; }
+}
+
+/* ==========================================================================
+   DARK MODE OVERRIDES
+   Placed at the END of this file so they always win on source-order ties
+   with equal-specificity base rules. Design token overrides live in
+   design-tokens.css (loaded before this file). These rules handle cases
+   where the component uses hardcoded values, rgba compositing, or needs
+   a structurally different dark treatment (e.g. glass surfaces).
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+
+  /* ── Page base ── */
+  body { background: var(--cream); color: var(--text-dark); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  /* ── Modal ── */
+  .modal-backdrop { background: rgba(0, 0, 0, 0.65); }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-header {
+    border-bottom-color: var(--border);
+    background: var(--surface-sunken);
+  }
+  .modal-footer {
+    border-top-color: var(--border);
+    background: var(--surface-sunken);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--sidebar-bg);
+    border-right-color: var(--sidebar-border);
+  }
+  .sidebar-footer { background: var(--sidebar-footer-bg); border-top-color: var(--border); }
+
+  /* ── Topbar / mobile topbar ── */
+  .desktop-topbar,
+  .mobile-topbar {
+    background: var(--surface);
+    border-bottom-color: var(--border);
+  }
+
+  /* ── Tables ── */
+  .data-table th {
+    background: var(--surface-sunken);
+    border-bottom-color: var(--border-strong);
+    color: var(--text-muted);
+  }
+  .data-table td { border-bottom-color: var(--border); }
+  .data-table tr:hover td { background: var(--surface-sunken); }
+
+  /* ── Inputs & selects ── */
+  input, textarea, select {
+    background: var(--surface);
+    color: var(--text-dark);
+    border-color: var(--border-strong);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-faint); }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(212, 114, 79, 0.18);
+  }
+
+  /* ── Buttons ── */
+  .btn-outline {
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text-dark);
+  }
+  .btn-outline:hover { background: var(--surface-sunken); }
+
+  /* ── App shell background — swap to dark hero image ── */
+  .app-shell {
+    background:
+      linear-gradient(rgba(10, 10, 20, 0.78), rgba(10, 10, 20, 0.78)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  /* ── Login screen — swap to dark hero image ── */
+  .login-screen {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.55), rgba(5, 8, 20, 0.55)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  /* ── Landing hero — swap to dark hero image ── */
+  .landing-hero {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.52), rgba(5, 8, 20, 0.52)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  .login-card {
+    background: rgba(26, 29, 39, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .login-card h1 { color: var(--text-dark); }
+  .login-card .sub { color: var(--text-muted); }
+  .login-orb-glass {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ── Bottom nav (mobile pill rail) ── */
+  .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
+  .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
+  .bottom-nav-rail-outer::after  { background: linear-gradient(to left,  var(--cream), transparent); }
+  .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+  .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+  .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
+  .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
+
+  /* ── Badges ── */
+  .badge-paid    { background: var(--success-bg); color: var(--success); }
+  .badge-unpaid  { background: var(--danger-bg);  color: var(--danger);  }
+  .badge-partial { background: var(--warning-bg); color: var(--warning); }
+
+  /* ── Wizard ── */
+  .wizard-screen { background: var(--cream); }
+
+  /* ── DropdownMenu / RowActionsMenu ── */
+  .dropdown-menu {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+  .dropdown-menu button:hover { background: var(--surface-sunken); }
+
+  /* ── SearchBar ── */
+  .search-bar { background: var(--surface); border-color: var(--border-strong); }
+
+  /* ── Metric card ── */
+  .metric-card .label { color: var(--text-muted); }
+  .metric-card .value { color: var(--text-dark); }
+
+  /* ── Page header divider ── */
+  .page-header { border-bottom-color: var(--border); }
+
+  /* ── Recharts tooltips ── */
+  .recharts-tooltip-wrapper .recharts-default-tooltip {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-dark) !important;
+  }
 }
