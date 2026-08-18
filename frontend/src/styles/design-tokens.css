@@ -10,6 +10,18 @@
   /* ---- Layout ---- */
   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
 
+  /* ---- Glassmorphism ----
+     Shared tokens for the frosted-glass surfaces (.sidebar, .card,
+     .login-card, .modal, form inputs). Kept here rather than hardcoded
+     per-selector so the whole app's glass look-and-feel stays in sync from
+     one place. */
+  --glass-bg:         rgba(255, 255, 255, 0.12);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.20);
+  --glass-border:     rgba(255, 255, 255, 0.25);
+  --glass-blur:       blur(30px);
+  --glass-saturate:   saturate(190%);
+  --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
+
   /* ---- Core palette ---- */
   --cream:            #F7F4EE;   /* page background */
   --surface:          #FFFFFF;   /* cards, inputs, modals */
