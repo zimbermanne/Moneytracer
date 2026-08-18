@@ -32,6 +32,28 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
+    # ── API reverse proxy ──────────────────────────────────────────────
+    # Belt-and-suspenders: even if VITE_API_URL wasn't baked in at build
+    # time, any /api/* request from the browser gets forwarded to the
+    # backend service instead of falling through to the SPA index.html.
+    #
+    # BACKEND_URL must be set as an environment variable on the frontend
+    # Railway service, e.g.:
+    #   BACKEND_URL=https://adminwebappbackend-production.up.railway.app
+    #
+    # If it's not set, this block is silently skipped (the variable stays
+    # empty and nginx skips the proxy_pass). The primary fix is always
+    # VITE_API_URL at build time — this is just a safety net.
+    location /api/ {
+        proxy_pass        ${BACKEND_URL};
+        proxy_set_header  Host              $host;
+        proxy_set_header  X-Real-IP         $remote_addr;
+        proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header  X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header  Connection "";
+    }
+
     # SPA fallback: any path that isn't a real file goes to index.html
     # so client-side routing (react-router) handles it.
     location / {
