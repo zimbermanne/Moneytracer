@@ -122,6 +122,20 @@ button {
   background-repeat: no-repeat, no-repeat;
 }
 
+
+/* ── Soft ambient color blobs — give glass cards something to refract
+   on flat (non-photo) pages. Fixed so they stay put while content scrolls. ── */
+.app-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(70px);
+  z-index: 0;
+  pointer-events: none;
+}
+.app-blob-1 { width: 500px; height: 500px; top: -150px; right: -100px;  background: rgba(193, 95, 60, 0.14); }
+.app-blob-2 { width: 440px; height: 440px; bottom: -160px; left: -120px; background: rgba(76, 107, 138, 0.12); }
+.app-blob-3 { width: 360px; height: 360px; top: 38%; right: 18%;        background: rgba(107, 143, 94, 0.10); }
+
 .main-content {
   flex: 1;
   display: flex;
@@ -3257,15 +3271,28 @@ label {
 
   /* ── Cards ── */
   .card {
-    background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(48px) saturate(180%);
-    -webkit-backdrop-filter: blur(48px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background:
+      linear-gradient(135deg,
+        rgba(255,255,255,0.10) 0%,
+        rgba(255,255,255,0.04) 40%,
+        rgba(255,255,255,0.02) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     box-shadow:
-      0 4px 20px rgba(0, 0, 0, 0.22),
-      inset 0 1.5px 0 rgba(255, 255, 255, 0.07),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+      0 12px 32px rgba(0, 0, 0, 0.30),
+      0 2px 8px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
   }
+  .card::before {
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(255,255,255,0.12),
+      transparent);
+  }
+  .app-blob-1 { background: rgba(193, 95, 60, 0.10); }
+  .app-blob-2 { background: rgba(76, 107, 138, 0.09); }
+  .app-blob-3 { background: rgba(107, 143, 94, 0.08); }
 
   /* ── Modal ── */
   .modal-backdrop { background: rgba(0, 0, 0, 0.45); }

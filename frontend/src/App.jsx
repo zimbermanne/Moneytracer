@@ -91,6 +91,10 @@ function Layout({ children }) {
 
   return (
     <div className="app-shell">
+      {/* Ambient color blobs — give glass cards something to refract on flat pages */}
+      <div className="app-blob app-blob-1" aria-hidden="true" />
+      <div className="app-blob app-blob-2" aria-hidden="true" />
+      <div className="app-blob app-blob-3" aria-hidden="true" />
       <MobileTopBar
         title={pageTitle(location.pathname, t)}
         open={mobileOpen}
