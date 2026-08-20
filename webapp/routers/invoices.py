@@ -294,7 +294,6 @@ def update_status(invoice_id: int, status: DocumentStatus,
 
     inv.status = status
     if status == DocumentStatus.paid and not inv.converted_to_sale:
-        inv.paid_at = datetime.utcnow()
         sales = _convert_invoice_to_sales(db, inv, current_user)
         log_activity_for_user(
             db, current_user, "invoice_paid",

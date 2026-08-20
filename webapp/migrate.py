@@ -83,19 +83,11 @@ _SCHEMA_MIGRATIONS = {
         # correct even for ones that were already paid before this feature
         # shipped — see the backfill note in update_status().
         ("converted_to_sale", "BOOLEAN", "false"),
-        # See models.Invoice.paid_at — needed to correctly net a paid
-        # invoice's balance out of the customer statement.
-        ("paid_at", "TIMESTAMP", None),
     ],
     ("business", "invoice_items"): [
         # Optional link to inventory so a paid invoice can decrement stock
         # and record a proper Sale against the item it actually sold.
         ("item_id", "INTEGER", None),
-    ],
-    ("business", "customers"): [
-        # Customer Center: email alongside the existing phone/address/TIN
-        # contact fields.
-        ("email", "VARCHAR(150)", "''"),
     ],
 }
 

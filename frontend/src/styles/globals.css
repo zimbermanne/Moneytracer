@@ -165,115 +165,6 @@ button {
   margin-bottom: 20px;
 }
 
-/* ---------- Dashboard metric carousel (MOBILE ONLY) ---------------------
-   Gives each metric its own full-width "card" to breathe in, instead of
-   squeezing into the stacked .card-grid boxes on a narrow phone screen.
-   Desktop keeps .card-grid — see the display toggles in the max/min-width
-   768px blocks further down. Both markups render; CSS picks one. */
-.dashboard-carousel { margin-bottom: 8px; }
-
-.carousel-section-label {
-  padding: 4px 2px 10px;
-  font-size: 12.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--text-muted);
-}
-
-.metric-carousel-wrap { position: relative; }
-
-.metric-carousel {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 2px 2px 6px;
-  margin: 0 -2px;
-}
-.metric-carousel::-webkit-scrollbar { display: none; }
-
-.metric-card {
-  flex: 0 0 82%;
-  scroll-snap-align: center;
-  border-radius: 18px;
-  padding: 20px 18px;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.metric-card.tone-blue    { background: linear-gradient(135deg, #4f7cff, #2f4fd6); }
-.metric-card.tone-green   { background: linear-gradient(135deg, #34c07a, #1c8f57); }
-.metric-card.tone-orange  { background: linear-gradient(135deg, #ff9f4f, #e0722f); }
-.metric-card.tone-red     { background: linear-gradient(135deg, #ff6b6b, #d63a3a); }
-.metric-card.tone-navy    { background: linear-gradient(135deg, #2c3555, #171d33); }
-.metric-card.tone-purple  { background: linear-gradient(135deg, #8a63ff, #5b34d6); }
-
-.metric-card::after {
-  content: '';
-  position: absolute;
-  right: -30px; top: -30px;
-  width: 140px; height: 140px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-}
-
-.metric-badge {
-  align-self: flex-start;
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(6px);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  position: relative;
-  z-index: 1;
-}
-
-.metric-label { font-size: 13px; opacity: 0.85; margin-top: 12px; position: relative; z-index: 1; }
-.metric-value { font-size: 26px; font-weight: 800; margin-top: 4px; line-height: 1.15; word-break: break-word; position: relative; z-index: 1; }
-.metric-sub { font-size: 11.5px; opacity: 0.75; margin-top: 6px; position: relative; z-index: 1; }
-
-.carousel-dots { display: flex; justify-content: center; gap: 6px; padding: 8px 0 2px; }
-.carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.2s ease; }
-.carousel-dot.active { width: 18px; border-radius: 4px; background: var(--accent); }
-
-.carousel-arrow {
-  display: none;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(20,30,50,0.12);
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 15px;
-  color: var(--text-dark);
-  z-index: 5;
-}
-.carousel-arrow.prev { left: 2px; }
-.carousel-arrow.next { right: 2px; }
-/* Only offer arrows to devices that actually have a precise pointer —
-   a touch phone already has swipe, so arrows would just be visual noise. */
-@media (hover: hover) and (pointer: fine) {
-  .carousel-arrow { display: flex; }
-}
-
-/* Mobile-first default: carousel visible, desktop grid hidden. Flipped
-   back at 769px+ in the existing min-width block further down. */
-.dashboard-grid-desktop { display: none; }
-
 .metric-card .label {
   font-size: 13px;
   color: var(--text-muted);
@@ -283,14 +174,6 @@ button {
 .metric-card .value {
   font-size: 24px;
   font-weight: 700;
-  /* .metric-card defaults to white text (color:#fff) for the mobile
-     gradient carousel cards (tone-blue/green/etc). The plain desktop
-     grid version has no tone class, so it falls back to .card's
-     near-white background — meaning without this override the value
-     text is effectively invisible (white on white). Force it black here;
-     doesn't affect the mobile carousel, which uses the separate
-     .metric-value class, not this one. */
-  color: #000;
 }
 
 /* Scoped to the Home dashboard only (not every metric-card app-wide) —
@@ -711,15 +594,8 @@ label {
 .customer-detail-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.customer-detail-header h2 {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Back button only makes sense in the single-column mobile layout, where
@@ -751,14 +627,13 @@ label {
 .success-text { color: var(--success); font-size: 13px; margin-top: 6px; }
 
 /* ---------- Sidebar (floating panel) ----------------------------------
-   Base rules here are the safe, MOBILE-FIRST layout: full width, full
-   labels always visible — exactly how the slide-in drawer should look
-   on a phone (no hover exists on touch, so nothing here should depend
-   on it). The collapsed icon-rail + hover-to-expand behaviour is
-   DESKTOP-ONLY and lives in the min-width:769px block further below,
-   so it can never leak onto mobile via selector specificity/ordering. */
+   Base rules here are the DESKTOP layout (fixed floating panel, sticky).
+   On phones this same .sidebar class gets turned into a slide-in drawer —
+   see the "MOBILE: main phone breakpoint" block further down. */
 .sidebar {
-  width: 260px;
+  width: 240px;
+  max-width: 22vw;
+  min-width: 200px;
   flex-shrink: 0;
   position: sticky;
   top: 16px;
@@ -773,8 +648,7 @@ label {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.25s ease, max-width 0.25s ease;
-  z-index: 40;
+  transition: width 0.25s ease;
 }
 
 .sidebar-brand {
@@ -783,97 +657,6 @@ label {
   gap: 10px;
   padding: 20px 16px 14px;
 }
-
-.menu-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  font-size: 17px;
-  line-height: 1;
-}
-/* Mobile-first default: emoji only, GIF never renders/downloads. */
-.menu-icon-gif { display: none; }
-.menu-icon-emoji { display: inline; }
-
-.sidebar .links_name {
-  opacity: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: opacity 0.2s ease, width 0.2s ease;
-}
-
-.sidebar-footer { padding: 12px 16px; }
-
-/* ---------- DESKTOP-ONLY: collapse-to-icons + hover-to-expand ----------
-   Everything below only ever applies at >=769px, so touch devices are
-   completely unaffected — no hover pseudo-class guesswork on mobile. */
-@media (min-width: 769px) {
-  /* Dashboard: desktop keeps the plain metric grid, the swipeable
-     carousel is mobile-only (see .dashboard-carousel above). */
-  .dashboard-carousel { display: none; }
-  .dashboard-grid-desktop { display: grid; }
-
-  /* Desktop swaps to the animated-GIF icon pack; emoji fallback (mobile)
-     is hidden here so only one icon renders per item. */
-  .menu-icon-gif {
-    display: block;
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    border-radius: 4px;
-  }
-  .menu-icon-emoji { display: none; }
-
-  .sidebar {
-    width: 68px;
-    min-width: 68px;
-    max-width: 68px;
-  }
-
-  .sidebar:hover {
-    width: 240px;
-    max-width: 240px;
-  }
-
-  .sidebar-brand {
-    padding: 20px 0 14px;
-    justify-content: center;
-    transition: padding 0.2s ease, justify-content 0.2s ease;
-  }
-  .sidebar:hover .sidebar-brand { padding: 20px 16px 14px; justify-content: flex-start; }
-
-  .sidebar .menu-item,
-  .sidebar .group-header { justify-content: center; }
-  .sidebar:hover .menu-item,
-  .sidebar:hover .group-header { justify-content: flex-start; }
-
-  .sidebar .links_name {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .sidebar:hover .links_name {
-    opacity: 1;
-    width: auto;
-    pointer-events: auto;
-  }
-
-  .sidebar-footer { justify-content: center; padding: 12px 8px; }
-  .sidebar:hover .sidebar-footer { justify-content: flex-start; padding: 12px 16px; }
-
-  /* Sub-menu items never show while collapsed, even if previously
-     toggled open, so there's nothing orphaned in icon-only mode. */
-  .sidebar:not(:hover) .group-children { max-height: 0 !important; }
-}
-
-/* Sub-menu items never show while collapsed, even if previously toggled
-   open, so there's nothing orphaned in icon-only mode. */
-.sidebar:not(:hover) .group-children { max-height: 0 !important; }
 
 .brand-logo {
   width: 34px;
@@ -959,7 +742,6 @@ label {
 .avatar {
   width: 34px;
   height: 34px;
-  flex-shrink: 0;
   border-radius: 50%;
   background: var(--navy);
   color: #fff;
@@ -1133,10 +915,7 @@ label {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* max(), not +, so the safe-area inset and the base padding don't
-       stack — stacking is what left a visible empty gap below the
-       labels on devices that already report a safe-area inset. */
-    padding: 6px 4px max(6px, env(safe-area-inset-bottom, 0px));
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
   }
 
   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
@@ -1295,8 +1074,10 @@ label {
    Sidebar stays a fixed side panel (not a drawer yet) but narrows, and
    sidebar text shrinks slightly so labels don't wrap. */
 @media (min-width: 769px) and (max-width: 1100px) {
-  .sidebar { width: 68px; min-width: 68px; max-width: 68px; }
-  .sidebar:hover { width: 190px; max-width: 190px; }
+  .sidebar {
+    width: 190px;
+    min-width: 170px;
+  }
   .brand-text { font-size: 14px; }
   .menu-item, .group-header { font-size: 12.5px; }
 }
@@ -2702,62 +2483,6 @@ label {
   line-height: var(--leading-loose);
   font-size: var(--text-sm);
   margin: 0 0 10px;
-}
-
-.legal-clause ul {
-  margin: 0 0 10px;
-  padding-left: 20px;
-  color: var(--text-muted);
-  line-height: var(--leading-loose);
-  font-size: var(--text-sm);
-}
-
-.legal-clause li {
-  margin-bottom: 6px;
-}
-
-/* Document switcher — separate from the language switcher below it, since
-   only the original beta disclaimer is translated so far. */
-.legal-doc-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.legal-doc-tab {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: var(--text-sm);
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
-}
-
-.legal-doc-tab:hover {
-  background: var(--surface-sunken);
-}
-
-.legal-doc-tab.active {
-  background: var(--navy);
-  color: #fff;
-  border-color: var(--navy);
-}
-
-.legal-draft-notice {
-  display: inline-block;
-  background: var(--warning-bg);
-  color: var(--warning);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  margin-bottom: 24px;
 }
 
 .landing-cta-band {

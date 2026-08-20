@@ -71,7 +71,6 @@ class ResetPasswordConfirmRequest(BaseModel):
 class CustomerCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
-    email: Optional[str] = ""
     address: Optional[str] = ""
     tin_number: Optional[str] = ""
     notes: Optional[str] = ""
@@ -80,7 +79,6 @@ class CustomerCreate(BaseModel):
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[str] = None
     address: Optional[str] = None
     tin_number: Optional[str] = None
     notes: Optional[str] = None
@@ -91,7 +89,6 @@ class CustomerOut(BaseModel):
     id: int
     name: str
     phone: str
-    email: str = ""
     address: str
     tin_number: str
     notes: str
@@ -564,19 +561,11 @@ class CustomerMonthlyIncome(BaseModel):
 
 
 class CustomerProfile(BaseModel):
-    customer_id: int
     customer_name: str
     phone: str = ""
-    email: str = ""
     address: str = ""
     tin: str = ""
     vrn: str = ""
-    notes: str = ""
-    # Credit vs debit at a glance: total_purchased is what the business has
-    # earned from this customer (Sale totals); outstanding_receivables is
-    # what the customer still owes (unpaid Debtor balance) — see
-    # routers/customers.py customer_profile() for how each is computed.
-    total_purchased: float = 0
     outstanding_receivables: float
     income_last_6_months: List[CustomerMonthlyIncome]
     total_income_last_6_months: float

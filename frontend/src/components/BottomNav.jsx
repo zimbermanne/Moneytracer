@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
-import { buildFlatNav, EMOJI_ICONS } from './Sidebar.jsx'
+import { buildFlatNav } from './Sidebar.jsx'
 
 // MOBILE ONLY: the fixed bottom tab strip shown on phones. The .bottom-nav
 // class is display:none by default (desktop) and only switched on inside
@@ -35,7 +35,7 @@ export default function BottomNav({ onMore }) {
               className={`bottom-nav-item ${active ? 'active' : ''}`}
               onClick={() => guardedNavigate(item.path)}
             >
-              <span className="bottom-nav-icon">{EMOJI_ICONS[item.icon] || '•'}</span>
+              <span className="bottom-nav-icon">{item.icon}</span>
               <span className="bottom-nav-label">{item.label}</span>
             </button>
           )

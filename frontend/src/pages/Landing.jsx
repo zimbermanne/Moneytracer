@@ -207,9 +207,6 @@ export default function Landing() {
         <div className="landing-footer-links">
           <Link to="/login">{t('landing.logInLink')}</Link>
           <Link to="/register">{t('landing.signUpLink')}</Link>
-          <Link to="/legal/tos">Terms of Service</Link>
-          <Link to="/legal/privacy">Privacy Policy</Link>
-          <Link to="/legal/refund">Refund Policy</Link>
           <a href="https://instagram.com/zimbermanne_studios" target="_blank" rel="noopener noreferrer">Instagram</a>
           <a href="https://facebook.com/moneytracer" target="_blank" rel="noopener noreferrer">Facebook</a>
         </div>

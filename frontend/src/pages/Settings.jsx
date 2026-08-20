@@ -185,18 +185,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Legal & policies — opens the public /legal pages in a new tab */}
-      <div className="card" style={{ marginTop: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Legal & Policies</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px', fontSize: 13 }}>
-          <a href="/legal/tos" target="_blank" rel="noopener noreferrer">Terms of Service</a>
-          <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-          <a href="/legal/dpa" target="_blank" rel="noopener noreferrer">Data Processing Agreement</a>
-          <a href="/legal/refund" target="_blank" rel="noopener noreferrer">Refund Policy</a>
-          <a href="/legal/msa" target="_blank" rel="noopener noreferrer">Master Service Agreement</a>
-        </div>
-      </div>
-
       {/* Account settings — only for regular admins (not superadmin) */}
       {isAdmin && !isSuperadmin && account && (
         <div className="card" style={{ marginTop: 4 }}>

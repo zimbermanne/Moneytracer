@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
-import { EXTRA_LEGAL_DOCS } from './legalDocsContent.js'
+import { Link } from 'react-router-dom'
 
 const CONTENT = {
   en: {
@@ -536,52 +535,12 @@ const CONTENT = {
   },
 }
 
-// Docs available on this page. "disclaimer" is the original multi-language
-// beta Terms of Use; the rest are the new policy set (English only for now
-// — translate later once the wording is finalized, not before).
-const DOC_TABS = [
-  { key: 'disclaimer', label: 'Terms of Use & Disclaimer' },
-  { key: 'tos', label: 'Terms of Service' },
-  { key: 'privacy', label: 'Privacy Policy' },
-  { key: 'dpa', label: 'Data Processing Agreement' },
-  { key: 'refund', label: 'Refund Policy' },
-  { key: 'msa', label: 'Master Service Agreement' },
-]
-
-function ExtraDoc({ doc }) {
-  return (
-    <>
-      <h1>{doc.title}</h1>
-      <p className="legal-updated">{doc.updated}</p>
-      <p className="legal-draft-notice">
-        Draft — under review. This page will be finalized before general availability.
-      </p>
-      <div className="legal-body">
-        {doc.sections.map((s) => (
-          <div key={s.h} className="legal-clause">
-            <h3>{s.h}</h3>
-            {s.p.map((para, i) => <p key={i}>{para}</p>)}
-            {s.list && (
-              <ul>
-                {s.list.map((item, i) => <li key={i}>{item}</li>)}
-              </ul>
-            )}
-          </div>
-        ))}
-      </div>
-    </>
-  )
-}
-
 export default function Legal() {
   const [lang, setLang] = useState('en')
-  const { doc: docParam } = useParams()
-  const navigate = useNavigate()
-  const activeDoc = docParam && DOC_TABS.some((d) => d.key === docParam) ? docParam : 'disclaimer'
   const c = CONTENT[lang]
 
   return (
-    <div className="landing-page" dir={activeDoc === 'disclaimer' && lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="landing-page" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="landing-header">
         <div className="landing-header-inner">
           <Link to="/" className="landing-brand">
@@ -596,51 +555,33 @@ export default function Legal() {
       </header>
 
       <section className="landing-section legal-section">
-        <div className="legal-doc-tabs">
-          {DOC_TABS.map((d) => (
+        <div className="legal-lang-switch">
+          {Object.entries(CONTENT).map(([key, val]) => (
             <button
-              key={d.key}
-              className={`legal-doc-tab${activeDoc === d.key ? ' active' : ''}`}
-              onClick={() => navigate(d.key === 'disclaimer' ? '/legal' : `/legal/${d.key}`)}
+              key={key}
+              className={`legal-lang-btn${lang === key ? ' active' : ''}`}
+              onClick={() => setLang(key)}
             >
-              {d.label}
+              {val.label}
             </button>
           ))}
         </div>
 
-        {activeDoc === 'disclaimer' ? (
-          <>
-            <div className="legal-lang-switch">
-              {Object.entries(CONTENT).map(([key, val]) => (
-                <button
-                  key={key}
-                  className={`legal-lang-btn${lang === key ? ' active' : ''}`}
-                  onClick={() => setLang(key)}
-                >
-                  {val.label}
-                </button>
+        <h1>{c.title}</h1>
+        <p className="legal-updated">{c.updated}</p>
+
+        <div className="legal-body">
+          {c.sections.map((s) => (
+            <div key={s.h} className="legal-clause">
+              <h3>{s.h}</h3>
+              {s.p.map((para, i) => (
+                <p key={i}>{para}</p>
               ))}
             </div>
+          ))}
+        </div>
 
-            <h1>{c.title}</h1>
-            <p className="legal-updated">{c.updated}</p>
-
-            <div className="legal-body">
-              {c.sections.map((s) => (
-                <div key={s.h} className="legal-clause">
-                  <h3>{s.h}</h3>
-                  {s.p.map((para, i) => (
-                    <p key={i}>{para}</p>
-                  ))}
-                </div>
-              ))}
-            </div>
-
-            <p className="landing-disclaimer-note">{c.footerNote}</p>
-          </>
-        ) : (
-          <ExtraDoc doc={EXTRA_LEGAL_DOCS[activeDoc]} />
-        )}
+        <p className="landing-disclaimer-note">{c.footerNote}</p>
       </section>
 
       <footer className="landing-footer">
@@ -648,9 +589,6 @@ export default function Legal() {
         <div className="landing-footer-links">
           <Link to="/login">Log in</Link>
           <Link to="/register">Sign up</Link>
-          <Link to="/legal/tos">Terms of Service</Link>
-          <Link to="/legal/privacy">Privacy Policy</Link>
-          <Link to="/legal/refund">Refund Policy</Link>
           <a href="https://instagram.com/zimbermanne_studios" target="_blank" rel="noopener noreferrer">Instagram</a>
           <a href="https://facebook.com/moneytracer" target="_blank" rel="noopener noreferrer">Facebook</a>
         </div>
