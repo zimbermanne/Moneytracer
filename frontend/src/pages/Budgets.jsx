@@ -1,91 +1,19 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
-import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 const currentYear = new Date().getFullYear()
 
-/**
- * Maps budget categories to actual spending from expenses and payroll.
- */
-export function calculateActualSpending(budget, expenses, payroll, purchases) {
-  let total = 0
-  const { category, period_type, year, month, quarter } = budget
-  const catLower = category.toLowerCase()
-
-  // Helper to check if a date string matches the budget period
-  const isPeriodMatch = (dateStr) => {
-    if (!dateStr) return false
-    const d = new Date(dateStr)
-    if (d.getFullYear() !== year) return false
-
-    if (period_type === 'monthly') {
-      return d.getMonth() + 1 === month
-    }
-    if (period_type === 'quarterly') {
-      const q = Math.floor(d.getMonth() / 3) + 1
-      return q === quarter
-    }
-    return true // yearly
-  }
-
-  // 1. Match from Expenses
-  const matchingExpenses = expenses.filter(e =>
-    e.category.toLowerCase() === catLower && isPeriodMatch(e.created_at)
-  )
-  total += matchingExpenses.reduce((sum, e) => sum + e.amount, 0)
-
-  // 2. Match from Purchases (Inventory)
-  // Check if category is "Inventory" or "Purchases"
-  if (catLower.includes('inventory') || catLower.includes('purchase')) {
-    const matchingPurchases = purchases.filter(p => isPeriodMatch(p.created_at))
-    total += matchingPurchases.reduce((sum, p) => sum + p.total, 0)
-  }
-
-  // 3. Match from Payroll
-  if (catLower.includes('salaries') || catLower.includes('payroll') || catLower.includes('wages')) {
-    const matchingPayroll = payroll.filter(p => isPeriodMatch(p.pay_date))
-    total += matchingPayroll.reduce((sum, p) => sum + p.net_pay, 0)
-  }
-
-  return total
-}
-
-export function BudgetProgressBar({ budgeted, actual }) {
-  const percentage = budgeted > 0 ? Math.min(Math.round((actual / budgeted) * 100), 100) : 0
-
-  let barColor = '#2e7d32' // Green (< 80%)
-  if (percentage >= 80 && percentage < 100) barColor = '#ed6c02' // Orange (Near limit)
-  if (actual > budgeted) barColor = '#d32f2f' // Red (Over budget)
-
-  return (
-    <div style={{ minWidth: '120px' }}>
-      <div style={{ width: '100%', backgroundColor: 'var(--border)', borderRadius: '4px', overflow: 'hidden', height: '8px', marginBottom: '4px' }}>
-        <div style={{ width: `${percentage}%`, backgroundColor: barColor, height: '100%', transition: 'width 0.3s ease' }} />
-      </div>
-      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-        <span>{percentage}% utilized</span>
-        {actual > budgeted && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>OVER</span>}
-      </div>
-    </div>
-  )
-}
-
 const emptyForm = () => ({
-  period_type: 'monthly', year: currentYear, month: new Date().getMonth() + 1, quarter: '', category: '', budgeted_amount: '',
+  period_type: 'monthly', year: currentYear, month: '', quarter: '', category: '', budgeted_amount: '',
 })
 
 export default function Budgets() {
   const api = useApi()
   const [budgets, setBudgets] = useState([])
-  const [expenses, setExpenses] = useState([])
-  const [payroll, setPayroll] = useState([])
-  const [purchases, setPurchases] = useState([])
-  const [reminders, setReminders] = useState([])
-
   const [error, setError] = useState('')
   const [listLoading, setListLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -93,68 +21,16 @@ export default function Budgets() {
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
   const [yearFilter, setYearFilter] = useState(currentYear)
-  const [periodTypeFilter, setPeriodTypeFilter] = useState('all') // 'all' | 'monthly' | 'yearly'
-
-  const loadReminders = () => {
-    api.get('/reminders/').then(data => {
-      const map = new Map();
-      const result = [];
-      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
-      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
-      data.forEach(r => {
-        const loanMatch = r.text.match(loanRegex);
-        const invMatch = r.text.match(invoiceRegex);
-        if (loanMatch || invMatch) {
-          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
-          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
-          const existing = map.get(entity);
-          if (!existing || days > existing.days) map.set(entity, { id: r.id, days, record: r });
-        } else { result.push(r); }
-      });
-      setReminders([...result, ...Array.from(map.values()).map(v => v.record)]);
-    }).catch(() => {})
-  }
-
-  const dismissReminder = (id) => {
-    setReminders((prev) => prev.filter((r) => r.id !== id))
-    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
-  }
 
   const load = () => {
     setListLoading(true)
-    Promise.all([
-      api.get(`/approvals/budgets?year=${yearFilter}`),
-      api.get('/expenses/'),
-      api.get('/payroll/payslips'),
-      api.get('/purchases/'),
-    ])
-      .then(([b, e, p, pur]) => {
-        setBudgets(b)
-        setExpenses(e)
-        setPayroll(p)
-        setPurchases(pur)
-      })
+    api.get(`/approvals/budgets?year=${yearFilter}`)
+      .then(setBudgets)
       .catch((e) => setError(e.message))
       .finally(() => setListLoading(false))
   }
 
-  useEffect(() => {
-    load()
-    loadReminders()
-  }, [yearFilter]) // eslint-disable-line
-
-  const enrichedBudgets = useMemo(() => {
-    return budgets.map(b => {
-      const actual = calculateActualSpending(b, expenses, payroll, purchases)
-      const variance = b.budgeted_amount - actual
-      let status = 'Within Budget'
-      const pct = (actual / b.budgeted_amount) * 100
-      if (pct > 100) status = 'Over Budget'
-      else if (pct >= 80) status = 'Near Limit'
-
-      return { ...b, actual_calculated: actual, variance_calculated: variance, status_label: status }
-    }).filter(b => periodTypeFilter === 'all' || b.period_type === periodTypeFilter)
-  }, [budgets, expenses, payroll, purchases, periodTypeFilter])
+  useEffect(() => { load() }, [yearFilter]) // eslint-disable-line
 
   const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
   const openEdit = (b) => {
@@ -192,8 +68,8 @@ export default function Budgets() {
     try { await api.del(`/approvals/budgets/${b.id}`); load() } catch (e) { alert(e.message) }
   }
 
-  const totalBudgeted = enrichedBudgets.reduce((s, b) => s + (Number(b.budgeted_amount) || 0), 0)
-  const totalActual = enrichedBudgets.reduce((s, b) => s + (Number(b.actual_calculated) || 0), 0)
+  const totalBudgeted = budgets.reduce((s, b) => s + (Number(b.budgeted_amount) || 0), 0)
+  const totalActual = budgets.reduce((s, b) => s + (Number(b.actual_amount) || 0), 0)
 
   const periodLabel = (b) => {
     if (b.period_type === 'monthly' && b.month) return `${b.year}-${String(b.month).padStart(2, '0')}`
@@ -205,32 +81,21 @@ export default function Budgets() {
     { key: 'category', header: 'Category', render: (b) => <strong>{b.category}</strong> },
     { key: 'period', header: 'Period', render: (b) => periodLabel(b) },
     { key: 'budgeted_amount', header: 'Budgeted', render: (b) => money(b.budgeted_amount) },
-    { key: 'actual_amount', header: 'Actual', render: (b) => money(b.actual_calculated) },
+    { key: 'actual_amount', header: 'Actual', render: (b) => money(b.actual_amount) },
     {
       key: 'variance', header: 'Variance',
       render: (b) => (
-        <span style={{ color: b.variance_calculated < 0 ? 'var(--danger)' : 'var(--success, #16a34a)' }}>
-          {money(b.variance_calculated)}
+        <span style={{ color: b.variance < 0 ? 'var(--danger)' : 'var(--success, #16a34a)' }}>
+          {money(b.variance)}
         </span>
       ),
     },
-    {
-      key: 'health', header: 'Utilization',
-      render: (b) => <BudgetProgressBar budgeted={b.budgeted_amount} actual={b.actual_calculated} />
-    },
-    {
-      key: 'status', header: 'Status',
-      render: (b) => {
-        const color = b.status_label === 'Over Budget' ? 'var(--danger)' : b.status_label === 'Near Limit' ? 'var(--warning)' : 'var(--success)'
-        return <span className="badge" style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}>{b.status_label}</span>
-      }
-    },
+    { key: 'is_active', header: 'Status', render: (b) => <span className={b.is_active ? 'badge badge-paid' : 'badge badge-unpaid'}>{b.is_active ? 'Active' : 'Inactive'}</span> },
     {
       key: 'actions', header: '', stopRowClick: true,
       render: (b) => (
         <RowActionsMenu items={[
           { label: 'Edit', onClick: () => openEdit(b) },
-          { label: 'Log Expense', onClick: () => { /* would ideally open expense modal with this category */ } },
           { label: 'Delete', onClick: () => remove(b), danger: true },
         ]} />
       ),
@@ -238,21 +103,16 @@ export default function Budgets() {
   ]
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h1 style={{ margin: 0 }}>Budgets</h1>
-          <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-            Total budgeted: <strong>{money(totalBudgeted)}</strong> · Total actual: <strong>{money(totalActual)}</strong>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+            Total budgeted: {money(totalBudgeted)} · Total actual: {money(totalActual)}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div className="mode-switch">
-            <button className={periodTypeFilter === 'all' ? 'active' : ''} onClick={() => setPeriodTypeFilter('all')}>All</button>
-            <button className={periodTypeFilter === 'monthly' ? 'active' : ''} onClick={() => setPeriodTypeFilter('monthly')}>Monthly</button>
-            <button className={periodTypeFilter === 'yearly' ? 'active' : ''} onClick={() => setPeriodTypeFilter('yearly')}>Annual</button>
-          </div>
-          <select value={yearFilter} onChange={(e) => setYearFilter(Number(e.target.value))} style={{ width: 'auto' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select value={yearFilter} onChange={(e) => setYearFilter(Number(e.target.value))}>
             {Array.from({ length: 5 }, (_, i) => currentYear - 2 + i).map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
@@ -261,9 +121,7 @@ export default function Budgets() {
         </div>
       </div>
 
-      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
-
-      <Table columns={columns} rows={enrichedBudgets} loading={listLoading} emptyText="No budgets set for this year yet." onRowClick={openEdit} />
+      <Table columns={columns} rows={budgets} loading={listLoading} emptyText="No budgets set for this year yet." onRowClick={openEdit} />
 
       {open && (
         <Modal

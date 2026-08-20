@@ -55,22 +55,16 @@ _STANDARD_CHART = [
     ("1010", "Bank", LedgerAccountType.asset),
     ("1100", "Accounts Receivable", LedgerAccountType.asset),
     ("1200", "Inventory", LedgerAccountType.asset),
-    ("1300", "Fixed Assets", LedgerAccountType.asset),
-    ("1310", "Accumulated Depreciation", LedgerAccountType.asset),  # Contra-asset
-    ("1400", "Financial Investments", LedgerAccountType.asset),
     ("2000", "Accounts Payable", LedgerAccountType.liability),
     ("2100", "VAT Payable (Output)", LedgerAccountType.liability),
     ("2110", "VAT Receivable (Input)", LedgerAccountType.asset),
     ("2200", "Bank Loans Payable", LedgerAccountType.liability),
-    ("2210", "Interest Payable", LedgerAccountType.liability),
     ("3000", "Owner's Equity", LedgerAccountType.equity),
     ("4000", "Sales Revenue", LedgerAccountType.revenue),
-    ("4100", "Revaluation Gain (Unrealized)", LedgerAccountType.revenue),
     ("5000", "Cost of Goods Sold", LedgerAccountType.expense),
     ("5100", "Operating Expenses", LedgerAccountType.expense),
     ("5200", "Interest Expense", LedgerAccountType.expense),
     ("5300", "Salaries & Wages Expense", LedgerAccountType.expense),
-    ("5400", "Depreciation Expense", LedgerAccountType.expense),
     ("2300", "PAYE Tax Payable", LedgerAccountType.liability),
     ("2310", "Social Security Payable", LedgerAccountType.liability),
     ("2320", "Other Payroll Deductions Payable", LedgerAccountType.liability),
@@ -309,66 +303,4 @@ def post_loan_payment_entry(db: Session, account_id: int, loan, payment, created
         reference=f"loan-payment-{payment.id}",
         created_by=created_by,
         date=payment.paid_at,
-    )
-
-
-def post_loan_interest_accrual_entry(db: Session, account_id: int, loan, amount: float, date: datetime):
-    """Dr Interest Expense, Cr Interest Payable."""
-    lines = [
-        ("5200", amount, 0),  # Interest Expense
-        ("2210", 0, amount),  # Interest Payable
-    ]
-    return post_journal_entry(
-        db, account_id,
-        description=f"Interest accrual: {loan.lender_name}",
-        lines=lines,
-        reference=f"loan-accrual-{loan.id}-{date.strftime('%Y%m')}",
-        created_by="system",
-        date=date,
-    )
-
-
-def post_asset_creation_entry(db: Session, account_id: int, asset, created_by: str = None):
-    """Dr Fixed Assets / Financial Investments, Cr Cash/Bank."""
-    code = "1400" if asset.asset_type.value == "financial_investment" else "1300"
-    lines = [(code, asset.acquisition_cost, 0), ("1000", 0, asset.acquisition_cost)]
-    return post_journal_entry(
-        db, account_id,
-        description=f"Asset acquired: {asset.name}",
-        lines=lines,
-        reference=f"asset-acquire-{asset.id}",
-        created_by=created_by,
-        date=asset.acquired_date,
-    )
-
-
-def post_asset_revaluation_entry(db: Session, account_id: int, asset, reval, created_by: str = None):
-    """If gain: Dr Asset, Cr Revaluation Gain. If loss: Dr Revaluation Gain, Cr Asset."""
-    code = "1400" if asset.asset_type.value == "financial_investment" else "1300"
-    if reval.gain_loss_amount >= 0:
-        lines = [(code, reval.gain_loss_amount, 0), ("4100", 0, reval.gain_loss_amount)]
-    else:
-        loss = abs(reval.gain_loss_amount)
-        lines = [("4100", loss, 0), (code, 0, loss)]
-
-    return post_journal_entry(
-        db, account_id,
-        description=f"Asset revaluation: {asset.name}",
-        lines=lines,
-        reference=f"asset-reval-{reval.id}",
-        created_by=created_by,
-        date=reval.date,
-    )
-
-
-def post_depreciation_entry(db: Session, account_id: int, asset, amount: float, date: datetime, created_by: str = None):
-    """Dr Depreciation Expense, Cr Accumulated Depreciation."""
-    lines = [("5400", amount, 0), ("1310", 0, amount)]
-    return post_journal_entry(
-        db, account_id,
-        description=f"Depreciation: {asset.name}",
-        lines=lines,
-        reference=f"asset-depr-{asset.id}-{date.strftime('%Y%m')}",
-        created_by=created_by,
-        date=date,
     )

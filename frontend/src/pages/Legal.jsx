@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { EXTRA_LEGAL_DOCS } from './legalDocsContent.js'
-import logoMark from '../assets/logo-mark.png'
 
 const CONTENT = {
   en: {
@@ -586,7 +585,7 @@ export default function Legal() {
       <header className="landing-header">
         <div className="landing-header-inner">
           <Link to="/" className="landing-brand">
-            <img src={logoMark} alt="Moneytracer" className="landing-brand-mark" />
+            <span className="landing-brand-mark">M</span>
             <span className="landing-brand-name">Moneytracer</span>
           </Link>
           <nav className="landing-nav">

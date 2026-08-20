@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { apiUrl } from '../api-config.js'
 import PasswordInput from '../components/PasswordInput.jsx'
-import logoMark from '../assets/logo-mark.png'
 import PlatformBanner from '../components/PlatformBanner.jsx'
 
 export default function ResetPassword() {
@@ -56,7 +55,7 @@ export default function ResetPassword() {
       </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div className="login-brand">
-          <img src={logoMark} alt="Moneytracer" className="login-brand-mark" />
+          <div className="login-brand-mark">M</div>
           <div className="login-brand-name">Moneytracer</div>
         </div>
 

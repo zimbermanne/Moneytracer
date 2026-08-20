@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { apiUrl } from '../api-config.js'
 import PlatformBanner from '../components/PlatformBanner.jsx'
-import logoMark from '../assets/logo-mark.png'
 
 export default function ForgotPassword() {
   const { t } = useTranslation()
@@ -48,7 +47,7 @@ export default function ForgotPassword() {
       </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div className="login-brand">
-          <img src={logoMark} alt="Moneytracer" className="login-brand-mark" />
+          <div className="login-brand-mark">M</div>
           <div className="login-brand-name">Moneytracer</div>
         </div>
 

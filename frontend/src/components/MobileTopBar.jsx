@@ -1,5 +1,4 @@
 import Clock from '../Clock.jsx'
-import logoMark from '../assets/logo-mark.png'
 
 // MOBILE ONLY: always rendered by Layout in App.jsx, but CSS keeps it
 // hidden (display:none) until the phone breakpoint kicks in — see
@@ -18,7 +17,7 @@ export default function MobileTopBar({
         <button className="hamburger" onClick={onToggle} aria-label="Toggle menu">
           {open ? '✕' : '☰'}
         </button>
-        <img src={logoMark} alt="Moneytracer" className="brand-logo" style={{ width: 26, height: 26 }} />
+        <div className="brand-logo" style={{ width: 26, height: 26, fontSize: 13 }}>M</div>
         <div className="mobile-topbar-title">{title}</div>
         <Clock showAccount={false} showReminders={false} />
       </div>

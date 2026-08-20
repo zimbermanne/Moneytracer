@@ -87,16 +87,8 @@ class PurchaseOrderStatus(str, enum.Enum):
     # settled separately later. Defined here (rather than next to
     # DocumentStatus further down) because PurchaseOrder itself is defined
     # right after Purchase, well before DocumentStatus's usual spot.
-    #
-    # "approved" is a distinct step from "received": approving authorizes
-    # the order (a manager/admin signing off that it's OK to buy) but does
-    # NOT touch stock or the ledger yet — that only happens once goods
-    # physically arrive and someone marks it received. Keeping these
-    # separate means a PO can be approved today and received next week
-    # without prematurely inflating inventory before the goods exist.
     draft = "draft"
     sent = "sent"
-    approved = "approved"
     received = "received"
     cancelled = "cancelled"
 
@@ -177,29 +169,6 @@ class Customer(Base):
     tin_number = Column(String(50), default="")
     notes = Column(String(500), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class Supplier(Base):
-    """The supplier-side mirror of Customer — a real, addressable supplier
-    record (name, contact, address, TIN/VRN) distinct from the free-text
-    supplier/supplier_name fields still used on Purchase/PurchaseOrder/
-    Creditor. Same non-FK, name-matching aggregation approach as Customer
-    (see routers/suppliers.py) so existing historical purchase records show
-    up under a Supplier record the moment one with a matching name exists —
-    no backfill migration needed."""
-    __tablename__ = "suppliers"
-    __table_args__ = schema_args(SCHEMA_BUSINESS)
-
-    id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
-    name = Column(String(150), nullable=False)
-    phone = Column(String(40), default="")
-    email = Column(String(150), default="")
-    address = Column(String(255), default="")
-    tin_number = Column(String(50), default="")
-    vrn_number = Column(String(50), default="")
-    notes = Column(String(500), default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -259,7 +228,6 @@ class PurchaseOrder(Base):
     po_no = Column(String(30), default="")
     supplier_name = Column(String(150), default="")
     supplier_phone = Column(String(50), default="")
-    supplier_email = Column(String(150), default="")
     supplier_address = Column(String(255), default="")
     supplier_tin = Column(String(50), default="")
     supplier_vrn = Column(String(50), default="")
@@ -271,12 +239,6 @@ class PurchaseOrder(Base):
     total = Column(Float, default=0)
     notes = Column(String(500), default="")
     status = Column(Enum(PurchaseOrderStatus), default=PurchaseOrderStatus.draft)
-    # Who authorized this PO and when — set the moment status first
-    # transitions to "approved". Distinct from created_by/created_at
-    # (who wrote the PO) since the same person doesn't always approve
-    # their own order, and a paper trail matters here.
-    approved_by = Column(String(80), nullable=True)
-    approved_at = Column(DateTime, nullable=True)
     # Set once this PO has generated its Purchase rows (on first transition
     # to "received"). Prevents double-booking stock if received is set twice.
     converted_to_purchase = Column(Boolean, default=False)
@@ -866,19 +828,10 @@ class LoanStatus(str, enum.Enum):
 # community.py's ownership check; it was never actually enforced here).
 # ---------------------------------------------------------------------------
 
-class AssetType(str, enum.Enum):
-    fixed_asset = "fixed_asset"
-    financial_investment = "financial_investment"
-    intangible = "intangible"
-
-
 class AssetCategory(str, enum.Enum):
     property = "property"
     vehicle = "vehicle"
     equipment = "equipment"
-    shares = "shares"
-    bonds = "bonds"
-    group_equity = "group_equity"
     other = "other"
 
 
@@ -889,34 +842,12 @@ class Asset(Base):
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
-    asset_type = Column(Enum(AssetType), default=AssetType.fixed_asset)
     category = Column(Enum(AssetCategory), default=AssetCategory.other)
-    acquisition_cost = Column(Float, default=0)
-    estimated_value = Column(Float, default=0)  # Current Carrying Value
-    salvage_value = Column(Float, default=0)
-    useful_life_years = Column(Integer, default=5)
+    estimated_value = Column(Float, default=0)
     acquired_date = Column(DateTime, nullable=True)
-    last_revaluation_date = Column(DateTime, nullable=True)
     notes = Column(String(255), default="")
     created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    revaluation_history = relationship("AssetRevaluationHistory", back_populates="asset", cascade="all, delete-orphan")
-
-
-class AssetRevaluationHistory(Base):
-    __tablename__ = "asset_revaluation_history"
-    __table_args__ = schema_args(SCHEMA_BUSINESS)
-
-    id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(Integer, ForeignKey(fk_ref("assets.id", SCHEMA_BUSINESS)), nullable=False, index=True)
-    date = Column(DateTime, default=datetime.utcnow)
-    previous_value = Column(Float, nullable=False)
-    new_value = Column(Float, nullable=False)
-    gain_loss_amount = Column(Float, nullable=False)
-    notes = Column(Text, default="")
-
-    asset = relationship("Asset", back_populates="revaluation_history")
 
 
 class BankLoan(Base):

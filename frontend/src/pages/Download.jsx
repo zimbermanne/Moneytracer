@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import logoMark from '../assets/logo-mark.png'
 
 const STEPS = [
   {
@@ -31,7 +30,7 @@ export default function Download() {
       <header className="landing-header">
         <div className="landing-header-inner">
           <Link to="/" className="landing-brand">
-            <img src={logoMark} alt="Moneytracer" className="landing-brand-mark" />
+            <span className="landing-brand-mark">M</span>
             <span className="landing-brand-name">Moneytracer</span>
           </Link>
           <nav className="landing-nav">

@@ -4,7 +4,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -13,10 +12,9 @@ from models import (
     Account, InventoryItem, Purchase,
 )
 from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
-from email_utils import send_email_with_attachment
 
 # Reuse the invoice module's PDF renderer, account-details lookup, and totals
 # calculator rather than duplicating ~150 lines of ReportLab layout code —
@@ -48,7 +46,6 @@ class _PdfDocAdapter:
         self.invoice_no = po.po_no
         self.customer_name = po.supplier_name or "Supplier"
         self.customer_phone = po.supplier_phone or ""
-        self.customer_email = po.supplier_email or ""
         self.customer_address = po.supplier_address or ""
         self.customer_tin = po.supplier_tin or ""
         self.customer_vrn = po.supplier_vrn or ""
@@ -91,10 +88,8 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     if not payload.items:
         raise HTTPException(status_code=400, detail="Purchase order must have at least one line item")
 
-    # A dedicated "PO" prefix, not the account's invoice_prefix — combining
-    # them produced numbers like "PO-INV-0001", which reads like a typo.
-    # Purchase orders are numbered in their own sequence either way.
-    prefix = "PO"
+    account = db.query(Account).filter(Account.id == account_id).first()
+    prefix = f"PO-{account.invoice_prefix}" if account and account.invoice_prefix else "PO"
 
     existing_count = db.query(PurchaseOrder).filter(PurchaseOrder.account_id == account_id).count()
     po_no = f"{prefix}-{existing_count + 1:04d}"
@@ -109,7 +104,6 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         po_no=po_no,
         supplier_name=payload.supplier_name or "",
         supplier_phone=payload.supplier_phone or "",
-        supplier_email=payload.supplier_email or "",
         supplier_address=payload.supplier_address or "",
         supplier_tin=payload.supplier_tin or "",
         supplier_vrn=payload.supplier_vrn or "",
@@ -141,8 +135,6 @@ def update_purchase_order(po_id: int, payload: PurchaseOrderUpdate, db: Session 
     if not po: raise HTTPException(404, "Purchase order not found")
     if po.status == PurchaseOrderStatus.received:
         raise HTTPException(400, "Cannot edit a purchase order that's already been received")
-    if po.status == PurchaseOrderStatus.approved:
-        raise HTTPException(400, "Cannot edit a purchase order that's already approved — reject or reset it to draft first, then re-approve")
 
     data = payload.model_dump(exclude_unset=True, exclude={"items"})
     for k, v in data.items():
@@ -221,34 +213,6 @@ def _convert_po_to_purchases(db: Session, po: PurchaseOrder, current_user: User)
     return created
 
 
-@router.post("/{po_id}/approve", response_model=PurchaseOrderOut)
-def approve_purchase_order(po_id: int, db: Session = Depends(get_db),
-                           current_user: User = Depends(require_manager_up)):
-    """Authorizes a PO — a manager/admin signing off that it's OK to buy.
-    Deliberately does NOT touch stock or the ledger: that only happens once
-    goods physically arrive (see update_po_status's "received" handling).
-    Keeping these separate means an order can be approved today and only
-    affect inventory/books once it's actually received, possibly much later
-    or not at all if the supplier falls through.
-    """
-    q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
-    account_id = get_account_filter(current_user)
-    if account_id is not None:
-        q = q.filter(PurchaseOrder.account_id == account_id)
-    po = q.first()
-    if not po: raise HTTPException(404, "Purchase order not found")
-
-    if po.status not in (PurchaseOrderStatus.draft, PurchaseOrderStatus.sent):
-        raise HTTPException(400, f"Cannot approve a PO that is already {po.status.value}.")
-
-    po.status = PurchaseOrderStatus.approved
-    po.approved_by = current_user.username
-    po.approved_at = datetime.utcnow()
-    db.commit(); db.refresh(po)
-    log_activity_for_user(db, current_user, "po_approved", f"{po.po_no} approved by {current_user.username}")
-    return po
-
-
 @router.patch("/{po_id}/status", response_model=PurchaseOrderOut)
 def update_po_status(po_id: int, status: PurchaseOrderStatus,
                      db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -258,19 +222,6 @@ def update_po_status(po_id: int, status: PurchaseOrderStatus,
         q = q.filter(PurchaseOrder.account_id == account_id)
     po = q.first()
     if not po: raise HTTPException(404, "Purchase order not found")
-
-    # "approved" has its own endpoint (POST /approve) because it needs the
-    # manager/admin gate and sets the approved_by/approved_at audit fields —
-    # routing it through here too would let any employee bypass that check.
-    if status == PurchaseOrderStatus.approved:
-        raise HTTPException(400, "Use POST /purchase-orders/{id}/approve to approve a PO.")
-
-    # Goods can't be "received" before someone has actually authorized the
-    # purchase — without this, an employee could skip approval entirely and
-    # go straight from draft/sent to received, silently adding stock and
-    # posting the ledger for a purchase nobody signed off on.
-    if status == PurchaseOrderStatus.received and po.status != PurchaseOrderStatus.approved:
-        raise HTTPException(400, "This PO must be approved before it can be marked received.")
 
     po.status = status
     if status == PurchaseOrderStatus.received and not po.converted_to_purchase:
@@ -299,49 +250,3 @@ def purchase_order_pdf(po_id: int, db: Session = Depends(get_db), current_user: 
     log_activity_for_user(db, current_user, "po_pdf", f"Exported {po.po_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="PurchaseOrder-{po.po_no}.pdf"'})
-
-
-class EmailPORequest(BaseModel):
-    to_email: EmailStr
-    message: Optional[str] = ""
-
-
-@router.post("/{po_id}/email")
-def email_purchase_order(po_id: int, payload: EmailPORequest, db: Session = Depends(get_db),
-                         current_user: User = Depends(get_current_user)):
-    """Sends the PO PDF straight to the supplier's inbox — the main point of
-    a purchase order being 'previewable' at all: reviewing it before it goes
-    out, then handing it to the supplier without a manual export-then-attach
-    step."""
-    q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
-    account_id = get_account_filter(current_user)
-    if account_id is not None:
-        q = q.filter(PurchaseOrder.account_id == account_id)
-    po = q.first()
-    if not po: raise HTTPException(404, "Purchase order not found")
-
-    account = get_account_details(db, po.account_id)
-    buf = _render_pdf(_PdfDocAdapter(po), "PURCHASE ORDER", account, party_label="Supplier", is_payable=False)
-    company = (account or {}).get("name") or "Our company"
-    supplier_name = po.supplier_name or "there"
-    body = payload.message or (
-        f"Dear {supplier_name},\n\n"
-        f"Please find attached Purchase Order {po.po_no} for your review and fulfillment.\n\n"
-        f"Regards,\n{company}"
-    )
-
-    try:
-        send_email_with_attachment(
-            to_email=payload.to_email,
-            subject=f"Purchase Order {po.po_no} from {company}",
-            body=body,
-            attachment_bytes=buf.getvalue(),
-            attachment_filename=f"PurchaseOrder-{po.po_no}.pdf",
-        )
-    except RuntimeError as exc:
-        raise HTTPException(400, str(exc))
-    except Exception as exc:
-        raise HTTPException(502, f"Failed to send email: {exc}")
-
-    log_activity_for_user(db, current_user, "po_email", f"Emailed {po.po_no} to {payload.to_email}")
-    return {"detail": f"Purchase order emailed to {payload.to_email}"}

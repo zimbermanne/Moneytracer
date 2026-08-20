@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
@@ -98,43 +98,6 @@ class CustomerOut(BaseModel):
     created_at: datetime
     # Computed, not stored columns -- filled in by the router.
     total_purchased: float = 0
-    total_owed: float = 0
-    last_activity: Optional[datetime] = None
-
-
-class SupplierCreate(BaseModel):
-    name: str
-    phone: Optional[str] = ""
-    email: Optional[str] = ""
-    address: Optional[str] = ""
-    tin_number: Optional[str] = ""
-    vrn_number: Optional[str] = ""
-    notes: Optional[str] = ""
-
-
-class SupplierUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    address: Optional[str] = None
-    tin_number: Optional[str] = None
-    vrn_number: Optional[str] = None
-    notes: Optional[str] = None
-
-
-class SupplierOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    name: str
-    phone: str
-    email: str = ""
-    address: str
-    tin_number: str
-    vrn_number: str = ""
-    notes: str
-    created_at: datetime
-    # Computed, not stored columns -- filled in by the router.
-    total_spent: float = 0
     total_owed: float = 0
     last_activity: Optional[datetime] = None
 
@@ -411,37 +374,18 @@ class PersonalOverview(BaseModel):
 
 
 # ---------- Assets ----------
-class AssetRevaluationHistoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    asset_id: int
-    date: datetime
-    previous_value: float
-    new_value: float
-    gain_loss_amount: float
-    notes: str
-
-
 class AssetCreate(BaseModel):
     name: str
-    asset_type: AssetType = AssetType.fixed_asset
     category: AssetCategory = AssetCategory.other
-    acquisition_cost: float = 0
-    estimated_value: float = 0  # Initial carrying value
-    salvage_value: float = 0
-    useful_life_years: int = 5
+    estimated_value: float = 0
     acquired_date: Optional[datetime] = None
     notes: Optional[str] = ""
 
 
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
-    asset_type: Optional[AssetType] = None
     category: Optional[AssetCategory] = None
-    acquisition_cost: Optional[float] = None
     estimated_value: Optional[float] = None
-    salvage_value: Optional[float] = None
-    useful_life_years: Optional[int] = None
     acquired_date: Optional[datetime] = None
     notes: Optional[str] = None
 
@@ -450,22 +394,11 @@ class AssetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
-    asset_type: AssetType
     category: AssetCategory
-    acquisition_cost: float
     estimated_value: float
-    salvage_value: float
-    useful_life_years: int
     acquired_date: Optional[datetime] = None
-    last_revaluation_date: Optional[datetime] = None
     notes: str
     created_at: datetime
-    revaluation_history: List[AssetRevaluationHistoryOut] = []
-
-
-class AssetRevaluationCreate(BaseModel):
-    new_value: float
-    notes: Optional[str] = ""
 
 
 # ---------- Bank Loans ----------
@@ -520,12 +453,6 @@ class BankLoanOut(BaseModel):
     notes: str
     created_at: datetime
     payments: List[BankLoanPaymentOut] = []
-
-    # Calculated fields (not stored in DB)
-    outstanding_principal: float = 0
-    accrued_interest: float = 0
-    total_balance: float = 0
-    days_overdue: int = 0
 
 
 class LoanRoadmapEntry(BaseModel):
@@ -658,33 +585,6 @@ class CustomerProfile(BaseModel):
     debts: List[DebtorOut] = []
 
 
-class SupplierMonthlySpend(BaseModel):
-    month: str          # e.g. "2026-04"
-    total: float
-
-
-class SupplierProfile(BaseModel):
-    supplier_id: int
-    supplier_name: str
-    phone: str = ""
-    email: str = ""
-    address: str = ""
-    tin: str = ""
-    vrn: str = ""
-    notes: str = ""
-    # total_spent is what the business has paid this supplier (received
-    # Purchase totals); outstanding_payables is what the business still
-    # owes them (unpaid Creditor balance) — the supplier-side mirror of
-    # CustomerProfile's total_purchased/outstanding_receivables.
-    total_spent: float = 0
-    outstanding_payables: float
-    spend_last_6_months: List[SupplierMonthlySpend]
-    total_spend_last_6_months: float
-    purchase_orders: List["PurchaseOrderOut"] = []
-    purchases: List[PurchaseOut] = []
-    payables: List["CreditorOut"] = []
-
-
 class CustomerStatementEntry(BaseModel):
     date: datetime
     description: str
@@ -811,21 +711,6 @@ class DocumentLineOut(BaseModel):
     total: float
     item_id: Optional[int] = None
 
-    # Same nullable-column-vs-required-field guard as PurchaseOrderOut below —
-    # this schema is shared by invoice/quotation/purchase-order line items,
-    # all backed by columns with default="" / default=0 but no NOT NULL
-    # constraint, so a legacy row with a real NULL shouldn't break the whole
-    # parent list response.
-    @field_validator("description", mode="before")
-    @classmethod
-    def _none_to_empty_str(cls, v):
-        return "" if v is None else v
-
-    @field_validator("quantity", "unit_price", "total", mode="before")
-    @classmethod
-    def _none_to_zero(cls, v):
-        return 0 if v is None else v
-
 
 class InvoiceCreate(BaseModel):
     customer_name: str = "Walk-in"
@@ -883,7 +768,6 @@ class InvoiceUpdate(BaseModel):
 class PurchaseOrderCreate(BaseModel):
     supplier_name: str = ""
     supplier_phone: Optional[str] = ""
-    supplier_email: Optional[str] = ""
     supplier_address: Optional[str] = ""
     supplier_tin: Optional[str] = ""
     supplier_vrn: Optional[str] = ""
@@ -900,7 +784,6 @@ class PurchaseOrderOut(BaseModel):
     po_no: str
     supplier_name: str
     supplier_phone: str
-    supplier_email: Optional[str] = ""
     supplier_address: str
     supplier_tin: Optional[str] = ""
     supplier_vrn: Optional[str] = ""
@@ -913,39 +796,14 @@ class PurchaseOrderOut(BaseModel):
     notes: str
     status: PurchaseOrderStatus
     converted_to_purchase: bool = False
-    approved_by: Optional[str] = None
-    approved_at: Optional[datetime] = None
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []
-
-    # DB columns backing these fields are nullable (default="" is only
-    # applied on INSERT, not enforced as NOT NULL) — a row saved through any
-    # older code path or a direct DB edit can have NULL here even though the
-    # schema below requires a str. Without this, FastAPI/Pydantic raises a
-    # validation error while serializing the response, which (depending on
-    # the CORS middleware's handling of error responses) can surface to the
-    # browser as a generic "Could not reach the server" fetch failure rather
-    # than a visible 500 — coerce None -> "" / 0 here so a single legacy row
-    # never breaks the whole list endpoint.
-    @field_validator(
-        "po_no", "supplier_name", "supplier_phone", "supplier_address", "notes", "created_by",
-        mode="before",
-    )
-    @classmethod
-    def _none_to_empty_str(cls, v):
-        return "" if v is None else v
-
-    @field_validator("subtotal", "tax_rate", "tax_amount", "discount", "total", mode="before")
-    @classmethod
-    def _none_to_zero(cls, v):
-        return 0 if v is None else v
 
 
 class PurchaseOrderUpdate(BaseModel):
     supplier_name: Optional[str] = None
     supplier_phone: Optional[str] = None
-    supplier_email: Optional[str] = None
     supplier_address: Optional[str] = None
     supplier_tin: Optional[str] = None
     supplier_vrn: Optional[str] = None

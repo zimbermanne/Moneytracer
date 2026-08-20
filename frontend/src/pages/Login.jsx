@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
 import PasswordInput from '../components/PasswordInput.jsx'
 import PlatformBanner from '../components/PlatformBanner.jsx'
-import logoMark from '../assets/logo-mark.png'
 
 export default function Login() {
   const { login, loginAsDemo, user } = useAuth()
@@ -59,7 +58,7 @@ export default function Login() {
       </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div className="login-brand">
-          <img src={logoMark} alt="Moneytracer" className="login-brand-mark" />
+          <div className="login-brand-mark">M</div>
           <div className="login-brand-name">Moneytracer</div>
         </div>
 

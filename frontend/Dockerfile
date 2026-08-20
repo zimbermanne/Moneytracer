@@ -3,17 +3,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-
-# ── IMPORTANT: Set VITE_API_URL on Railway as a build-time variable ──
-# e.g.  VITE_API_URL=https://adminwebappbackend-production.up.railway.app
-#
-# This value is baked into the JS bundle at build time. If it's not set,
-# all /api/* requests will stay relative and nginx will return index.html
-# instead of forwarding to the backend — that's the "Could not reach the
-# server" error you see after deploy.
+# Baked in at build time so the built JS bundle calls the backend directly
+# instead of falling back to relative /api/... paths (which nginx's SPA
+# fallback turns into 405s, since it serves index.html for any non-file
+# route regardless of HTTP method).
 ARG VITE_API_URL=https://adminwebappbackend-production.up.railway.app
 ENV VITE_API_URL=$VITE_API_URL
-RUN echo "Building with VITE_API_URL=${VITE_API_URL}" && npm run build
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
