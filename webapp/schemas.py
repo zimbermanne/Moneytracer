@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
@@ -775,6 +775,21 @@ class DocumentLineOut(BaseModel):
     total: float
     item_id: Optional[int] = None
 
+    # Same nullable-column-vs-required-field guard as PurchaseOrderOut below —
+    # this schema is shared by invoice/quotation/purchase-order line items,
+    # all backed by columns with default="" / default=0 but no NOT NULL
+    # constraint, so a legacy row with a real NULL shouldn't break the whole
+    # parent list response.
+    @field_validator("description", mode="before")
+    @classmethod
+    def _none_to_empty_str(cls, v):
+        return "" if v is None else v
+
+    @field_validator("quantity", "unit_price", "total", mode="before")
+    @classmethod
+    def _none_to_zero(cls, v):
+        return 0 if v is None else v
+
 
 class InvoiceCreate(BaseModel):
     customer_name: str = "Walk-in"
@@ -867,6 +882,28 @@ class PurchaseOrderOut(BaseModel):
     created_by: str
     created_at: datetime
     items: List[DocumentLineOut] = []
+
+    # DB columns backing these fields are nullable (default="" is only
+    # applied on INSERT, not enforced as NOT NULL) — a row saved through any
+    # older code path or a direct DB edit can have NULL here even though the
+    # schema below requires a str. Without this, FastAPI/Pydantic raises a
+    # validation error while serializing the response, which (depending on
+    # the CORS middleware's handling of error responses) can surface to the
+    # browser as a generic "Could not reach the server" fetch failure rather
+    # than a visible 500 — coerce None -> "" / 0 here so a single legacy row
+    # never breaks the whole list endpoint.
+    @field_validator(
+        "po_no", "supplier_name", "supplier_phone", "supplier_address", "notes", "created_by",
+        mode="before",
+    )
+    @classmethod
+    def _none_to_empty_str(cls, v):
+        return "" if v is None else v
+
+    @field_validator("subtotal", "tax_rate", "tax_amount", "discount", "total", mode="before")
+    @classmethod
+    def _none_to_zero(cls, v):
+        return 0 if v is None else v
 
 
 class PurchaseOrderUpdate(BaseModel):
