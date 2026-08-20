@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { apiUrl } from '../api-config.js'
+import { downloadFile } from '../utils/download.js'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
@@ -392,30 +394,15 @@ export default function Reports({ view }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
-  const handleExport = async () => {
-    setExporting(true)
-    try {
-      let endpoint = `/reports/export/${view}`
-      const params = new URLSearchParams()
-      if (config.dateFilter) {
-        if (start) params.set('start', start)
-        if (end) params.set('end', end)
-      }
-      if ([...params].length) endpoint += `?${params.toString()}`
-      const res = await api.get(endpoint)
-      // useApi returns the raw Response for non-JSON content types (xlsx)
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${config.title.replace(/\s+/g, '_')}.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setExporting(false)
+  const handleExport = () => {
+    let endpoint = `/api/reports/export/${view}`
+    const params = new URLSearchParams()
+    if (config.dateFilter) {
+      if (start) params.set('start', start)
+      if (end) params.set('end', end)
     }
+    if ([...params].length) endpoint += `?${params.toString()}`
+    downloadFile(apiUrl(endpoint), `${config.title.replace(/\s+/g, '_')}.xlsx`)
   }
 
   const Component = config.Component

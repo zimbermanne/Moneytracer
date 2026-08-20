@@ -68,7 +68,9 @@
     "balanceSheet": "Balance Sheet",
     "vatReturn": "VAT Return",
     "payroll": "Payroll",
-    "budgets": "Budgets"
+    "budgets": "Budgets",
+    "suppliers": "Suppliers",
+    "arDashboard": "AR Dashboard"
   },
   "auth": {
     "login": "Login",

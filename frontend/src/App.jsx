@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
@@ -10,37 +10,51 @@ import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
+// Landing and Login are the two screens almost everyone hits first (an
+// anonymous visitor lands on one or the other), so they stay in the main
+// bundle -- no loading flicker on the very first paint. Everything past
+// that point is behind an auth check or a deliberate navigation anyway,
+// so it's lazy-loaded: each page's JS is fetched only when its route is
+// actually visited, instead of every page (Payroll, Budgets, Reports and
+// its recharts dependency, PDF/thermal-printer code, etc.) all being
+// forced into the one bundle every visitor downloads before anything
+// renders. That single bundle was 1MB+ before this change -- a big chunk
+// of the "sluggish, especially right after opening the app" feeling on
+// mobile data.
 import Landing from './pages/Landing.jsx'
-import Download from './pages/Download.jsx'
-import Legal from './pages/Legal.jsx'
 import Login from './pages/Login.jsx'
-import Register from './pages/Register.jsx'
-import ForgotPassword from './pages/ForgotPassword.jsx'
-import ResetPassword from './pages/ResetPassword.jsx'
-import Onboarding from './pages/Onboarding.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import POS from './pages/POS.jsx'
-import Inventory from './pages/Inventory.jsx'
-import Sales from './pages/Sales.jsx'
-import Purchases from './pages/Purchases.jsx'
-import PurchaseOrders from './pages/PurchaseOrders.jsx'
-import Expenses from './pages/Expenses.jsx'
-import Debtors from './pages/Debtors.jsx'
-import Creditors from './pages/Creditors.jsx'
-import Reports from './pages/Reports.jsx'
-import Documents from './pages/Documents.jsx'
-import Customers from './pages/Customers.jsx'
-import Settings from './pages/Settings.jsx'
-import ActivityLogs from './pages/ActivityLogs.jsx'
-import VerifyDocument from './pages/VerifyDocument.jsx'
-import BankLoans from './pages/BankLoans.jsx'
-import Deadlines from './pages/Deadlines.jsx'
-import Assets from './pages/Assets.jsx'
-import Personal from './pages/Personal.jsx'
-import ChartOfAccounts from './pages/ChartOfAccounts.jsx'
-import GeneralLedger from './pages/GeneralLedger.jsx'
-import Payroll from './pages/Payroll.jsx'
-import Budgets from './pages/Budgets.jsx'
+
+const Download = lazy(() => import('./pages/Download.jsx'))
+const Legal = lazy(() => import('./pages/Legal.jsx'))
+const Register = lazy(() => import('./pages/Register.jsx'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
+const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
+const POS = lazy(() => import('./pages/POS.jsx'))
+const Inventory = lazy(() => import('./pages/Inventory.jsx'))
+const Sales = lazy(() => import('./pages/Sales.jsx'))
+const Purchases = lazy(() => import('./pages/Purchases.jsx'))
+const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders.jsx'))
+const Expenses = lazy(() => import('./pages/Expenses.jsx'))
+const Debtors = lazy(() => import('./pages/Debtors.jsx'))
+const ARDashboard = lazy(() => import('./pages/ARDashboard.jsx'))
+const Creditors = lazy(() => import('./pages/Creditors.jsx'))
+const Reports = lazy(() => import('./pages/Reports.jsx'))
+const Documents = lazy(() => import('./pages/Documents.jsx'))
+const Customers = lazy(() => import('./pages/Customers.jsx'))
+const Suppliers = lazy(() => import('./pages/Suppliers.jsx'))
+const Settings = lazy(() => import('./pages/Settings.jsx'))
+const ActivityLogs = lazy(() => import('./pages/ActivityLogs.jsx'))
+const VerifyDocument = lazy(() => import('./pages/VerifyDocument.jsx'))
+const BankLoans = lazy(() => import('./pages/BankLoans.jsx'))
+const Deadlines = lazy(() => import('./pages/Deadlines.jsx'))
+const Assets = lazy(() => import('./pages/Assets.jsx'))
+const Personal = lazy(() => import('./pages/Personal.jsx'))
+const ChartOfAccounts = lazy(() => import('./pages/ChartOfAccounts.jsx'))
+const GeneralLedger = lazy(() => import('./pages/GeneralLedger.jsx'))
+const Payroll = lazy(() => import('./pages/Payroll.jsx'))
+const Budgets = lazy(() => import('./pages/Budgets.jsx'))
 
 function pageTitle(pathname, t) {
   const key = PAGE_TITLE_KEYS[pathname]
@@ -116,11 +130,16 @@ function PrivateRoutes() {
   // load before deciding, so we don't flash the dashboard first.
   if (user.role === 'admin') {
     if (accountLoading || account === null) return <PageLoader label="Preparing your account" />
-    if (!account.onboarding_completed) return <Onboarding />
+    if (!account.onboarding_completed) return (
+      <Suspense fallback={<PageLoader />}>
+        <Onboarding />
+      </Suspense>
+    )
   }
 
   return (
     <Layout>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pos" element={<POS />} />
@@ -130,6 +149,7 @@ function PrivateRoutes() {
         <Route path="/purchase-orders" element={<PurchaseOrders />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
+        <Route path="/ar-dashboard" element={<ARDashboard />} />
         <Route path="/creditors" element={<Creditors />} />
         <Route path="/reports/profit-loss" element={<Reports key="profit-loss" view="profit-loss" />} />
         <Route path="/reports/financial-summary" element={<Reports key="financial-summary" view="financial-summary" />} />
@@ -147,6 +167,7 @@ function PrivateRoutes() {
         <Route path="/invoices" element={<Documents kind="invoices" />} />
         <Route path="/quotations" element={<Documents kind="quotations" />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/suppliers" element={<Suppliers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/activity" element={<ActivityLogs />} />
         <Route path="/bank-loans" element={<BankLoans />} />
@@ -155,6 +176,7 @@ function PrivateRoutes() {
         <Route path="/personal" element={<Personal />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
+      </Suspense>
     </Layout>
   )
 }
@@ -163,6 +185,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationGuardProvider>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/download" element={<Download />} />
@@ -176,6 +199,7 @@ export default function App() {
           <Route path="/verify/receipt/:id" element={<VerifyDocument kind="receipt" />} />
           <Route path="/app/*" element={<PrivateRoutes />} />
         </Routes>
+        </Suspense>
       </NavigationGuardProvider>
     </AuthProvider>
   )
