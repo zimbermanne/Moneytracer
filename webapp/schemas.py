@@ -411,18 +411,37 @@ class PersonalOverview(BaseModel):
 
 
 # ---------- Assets ----------
+class AssetRevaluationHistoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    asset_id: int
+    date: datetime
+    previous_value: float
+    new_value: float
+    gain_loss_amount: float
+    notes: str
+
+
 class AssetCreate(BaseModel):
     name: str
+    asset_type: AssetType = AssetType.fixed_asset
     category: AssetCategory = AssetCategory.other
-    estimated_value: float = 0
+    acquisition_cost: float = 0
+    estimated_value: float = 0  # Initial carrying value
+    salvage_value: float = 0
+    useful_life_years: int = 5
     acquired_date: Optional[datetime] = None
     notes: Optional[str] = ""
 
 
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
+    asset_type: Optional[AssetType] = None
     category: Optional[AssetCategory] = None
+    acquisition_cost: Optional[float] = None
     estimated_value: Optional[float] = None
+    salvage_value: Optional[float] = None
+    useful_life_years: Optional[int] = None
     acquired_date: Optional[datetime] = None
     notes: Optional[str] = None
 
@@ -431,11 +450,22 @@ class AssetOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    asset_type: AssetType
     category: AssetCategory
+    acquisition_cost: float
     estimated_value: float
+    salvage_value: float
+    useful_life_years: int
     acquired_date: Optional[datetime] = None
+    last_revaluation_date: Optional[datetime] = None
     notes: str
     created_at: datetime
+    revaluation_history: List[AssetRevaluationHistoryOut] = []
+
+
+class AssetRevaluationCreate(BaseModel):
+    new_value: float
+    notes: Optional[str] = ""
 
 
 # ---------- Bank Loans ----------
@@ -490,6 +520,12 @@ class BankLoanOut(BaseModel):
     notes: str
     created_at: datetime
     payments: List[BankLoanPaymentOut] = []
+
+    # Calculated fields (not stored in DB)
+    outstanding_principal: float = 0
+    accrued_interest: float = 0
+    total_balance: float = 0
+    days_overdue: int = 0
 
 
 class LoanRoadmapEntry(BaseModel):

@@ -5,9 +5,57 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import MetricCarousel from '../components/MetricCarousel.jsx'
+import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
+}
+
+function KpiCard({ label, value, health, onClick, style }) {
+  const isWarning = health === 'warning';
+  const isHealthy = health === 'healthy';
+  const isCritical = health === 'critical';
+
+  return (
+    <div
+      className="home-kpi-card metric-card"
+      onClick={onClick}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        minHeight: '110px',
+        ...style
+      }}
+    >
+      <div className="label" style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>
+        {label}
+      </div>
+      <div className="value" style={{
+        fontSize: value?.length > 20 ? 16 : 22,
+        fontWeight: 700,
+        color: 'var(--text-dark)',
+        wordBreak: 'break-word',
+      }}>
+        {value}
+      </div>
+      {(isWarning || isHealthy || isCritical) && (
+        <div style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: isCritical ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--success)',
+          boxShadow: `0 0 8px ${isCritical ? 'rgba(180,69,58,0.4)' : isWarning ? 'rgba(185,134,46,0.4)' : 'rgba(107,143,94,0.4)'}`,
+          animation: isCritical ? 'pulse 2s infinite' : 'none'
+        }} />
+      )}
+    </div>
+  );
 }
 
 function CashflowChart({ series }) {
@@ -83,22 +131,25 @@ function CommunityDashboard() {
       />
 
       <div className="card-grid dashboard-grid-desktop">
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.members')}</div>
-          <div className="value">{summary ? summary.member_count : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.totalContributionsAllTime')}</div>
-          <div className="value">{summary ? money(summary.total_contributions) : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.totalPayoutsAllTime')}</div>
-          <div className="value">{summary ? money(summary.total_payouts) : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.loansOutstanding')}</div>
-          <div className="value">{summary ? money(summary.total_loans_outstanding) : '—'}</div>
-        </div>
+        <KpiCard
+          label={t('dashboard.members')}
+          value={summary ? summary.member_count : '—'}
+          health={summary?.member_count > 0 ? 'healthy' : null}
+        />
+        <KpiCard
+          label={t('dashboard.totalContributionsAllTime')}
+          value={summary ? money(summary.total_contributions) : '—'}
+          health={summary?.total_contributions > 0 ? 'healthy' : null}
+        />
+        <KpiCard
+          label={t('dashboard.totalPayoutsAllTime')}
+          value={summary ? money(summary.total_payouts) : '—'}
+        />
+        <KpiCard
+          label={t('dashboard.loansOutstanding')}
+          value={summary ? money(summary.total_loans_outstanding) : '—'}
+          health={summary?.total_loans_outstanding > 0 ? 'critical' : 'healthy'}
+        />
       </div>
 
       <div className="card" style={{ marginTop: 20 }}>
@@ -124,6 +175,7 @@ function LoansAndDeadlinesWidget({ loans, deadlines }) {
   }, 0)
 
   const upcomingDeadlines = [...(deadlines || [])]
+    .filter(d => d.is_active)
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
     .slice(0, 3)
 
@@ -132,20 +184,28 @@ function LoansAndDeadlinesWidget({ loans, deadlines }) {
   return (
     <div className="card-grid" style={{ marginBottom: 20 }}>
       {activeLoans.length > 0 && (
-        <div className="card metric-card" style={{ cursor: 'pointer' }} onClick={() => navigate('/app/bank-loans')}>
-          <div className="label">{t('bankLoans.totalOutstanding')}</div>
-          <div className="value">TZS {totalOutstanding.toLocaleString()}</div>
-        </div>
+        <KpiCard
+          label={t('bankLoans.totalOutstanding')}
+          value={`TZS ${totalOutstanding.toLocaleString()}`}
+          health="critical"
+          onClick={() => navigate('/app/bank-loans')}
+        />
       )}
       {upcomingDeadlines.length > 0 && (
         <div className="card" style={{ cursor: 'pointer', gridColumn: 'span 2' }} onClick={() => navigate('/app/deadlines')}>
-          <div className="label" style={{ marginBottom: 8 }}>{t('deadlines.upcomingCompliance')}</div>
-          {upcomingDeadlines.map((d) => (
-            <div key={d.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span>{d.label}</span>
-              <span style={{ color: 'var(--text-muted)' }}>{new Date(d.due_date).toLocaleDateString()}</span>
-            </div>
-          ))}
+          <div className="label" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{t('deadlines.upcomingCompliance')}</span>
+            <span style={{ fontSize: 10, background: 'var(--danger)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>ACTION REQUIRED</span>
+          </div>
+          {upcomingDeadlines.map((d) => {
+            const isOverdue = new Date(d.due_date) < new Date();
+            return (
+              <div key={d.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={isOverdue ? { color: 'var(--danger)', fontWeight: 600 } : {}}>{d.label} {isOverdue ? '⚠️' : ''}</span>
+                <span style={{ color: isOverdue ? 'var(--danger)' : 'var(--text-muted)' }}>{new Date(d.due_date).toLocaleDateString()}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -164,7 +224,33 @@ function BusinessDashboard() {
   const [lowStock, setLowStock] = useState([])
   const [loans, setLoans] = useState([])
   const [deadlines, setDeadlines] = useState([])
+  const [reminders, setReminders] = useState([])
   const [error, setError] = useState('')
+
+  const loadReminders = () => {
+    api.get('/reminders/').then(data => {
+      const map = new Map();
+      const result = [];
+      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
+      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
+      data.forEach(r => {
+        const loanMatch = r.text.match(loanRegex);
+        const invMatch = r.text.match(invoiceRegex);
+        if (loanMatch || invMatch) {
+          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
+          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
+          const existing = map.get(entity);
+          if (!existing || days > existing.days) map.set(entity, { id: r.id, days, record: r });
+        } else { result.push(r); }
+      });
+      setReminders([...result, ...Array.from(map.values()).map(v => v.record)]);
+    }).catch(() => {})
+  }
+
+  const dismissReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -176,8 +262,9 @@ function BusinessDashboard() {
       api.get('/inventory/low-stock/alerts'),
       api.get('/bank-loans/').catch(() => []),
       api.get('/deadlines/').catch(() => []),
+      api.get('/reminders/').catch(() => []),
     ])
-      .then(([d, i, f, c, s, ls, bl, dl]) => {
+      .then(([d, i, f, c, s, ls, bl, dl, rem]) => {
         setDaily(d)
         setInv(i)
         setFin(f)
@@ -186,6 +273,7 @@ function BusinessDashboard() {
         setLowStock(ls)
         setLoans(bl)
         setDeadlines(dl)
+        setReminders(rem)
       })
       .catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,20 +287,25 @@ function BusinessDashboard() {
 
       {error && <div className="error-text">{error}</div>}
 
+      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+
       {lowStock.length > 0 && (
         <div
           onClick={() => navigate('/app/inventory')}
           style={{
-            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-            background: '#fdf1e8', border: '1px solid var(--accent-soft)', color: 'var(--accent-hover)',
-            borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 14,
+            cursor: 'pointer',
+            padding: '1rem',
+            backgroundColor: 'rgba(237, 108, 2, 0.12)',
+            border: '1px solid rgba(237, 108, 2, 0.4)',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: 14,
           }}
         >
-          <span style={{ fontSize: 18 }}>⚠️</span>
-          <span>
-            <strong>{lowStock.length} item{lowStock.length > 1 ? 's' : ''}</strong> {t('dashboard.lowStockAlert')}
-            {lowStock.length <= 3 ? `: ${lowStock.map((i) => i.name).join(', ')}` : ''} — {t('dashboard.tapToReview')}.
-          </span>
+          <span>⚠️ <strong>{lowStock.length} items</strong> {t('dashboard.lowStockAlert')} — {t('dashboard.tapToReview')}.</span>
         </div>
       )}
 
@@ -230,22 +323,27 @@ function BusinessDashboard() {
       />
 
       <div className="card-grid dashboard-grid-desktop">
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.todaysEarnings')}</div>
-          <div className="value">TZS {daily ? daily.earnings.toLocaleString() : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.itemsSoldToday')}</div>
-          <div className="value">{daily ? daily.items_sold : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.topProductToday')}</div>
-          <div className="value" style={{ fontSize: 16 }}>{daily?.top_product || t('dashboard.noSalesYet')}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.lowStockItems')}</div>
-          <div className="value">{daily ? daily.low_stock_count : '—'}</div>
-        </div>
+        <KpiCard
+          label={t('dashboard.todaysEarnings')}
+          value={daily ? `TZS ${daily.earnings.toLocaleString()}` : '—'}
+          health={daily?.earnings > 0 ? 'healthy' : null}
+        />
+        <KpiCard
+          label={t('dashboard.itemsSoldToday')}
+          value={daily ? daily.items_sold : '—'}
+          health={daily?.items_sold > 0 ? 'healthy' : null}
+        />
+        <KpiCard
+          label={t('dashboard.topProductToday')}
+          value={daily?.top_product || t('dashboard.noSalesYet')}
+          style={{ fontSize: 16 }}
+        />
+        <KpiCard
+          label={t('dashboard.lowStockItems')}
+          value={daily ? daily.low_stock_count : '—'}
+          health={daily?.low_stock_count > 0 ? 'critical' : 'healthy'}
+          onClick={() => navigate('/app/inventory')}
+        />
       </div>
 
       <MetricCarousel
@@ -269,37 +367,34 @@ function BusinessDashboard() {
       />
 
       <div className="card-grid dashboard-grid-desktop">
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.inventoryValue')}</div>
-          <div className="value">TZS {inv ? inv.total_value.toLocaleString() : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.totalStockUnits')}</div>
-          <div className="value">{inv ? inv.total_units : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.netProfitAllTime')}</div>
-          <div className="value">TZS {fin ? fin.net_profit.toLocaleString() : '—'}</div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.totalRevenueAllTime')}</div>
-          <div className="value">TZS {fin ? fin.revenue.toLocaleString() : '—'}</div>
-        </div>
+        <KpiCard
+          label={t('dashboard.inventoryValue')}
+          value={inv ? `TZS ${inv.total_value.toLocaleString()}` : '—'}
+        />
+        <KpiCard
+          label={t('dashboard.totalStockUnits')}
+          value={inv ? inv.total_units : '—'}
+        />
+        <KpiCard
+          label={t('dashboard.netProfitAllTime')}
+          value={fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—'}
+          health={fin?.net_profit > 0 ? 'healthy' : fin?.net_profit < 0 ? 'critical' : null}
+        />
+        <KpiCard
+          label={t('dashboard.totalRevenueAllTime')}
+          value={fin ? `TZS ${fin.revenue.toLocaleString()}` : '—'}
+        />
       </div>
 
       <div className="card-grid dashboard-grid-desktop">
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.mostSoldItemAllTime')}</div>
-          <div className="value" style={{ fontSize: 16 }}>
-            {salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet')}
-          </div>
-        </div>
-        <div className="card metric-card">
-          <div className="label">{t('dashboard.topRevenueItemAllTime')}</div>
-          <div className="value" style={{ fontSize: 16 }}>
-            {salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
-          </div>
-        </div>
+        <KpiCard
+          label={t('dashboard.mostSoldItemAllTime')}
+          value={salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet')}
+        />
+        <KpiCard
+          label={t('dashboard.topRevenueItemAllTime')}
+          value={salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
+        />
       </div>
 
       <LoansAndDeadlinesWidget loans={loans} deadlines={deadlines} />

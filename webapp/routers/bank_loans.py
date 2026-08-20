@@ -39,12 +39,66 @@ def _monthly_rate(loan: BankLoan) -> float:
     return (loan.annual_rate / 100) / 12
 
 
-def _current_balance(loan: BankLoan) -> float:
-    """Outstanding principal right now — original principal minus every
-    principal_portion paid off so far. Interest already paid doesn't
-    reduce this; only principal repayment does."""
+def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
+    now = at_date or datetime.utcnow()
+
+    # 1. Outstanding Principal
     paid_principal = sum(p.principal_portion for p in loan.payments)
-    return round(loan.principal - paid_principal, 2)
+    outstanding_principal = round(max(0.0, loan.principal - paid_principal), 2)
+
+    # 2. Accrued Interest (unpaid)
+    # We use a daily accrual model for precision
+    start_date = loan.start_date
+    daily_rate = (loan.annual_rate / 100) / 365
+
+    if now < start_date:
+        accrued_interest = 0.0
+    elif loan.interest_type == LoanInterestType.simple:
+        total_days = (now - start_date).days
+        total_interest_accrued = loan.principal * daily_rate * total_days
+        total_interest_paid = sum(p.interest_portion for p in loan.payments)
+        accrued_interest = round(max(0.0, total_interest_accrued - total_interest_paid), 2)
+    else:
+        # Reducing Balance
+        total_interest_accrued = 0.0
+        running_principal = loan.principal
+        last_date = start_date
+        for p in loan.payments:
+            p_date = p.paid_at
+            if p_date > now: break
+            days = (p_date - last_date).days
+            total_interest_accrued += running_principal * daily_rate * days
+            last_date = p_date
+            running_principal = max(0.0, running_principal - p.principal_portion)
+
+        # Stretch since last payment
+        if now > last_date:
+            days = (now - last_date).days
+            total_interest_accrued += running_principal * daily_rate * days
+
+        total_interest_paid = sum(p.interest_portion for p in loan.payments)
+        accrued_interest = round(max(0.0, total_interest_accrued - total_interest_paid), 2)
+
+    # 3. Total Balance
+    total_balance = round(outstanding_principal + accrued_interest, 2)
+
+    # 4. Overdue days
+    days_overdue = 0
+    if outstanding_principal > 0 or accrued_interest > 0:
+        due_day = loan.due_day_of_month
+        try:
+            this_month_due = now.replace(day=due_day, hour=0, minute=0, second=0, microsecond=0)
+            if now > this_month_due:
+                days_overdue = (now - this_month_due).days
+        except ValueError:
+            pass # Month shorter than due day
+
+    return {
+        "outstanding_principal": outstanding_principal,
+        "accrued_interest": accrued_interest,
+        "total_balance": total_balance,
+        "days_overdue": days_overdue
+    }
 
 
 def _split_payment(loan: BankLoan, amount: float, current_balance: float):
@@ -73,7 +127,15 @@ def list_loans(status: Optional[LoanStatus] = None, db: Session = Depends(get_db
         q = q.filter(BankLoan.account_id == account_id)
     if status is not None:
         q = q.filter(BankLoan.status == status)
-    return q.order_by(BankLoan.created_at.desc()).all()
+
+    loans = q.order_by(BankLoan.created_at.desc()).all()
+    for l in loans:
+        state = _calculate_loan_state(l)
+        l.outstanding_principal = state["outstanding_principal"]
+        l.accrued_interest = state["accrued_interest"]
+        l.total_balance = state["total_balance"]
+        l.days_overdue = state["days_overdue"]
+    return loans
 
 
 @router.get("/{loan_id}", response_model=BankLoanOut)
@@ -85,6 +147,12 @@ def get_loan(loan_id: int, db: Session = Depends(get_db), current_user: User = D
     loan = q.first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+
+    state = _calculate_loan_state(loan)
+    loan.outstanding_principal = state["outstanding_principal"]
+    loan.accrued_interest = state["accrued_interest"]
+    loan.total_balance = state["total_balance"]
+    loan.days_overdue = state["days_overdue"]
     return loan
 
 
@@ -181,24 +249,28 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be positive")
 
-    current_balance = _current_balance(loan)
-    if current_balance <= 0:
+    state = _calculate_loan_state(loan)
+    current_balance = state["outstanding_principal"]
+    accrued_interest = state["accrued_interest"]
+
+    if current_balance <= 0 and accrued_interest <= 0:
         raise HTTPException(status_code=400, detail="This loan is already fully repaid")
 
-    interest, principal_portion, new_balance = _split_payment(loan, payload.amount, current_balance)
-    if principal_portion < 0:
-        raise HTTPException(
-            status_code=400,
-            detail=f"This payment ({payload.amount}) doesn't even cover this period's interest "
-                   f"({interest}) — it would increase the balance rather than pay it down.",
-        )
+    # Payment first covers accrued interest, then principal
+    interest_portion = min(payload.amount, accrued_interest)
+    principal_portion = round(payload.amount - interest_portion, 2)
+    new_principal_balance = round(current_balance - principal_portion, 2)
+
+    if principal_portion > current_balance:
+        # Overpayment — allowed, but cap it?
+        pass
 
     payment = BankLoanPayment(
         loan_id=loan.id,
         amount=payload.amount,
-        interest_portion=interest,
+        interest_portion=interest_portion,
         principal_portion=principal_portion,
-        balance_after=max(new_balance, 0),
+        balance_after=max(new_principal_balance, 0),
         paid_at=payload.paid_at or datetime.utcnow(),
         created_by=current_user.username,
     )
@@ -211,7 +283,7 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     except (ValueError, FiscalPeriodLockedError) as e:
         log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
 
-    if new_balance <= 0:
+    if new_principal_balance <= 0:
         loan.status = LoanStatus.closed
         db.commit()
 
@@ -237,8 +309,9 @@ def loan_roadmap(
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    balance = _current_balance(loan)
-    if balance <= 0:
+    state = _calculate_loan_state(loan)
+    balance = state["outstanding_principal"]
+    if balance <= 0 and state["accrued_interest"] <= 0:
         return []
 
     r = _monthly_rate(loan)
@@ -246,8 +319,11 @@ def loan_roadmap(
 
     if payment_amount is None:
         if loan.term_months:
-            months_elapsed = len(loan.payments)
+            # Estimate months remaining based on original term vs time elapsed
+            now = datetime.utcnow()
+            months_elapsed = (now.year - loan.start_date.year) * 12 + now.month - loan.start_date.month
             months_remaining = max(loan.term_months - months_elapsed, 1)
+
             if loan.interest_type == LoanInterestType.simple:
                 fixed_interest = loan.principal * r
                 payment_amount = (balance + fixed_interest * months_remaining) / months_remaining
@@ -257,18 +333,15 @@ def loan_roadmap(
                 else:
                     payment_amount = balance * r * (1 + r) ** months_remaining / ((1 + r) ** months_remaining - 1)
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="This loan has no term_months set, so there's no way to infer a payment "
-                       "amount — pass ?monthly_payment=<amount> to project a roadmap at that rate.",
-            )
+            # Fallback to a 12-month payoff if no term set
+            payment_amount = (balance * (1 + r * 12)) / 12
 
     schedule = []
     running_balance = balance
-    last_date = loan.payments[-1].paid_at if loan.payments else loan.start_date
+    last_date = datetime.utcnow()
     period = len(loan.payments)
-    safety_cap = 600  # 50 years — a runaway loop guard, not a real expectation
-    while running_balance > 0.01 and period < safety_cap:
+    safety_cap = 600
+    while running_balance > 0.01 and len(schedule) < safety_cap:
         period += 1
         if loan.interest_type == LoanInterestType.simple:
             interest = round(loan.principal * r, 2)

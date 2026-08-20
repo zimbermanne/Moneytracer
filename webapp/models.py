@@ -866,10 +866,19 @@ class LoanStatus(str, enum.Enum):
 # community.py's ownership check; it was never actually enforced here).
 # ---------------------------------------------------------------------------
 
+class AssetType(str, enum.Enum):
+    fixed_asset = "fixed_asset"
+    financial_investment = "financial_investment"
+    intangible = "intangible"
+
+
 class AssetCategory(str, enum.Enum):
     property = "property"
     vehicle = "vehicle"
     equipment = "equipment"
+    shares = "shares"
+    bonds = "bonds"
+    group_equity = "group_equity"
     other = "other"
 
 
@@ -880,12 +889,34 @@ class Asset(Base):
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
+    asset_type = Column(Enum(AssetType), default=AssetType.fixed_asset)
     category = Column(Enum(AssetCategory), default=AssetCategory.other)
-    estimated_value = Column(Float, default=0)
+    acquisition_cost = Column(Float, default=0)
+    estimated_value = Column(Float, default=0)  # Current Carrying Value
+    salvage_value = Column(Float, default=0)
+    useful_life_years = Column(Integer, default=5)
     acquired_date = Column(DateTime, nullable=True)
+    last_revaluation_date = Column(DateTime, nullable=True)
     notes = Column(String(255), default="")
     created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    revaluation_history = relationship("AssetRevaluationHistory", back_populates="asset", cascade="all, delete-orphan")
+
+
+class AssetRevaluationHistory(Base):
+    __tablename__ = "asset_revaluation_history"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    asset_id = Column(Integer, ForeignKey(fk_ref("assets.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    date = Column(DateTime, default=datetime.utcnow)
+    previous_value = Column(Float, nullable=False)
+    new_value = Column(Float, nullable=False)
+    gain_loss_amount = Column(Float, nullable=False)
+    notes = Column(Text, default="")
+
+    asset = relationship("Asset", back_populates="revaluation_history")
 
 
 class BankLoan(Base):

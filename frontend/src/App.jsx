@@ -71,7 +71,33 @@ function Layout({ children }) {
   const [reminders, setReminders] = useState([])
 
   const loadReminders = () => {
-    api.get('/reminders/').then(setReminders).catch(() => {})
+    api.get('/reminders/').then(data => {
+      // Deduplicate overdue alerts before setting state
+      const map = new Map();
+      const result = [];
+      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
+      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
+
+      data.forEach(r => {
+        const loanMatch = r.text.match(loanRegex);
+        const invMatch = r.text.match(invoiceRegex);
+
+        if (loanMatch || invMatch) {
+          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
+          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
+
+          const existing = map.get(entity);
+          if (!existing || days > existing.days) {
+            map.set(entity, { id: r.id, days, record: r });
+          }
+        } else {
+          result.push(r);
+        }
+      });
+
+      const deduplicated = [...result, ...Array.from(map.values()).map(v => v.record)];
+      setReminders(deduplicated);
+    }).catch(() => {})
   }
 
   useEffect(() => {

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { apiUrl } from '../api-config.js'
 import { downloadFile } from '../utils/download.js'
+import Accordion from '../components/Accordion.jsx'
+import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
@@ -71,58 +73,82 @@ function FinancialSummary({ data }) {
 function ProfitLoss({ data }) {
   return (
     <>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Revenue by Item</h3>
+      <Accordion title="1. Summary & Net Profit" defaultOpen={true}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Net Profit</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: marginColor(data.net_profit), marginTop: 2 }}>
+              {money(data.net_profit)}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+              Total Revenue: {money(data.total_revenue)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Gross Profit</div>
+              <div style={{ fontSize: 18, fontWeight: 600 }}>{money(data.total_revenue - data.cogs)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Expenses</div>
+              <div style={{ fontSize: 18, fontWeight: 600 }}>{money(data.total_expenses)}</div>
+            </div>
+          </div>
+        </div>
+      </Accordion>
+
+      <Accordion title="2. Expenses by Category" defaultOpen={true}>
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 16px', borderRadius: '12px' }}>
+          {Object.entries(data.expense_by_category).map(([name, val]) => (
+            <Row key={name} left={name} right={money(val)} />
+          ))}
+          <Row left="Total Operating Expenses" right={money(data.total_expenses)} bold border />
+          <Row left="Cost of Goods Sold (COGS)" right={money(data.cogs)} />
+          <Row left="Net Profit" right={money(data.net_profit)} bold color={marginColor(data.net_profit)} border />
+        </div>
+      </Accordion>
+
+      <Accordion title="3. Revenue by Item" defaultOpen={false}>
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.revenue_by_item).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
           <Row left="Total Revenue" right={money(data.total_revenue)} bold border />
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Expenses by Category</h3>
-          {Object.entries(data.expense_by_category).map(([name, val]) => (
-            <Row key={name} left={name} right={money(val)} />
-          ))}
-          <Row left="Total Expenses" right={money(data.total_expenses)} bold border />
-          <Row left="Cost of Goods Sold" right={money(data.cogs)} />
-          <Row left="Net Profit" right={money(data.net_profit)} bold color={marginColor(data.net_profit)} border />
-        </div>
-      </div>
+      </Accordion>
 
       {data.item_profitability && data.item_profitability.length > 0 && (
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Item Profitability</h3>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
+        <Accordion title="4. Item Profitability Analysis" defaultOpen={true}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 15 }}>
             Sorted by gross profit — which items are actually making you money.
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <div style={{ overflowX: 'auto', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+            <table className="pl-table">
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
-                  <th style={{ padding: '6px 8px' }}>Item</th>
-                  <th style={{ padding: '6px 8px' }}>Qty Sold</th>
-                  <th style={{ padding: '6px 8px' }}>Revenue</th>
-                  <th style={{ padding: '6px 8px' }}>COGS</th>
-                  <th style={{ padding: '6px 8px' }}>Gross Profit</th>
-                  <th style={{ padding: '6px 8px' }}>Margin</th>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty Sold</th>
+                  <th>Revenue</th>
+                  <th>COGS</th>
+                  <th>Gross Profit</th>
+                  <th>Margin</th>
                 </tr>
               </thead>
               <tbody>
                 {data.item_profitability.map((r) => (
-                  <tr key={r.item_name} style={{ borderTop: '1px solid #f0ece1' }}>
-                    <td style={{ padding: '6px 8px' }}>{r.item_name}</td>
-                    <td style={{ padding: '6px 8px' }}>{r.quantity_sold}</td>
-                    <td style={{ padding: '6px 8px' }}>{money(r.revenue)}</td>
-                    <td style={{ padding: '6px 8px' }}>{money(r.cogs)}</td>
-                    <td style={{ padding: '6px 8px', color: marginColor(r.gross_profit), fontWeight: 600 }}>{money(r.gross_profit)}</td>
-                    <td style={{ padding: '6px 8px' }}>{r.gross_margin_pct}%</td>
+                  <tr key={r.item_name}>
+                    <td>{r.item_name}</td>
+                    <td>{r.quantity_sold}</td>
+                    <td>{money(r.revenue)}</td>
+                    <td>{money(r.cogs)}</td>
+                    <td style={{ color: marginColor(r.gross_profit), fontWeight: 600 }}>{money(r.gross_profit)}</td>
+                    <td>{r.gross_margin_pct}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Accordion>
       )}
     </>
   )
@@ -140,24 +166,24 @@ function CashFlow({ data }) {
       <div className="card" style={{ marginTop: 20 }}>
         <h3 style={{ marginTop: 0 }}>Monthly Breakdown</h3>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <table className="pl-table">
             <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
-                <th style={{ padding: '6px 8px' }}>Month</th>
-                <th style={{ padding: '6px 8px' }}>Incoming</th>
-                <th style={{ padding: '6px 8px' }}>Outgoing</th>
-                <th style={{ padding: '6px 8px' }}>Net</th>
-                <th style={{ padding: '6px 8px' }}>Balance</th>
+              <tr>
+                <th>Month</th>
+                <th>Incoming</th>
+                <th>Outgoing</th>
+                <th>Net</th>
+                <th>Balance</th>
               </tr>
             </thead>
             <tbody>
               {data.series.map((m) => (
-                <tr key={m.month} style={{ borderTop: '1px solid #f0ece1' }}>
-                  <td style={{ padding: '6px 8px' }}>{m.month}</td>
-                  <td style={{ padding: '6px 8px' }}>{money(m.incoming)}</td>
-                  <td style={{ padding: '6px 8px' }}>{money(m.outgoing)}</td>
-                  <td style={{ padding: '6px 8px', color: marginColor(m.net) }}>{money(m.net)}</td>
-                  <td style={{ padding: '6px 8px' }}>{money(m.balance)}</td>
+                <tr key={m.month}>
+                  <td>{m.month}</td>
+                  <td>{money(m.incoming)}</td>
+                  <td>{money(m.outgoing)}</td>
+                  <td style={{ color: marginColor(m.net), fontWeight: 600 }}>{money(m.net)}</td>
+                  <td>{money(m.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -227,33 +253,33 @@ function TrialBalance({ data }) {
     <div className="card">
       <h3 style={{ marginTop: 0 }}>Trial Balance</h3>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+        <table className="pl-table">
           <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
-              <th style={{ padding: '6px 8px' }}>Account Code</th>
-              <th style={{ padding: '6px 8px' }}>Account Name</th>
-              <th style={{ padding: '6px 8px' }}>Type</th>
-              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Debit</th>
-              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Credit</th>
-              <th style={{ padding: '6px 8px', textAlign: 'right' }}>Balance</th>
+            <tr>
+              <th>Account Code</th>
+              <th>Account Name</th>
+              <th>Type</th>
+              <th style={{ textAlign: 'right' }}>Debit</th>
+              <th style={{ textAlign: 'right' }}>Credit</th>
+              <th style={{ textAlign: 'right' }}>Balance</th>
             </tr>
           </thead>
           <tbody>
             {(data.accounts || []).map((acc) => (
-              <tr key={acc.code} style={{ borderTop: '1px solid #f0ece1' }}>
-                <td style={{ padding: '6px 8px' }}>{acc.code}</td>
-                <td style={{ padding: '6px 8px' }}>{acc.name}</td>
-                <td style={{ padding: '6px 8px', textTransform: 'capitalize' }}>{acc.account_type}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{acc.total_debit > 0 ? money(acc.total_debit) : '—'}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{acc.total_credit > 0 ? money(acc.total_credit) : '—'}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{money(acc.balance)}</td>
+              <tr key={acc.code}>
+                <td>{acc.code}</td>
+                <td>{acc.name}</td>
+                <td style={{ textTransform: 'capitalize' }}>{acc.account_type}</td>
+                <td style={{ textAlign: 'right' }}>{acc.total_debit > 0 ? money(acc.total_debit) : '—'}</td>
+                <td style={{ textAlign: 'right' }}>{acc.total_credit > 0 ? money(acc.total_credit) : '—'}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(acc.balance)}</td>
               </tr>
             ))}
-            <tr style={{ borderTop: '2px solid #f0ece1', backgroundColor: 'var(--bg-light)' }}>
-              <td style={{ padding: '8px', fontWeight: 700 }} colSpan={3}>Totals</td>
-              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_debit)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_credit)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>{money(data.total_balance)}</td>
+            <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'rgba(0,0,0,0.05)', fontWeight: 700 }}>
+              <td colSpan={3}>Totals</td>
+              <td style={{ textAlign: 'right' }}>{money(data.total_debit)}</td>
+              <td style={{ textAlign: 'right' }}>{money(data.total_credit)}</td>
+              <td style={{ textAlign: 'right' }}>{money(data.total_balance)}</td>
             </tr>
           </tbody>
         </table>
@@ -368,8 +394,34 @@ export default function Reports({ view }) {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [reminders, setReminders] = useState([])
 
   const config = VIEW_CONFIG[view] || VIEW_CONFIG['financial-summary']
+
+  const loadReminders = () => {
+    api.get('/reminders/').then(data => {
+      const map = new Map();
+      const result = [];
+      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
+      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
+      data.forEach(r => {
+        const loanMatch = r.text.match(loanRegex);
+        const invMatch = r.text.match(invoiceRegex);
+        if (loanMatch || invMatch) {
+          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
+          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
+          const existing = map.get(entity);
+          if (!existing || days > existing.days) map.set(entity, { id: r.id, days, record: r });
+        } else { result.push(r); }
+      });
+      setReminders([...result, ...Array.from(map.values()).map(v => v.record)]);
+    }).catch(() => {})
+  }
+
+  const dismissReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
+  }
 
   const load = () => {
     setData(null)
@@ -391,6 +443,7 @@ export default function Reports({ view }) {
     setData(null)
     setError('')
     api.get(config.endpoint).then(setData).catch((e) => setError(e.message))
+    loadReminders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
@@ -436,6 +489,9 @@ export default function Reports({ view }) {
       )}
 
       {error && <div className="error-text">{error}</div>}
+
+      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+
       {!data && !error && <div style={{ color: 'var(--text-muted)' }}>Loading…</div>}
       {data && <Component data={data} />}
     </div>
