@@ -86,8 +86,13 @@ def _compute_core_financials(db: Session, account_id, start: datetime = None, en
             cogs_by_item[s.item_name] += item_cogs
 
     expense_by_category = defaultdict(float)
+    expense_category_display = {}
     for e in expenses:
-        expense_by_category[e.category] += e.amount
+        raw = (e.category or "General").strip()
+        key = raw.lower()
+        expense_by_category[key] += e.amount
+        expense_category_display.setdefault(key, raw)
+    expense_by_category = {expense_category_display[k]: v for k, v in expense_by_category.items()}
 
     revenue = sum(revenue_by_item.values())
     total_expenses = sum(expense_by_category.values())
@@ -279,9 +284,17 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
 def inventory_valuation(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
     items = _scoped(db.query(InventoryItem), InventoryItem, account_id).all()
+    # Group case/whitespace-insensitively so "plumbing" / "Plumbing " / "PLUMBING"
+    # land in one bucket instead of fragmenting into near-duplicate categories.
+    # This does NOT fix genuine misspellings (e.g. "Plumbung") — those still need
+    # a manual merge, same as the item-level redundant-merge tool.
     by_category = defaultdict(float)
+    display_name = {}
     for i in items:
-        by_category[i.category] += i.quantity * i.cost_price
+        raw = (i.category or "General").strip()
+        key = raw.lower()
+        by_category[key] += i.quantity * i.cost_price
+        display_name.setdefault(key, raw)
     total_value = sum(by_category.values())
     top_items = sorted(
         ({
@@ -295,7 +308,7 @@ def inventory_valuation(db: Session = Depends(get_db), current_user: User = Depe
     )[:10]
     return {
         "total_value": round(total_value, 2),
-        "by_category": {k: round(v, 2) for k, v in by_category.items()},
+        "by_category": {display_name[k]: round(v, 2) for k, v in by_category.items()},
         "top_items": top_items,
     }
 

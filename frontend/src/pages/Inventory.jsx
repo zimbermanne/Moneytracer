@@ -22,6 +22,10 @@ export default function Inventory() {
   const [redundant, setRedundant] = useState(null)
   const [checkingRedundant, setCheckingRedundant] = useState(false)
   const [merging, setMerging] = useState(null)
+  const [catMergeOpen, setCatMergeOpen] = useState(false)
+  const [catMergeSelected, setCatMergeSelected] = useState([])
+  const [catMergeTarget, setCatMergeTarget] = useState('')
+  const [catMerging, setCatMerging] = useState(false)
 
   const load = () => { setListLoading(true); api.get('/inventory/').then(setItems).catch((e) => setError(e.message)).finally(() => setListLoading(false)) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,6 +98,33 @@ export default function Inventory() {
     finally { setMerging(null) }
   }
 
+  const distinctCategories = [...new Set(items.map((i) => i.category).filter(Boolean))].sort()
+
+  const openCatMerge = () => {
+    setCatMergeSelected([])
+    setCatMergeTarget('')
+    setCatMergeOpen(true)
+  }
+
+  const toggleCatSelected = (cat) => {
+    setCatMergeSelected((prev) => prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat])
+  }
+
+  const runCatMerge = async () => {
+    const target = catMergeTarget.trim()
+    if (!target) { setError('Pick or type the category name to keep.'); return }
+    const toMerge = catMergeSelected.filter((c) => c !== target)
+    if (toMerge.length === 0) { setError('Select at least one other category to fold into it.'); return }
+    setCatMerging(true); setError('')
+    try {
+      const res = await api.post('/inventory/categories/merge', { keep_category: target, merge_categories: toMerge })
+      load()
+      setCatMergeOpen(false)
+      alert(`✅ Relabeled ${res.items_relabeled} item(s) into "${res.keep_category}".`)
+    } catch (e) { setError(e.message) }
+    finally { setCatMerging(false) }
+  }
+
   const columns = [
     { key: 'name', header: 'Name' },
     { key: 'category', header: 'Category' },
@@ -131,6 +162,7 @@ export default function Inventory() {
           <button className="btn btn-outline" onClick={checkRedundant} disabled={checkingRedundant}>
             {checkingRedundant ? 'Checking…' : '🔎 Check for Duplicates'}
           </button>
+          <button className="btn btn-outline" onClick={openCatMerge}>🔀 Merge Categories</button>
           <button className="btn btn-primary" onClick={openNew}>+ Add Item</button>
         </div>
       </div>
@@ -175,6 +207,55 @@ export default function Inventory() {
         </Modal>
       )}
 
+      {catMergeOpen && (
+        <Modal
+          title="Merge Categories"
+          onClose={() => setCatMergeOpen(false)}
+          isDirty={false}
+          footer={(
+            <>
+              <button className="btn btn-outline" onClick={() => setCatMergeOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={runCatMerge} disabled={catMerging}>
+                {catMerging ? 'Merging…' : 'Merge'}
+              </button>
+            </>
+          )}
+        >
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+            Select the near-duplicate category spellings below (e.g. "plumbing", "Plumbung", "Plumbing"),
+            then choose the one name to keep. Every item under the selected categories gets relabeled —
+            nothing is deleted, quantities are untouched.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto', marginBottom: 16 }}>
+            {distinctCategories.map((cat) => (
+              <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={catMergeSelected.includes(cat)}
+                  onChange={() => toggleCatSelected(cat)}
+                />
+                {cat}
+              </label>
+            ))}
+            {distinctCategories.length === 0 && (
+              <div className="doc-sheet-muted">No categories yet.</div>
+            )}
+          </div>
+          <div className="form-row">
+            <label>Keep as</label>
+            <input
+              list="cat-merge-target-list"
+              value={catMergeTarget}
+              onChange={(e) => setCatMergeTarget(e.target.value)}
+              placeholder="e.g. Plumbing"
+            />
+            <datalist id="cat-merge-target-list">
+              {catMergeSelected.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+        </Modal>
+      )}
+
       {editing !== null && (
         <Modal
           title={editing.id ? 'Edit Item' : 'Add Item'}
@@ -197,7 +278,19 @@ export default function Inventory() {
           </div>
           <div className="form-row">
             <label>Category</label>
-            <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <input
+              list="inventory-category-list"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
+            {/* Suggests existing categories as you type so "Plumbing" doesn't
+                drift into "Plumbung" / "plumbing" / "Plumbng" across items —
+                each variant used to fragment the Value-by-Category report. */}
+            <datalist id="inventory-category-list">
+              {[...new Set(items.map((i) => i.category).filter(Boolean))].sort().map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <div className="form-row" style={{ flex: 1 }}>
