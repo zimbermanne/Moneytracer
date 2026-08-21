@@ -5,6 +5,7 @@ import Modal from '../components/Modal.jsx'
 import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
+import AppearanceSettings from '../components/AppearanceSettings.jsx'
 
 export default function Settings() {
   const { user, logout } = useAuth()
@@ -184,6 +185,9 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* Appearance: theme mode, accent color, frost color */}
+      <AppearanceSettings />
 
       {/* Legal & policies — opens the public /legal pages in a new tab */}
       <div className="card" style={{ marginTop: 20 }}>

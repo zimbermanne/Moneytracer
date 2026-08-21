@@ -381,10 +381,15 @@ button {
 }
 
 @media (prefers-color-scheme: dark) {
-  .pl-table tr:hover td {
+:root:not([data-theme]) .pl-table tr:hover td {
     background-color: rgba(255, 255, 255, 0.02);
   }
 }
+
+/* Explicit dark mode (user toggle) — mirrors the OS-driven block above. */
+:root[data-theme="dark"] .pl-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
 
 table {
   width: 100%;
@@ -3331,12 +3336,10 @@ label {
    a structurally different dark treatment (e.g. glass surfaces).
    ========================================================================== */
 @media (prefers-color-scheme: dark) {
-
-  /* ── Page base ── */
-  body { background: var(--cream); color: var(--text-dark); }
-
-  /* ── Cards ── */
-  .card {
+/* ── Page base ── */
+:root:not([data-theme]) body { background: var(--cream); color: var(--text-dark); }
+/* ── Cards ── */
+:root:not([data-theme]) .card {
     background:
       linear-gradient(135deg,
         rgba(255,255,255,0.06) 0%,
@@ -3350,19 +3353,18 @@ label {
       0 2px 8px rgba(0, 0, 0, 0.10),
       inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
-  .card::before {
+:root:not([data-theme]) .card::before {
     background: linear-gradient(90deg,
       transparent,
       rgba(255,255,255,0.12),
       transparent);
   }
-  .app-blob-1 { background: rgba(193, 95, 60, 0.10); }
-  .app-blob-2 { background: rgba(76, 107, 138, 0.09); }
-  .app-blob-3 { background: rgba(107, 143, 94, 0.08); }
-
-  /* ── Modal ── */
-  .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
-  .modal {
+:root:not([data-theme]) .app-blob-1 { background: rgba(193, 95, 60, 0.10); }
+:root:not([data-theme]) .app-blob-2 { background: rgba(76, 107, 138, 0.09); }
+:root:not([data-theme]) .app-blob-3 { background: rgba(107, 143, 94, 0.08); }
+/* ── Modal ── */
+:root:not([data-theme]) .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+:root:not([data-theme]) .modal {
     background: rgba(22, 25, 38, 0.38);
     backdrop-filter: blur(56px) saturate(200%);
     -webkit-backdrop-filter: blur(56px) saturate(200%);
@@ -3372,47 +3374,42 @@ label {
       inset 0 1px 0 rgba(255, 255, 255, 0.12),
       inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   }
-  .modal-header {
+:root:not([data-theme]) .modal-header {
     border-bottom-color: rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.04);
   }
-  .modal-footer {
+:root:not([data-theme]) .modal-footer {
     border-top-color: rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.04);
   }
-
-  /* ── Sidebar ── */
-  .sidebar {
+/* ── Sidebar ── */
+:root:not([data-theme]) .sidebar {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
     -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
   }
-  .sidebar-footer { background: rgba(255,255,255,0.02); border-top-color: rgba(255,255,255,0.06); }
-
-  /* ── Topbar / mobile topbar ── */
-  .desktop-topbar,
-  .mobile-topbar {
+:root:not([data-theme]) .sidebar-footer { background: rgba(255,255,255,0.02); border-top-color: rgba(255,255,255,0.06); }
+/* ── Topbar / mobile topbar ── */
+:root:not([data-theme]) .desktop-topbar, :root:not([data-theme]) .mobile-topbar {
     background: rgba(18, 20, 32, 0.55);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom-color: rgba(255, 255, 255, 0.07);
   }
-
-  /* ── Tables ── */
-  th {
+/* ── Tables ── */
+:root:not([data-theme]) th {
     background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-bottom-color: rgba(255, 255, 255, 0.08);
     color: var(--text-muted);
   }
-  td { border-bottom-color: rgba(255, 255, 255, 0.06); }
-  tr:hover td { background: rgba(255, 255, 255, 0.06); }
-
-  /* ── Inputs & selects ── */
-  input, textarea, select {
+:root:not([data-theme]) td { border-bottom-color: rgba(255, 255, 255, 0.06); }
+:root:not([data-theme]) tr:hover td { background: rgba(255, 255, 255, 0.06); }
+/* ── Inputs & selects ── */
+:root:not([data-theme]) input, :root:not([data-theme]) textarea, :root:not([data-theme]) select {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -3420,25 +3417,23 @@ label {
     border-color: rgba(255, 255, 255, 0.12);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
   }
-  input::placeholder, textarea::placeholder { color: var(--text-faint); }
-  input:focus, textarea:focus, select:focus {
+:root:not([data-theme]) input::placeholder, :root:not([data-theme]) textarea::placeholder { color: var(--text-faint); }
+:root:not([data-theme]) input:focus, :root:not([data-theme]) textarea:focus, :root:not([data-theme]) select:focus {
     background: rgba(255, 255, 255, 0.13);
     border-color: rgba(212, 114, 79, 0.5);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 3px rgba(212, 114, 79, 0.18);
   }
-
-  /* ── Buttons ── */
-  .btn-outline {
+/* ── Buttons ── */
+:root:not([data-theme]) .btn-outline {
     background: rgba(255, 255, 255, 0.10);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-color: rgba(255, 255, 255, 0.18);
     color: var(--text-dark);
   }
-  .btn-outline:hover { background: rgba(255, 255, 255, 0.16); }
-
-  /* ── App shell background — swap to dark hero image ── */
-  .app-shell {
+:root:not([data-theme]) .btn-outline:hover { background: rgba(255, 255, 255, 0.16); }
+/* ── App shell background — swap to dark hero image ── */
+:root:not([data-theme]) .app-shell {
     background:
       linear-gradient(rgba(5, 8, 18, 0.18), rgba(5, 8, 18, 0.10)),
       url('../assets/darkmood.jpg');
@@ -3446,9 +3441,8 @@ label {
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
   }
-
-  /* ── Login screen — swap to dark hero image ── */
-  .login-screen {
+/* ── Login screen — swap to dark hero image ── */
+:root:not([data-theme]) .login-screen {
     background:
       linear-gradient(rgba(5, 8, 20, 0.38), rgba(5, 8, 20, 0.28)),
       url('../assets/darkmood.jpg');
@@ -3456,9 +3450,8 @@ label {
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
   }
-
-  /* ── Landing hero — swap to dark hero image ── */
-  .landing-hero {
+/* ── Landing hero — swap to dark hero image ── */
+:root:not([data-theme]) .landing-hero {
     background:
       linear-gradient(rgba(5, 8, 20, 0.35), rgba(5, 8, 20, 0.25)),
       url('../assets/darkmood.jpg');
@@ -3466,60 +3459,223 @@ label {
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
   }
-
-  .login-card {
+:root:not([data-theme]) .login-card {
     background: rgba(26, 29, 39, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
-  .login-card h1 { color: var(--text-dark); }
-  .login-card .sub { color: var(--text-muted); }
-  .login-orb-glass {
+:root:not([data-theme]) .login-card h1 { color: var(--text-dark); }
+:root:not([data-theme]) .login-card .sub { color: var(--text-muted); }
+:root:not([data-theme]) .login-orb-glass {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
-
-  /* ── Bottom nav (mobile pill rail) ── */
-  .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
-  .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
-  .bottom-nav-rail-outer::after  { background: linear-gradient(to left,  var(--cream), transparent); }
-  .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
-  .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
-  .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
-  .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
-
-  /* ── Badges ── */
-  .badge-paid    { background: var(--success-bg); color: var(--success); }
-  .badge-unpaid  { background: var(--danger-bg);  color: var(--danger);  }
-  .badge-partial { background: var(--warning-bg); color: var(--warning); }
-
-  /* ── Wizard ── */
-  .wizard-screen { background: var(--cream); }
-
-  /* ── DropdownMenu / RowActionsMenu ── */
-  .dropdown-menu {
+/* ── Bottom nav (mobile pill rail) ── */
+:root:not([data-theme]) .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
+:root:not([data-theme]) .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
+:root:not([data-theme]) .bottom-nav-rail-outer::after { background: linear-gradient(to left,  var(--cream), transparent); }
+:root:not([data-theme]) .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+:root:not([data-theme]) .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+:root:not([data-theme]) .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
+:root:not([data-theme]) .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
+/* ── Badges ── */
+:root:not([data-theme]) .badge-paid { background: var(--success-bg); color: var(--success); }
+:root:not([data-theme]) .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
+:root:not([data-theme]) .badge-partial { background: var(--warning-bg); color: var(--warning); }
+/* ── Wizard ── */
+:root:not([data-theme]) .wizard-screen { background: var(--cream); }
+/* ── DropdownMenu / RowActionsMenu ── */
+:root:not([data-theme]) .dropdown-menu {
     background: rgba(22, 25, 38, 0.72);
     backdrop-filter: blur(24px) saturate(160%);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
     border-color: rgba(255, 255, 255, 0.09);
     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
   }
-  .dropdown-menu button:hover { background: rgba(255,255,255,0.07); }
-
-  /* ── SearchBar ── */
-  .search-bar { background: var(--surface); border-color: var(--border-strong); }
-
-  /* ── Metric card ── */
-  .metric-card .label { color: var(--text-muted); }
-  .metric-card .value { color: var(--text-dark); }
-
-  /* ── Page header divider ── */
-  .page-header { border-bottom-color: var(--border); }
-
-  /* ── Recharts tooltips ── */
-  .recharts-tooltip-wrapper .recharts-default-tooltip {
+:root:not([data-theme]) .dropdown-menu button:hover { background: rgba(255,255,255,0.07); }
+/* ── SearchBar ── */
+:root:not([data-theme]) .search-bar { background: var(--surface); border-color: var(--border-strong); }
+/* ── Metric card ── */
+:root:not([data-theme]) .metric-card .label { color: var(--text-muted); }
+:root:not([data-theme]) .metric-card .value { color: var(--text-dark); }
+/* ── Page header divider ── */
+:root:not([data-theme]) .page-header { border-bottom-color: var(--border); }
+/* ── Recharts tooltips ── */
+:root:not([data-theme]) .recharts-tooltip-wrapper .recharts-default-tooltip {
     background: var(--surface) !important;
     border-color: var(--border) !important;
     color: var(--text-dark) !important;
   }
 }
+
+/* Explicit dark mode (user toggle) — mirrors the OS-driven block above. */
+/* ── Page base ── */
+:root[data-theme="dark"] body { background: var(--cream); color: var(--text-dark); }
+/* ── Cards ── */
+:root[data-theme="dark"] .card {
+    background:
+      linear-gradient(135deg,
+        rgba(255,255,255,0.06) 0%,
+        rgba(255,255,255,0.02) 40%,
+        rgba(255,255,255,0.01) 100%);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 2px 8px rgba(0, 0, 0, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+:root[data-theme="dark"] .card::before {
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(255,255,255,0.12),
+      transparent);
+  }
+:root[data-theme="dark"] .app-blob-1 { background: rgba(193, 95, 60, 0.10); }
+:root[data-theme="dark"] .app-blob-2 { background: rgba(76, 107, 138, 0.09); }
+:root[data-theme="dark"] .app-blob-3 { background: rgba(107, 143, 94, 0.08); }
+/* ── Modal ── */
+:root[data-theme="dark"] .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+:root[data-theme="dark"] .modal {
+    background: rgba(22, 25, 38, 0.38);
+    backdrop-filter: blur(56px) saturate(200%);
+    -webkit-backdrop-filter: blur(56px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+:root[data-theme="dark"] .modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.04);
+  }
+:root[data-theme="dark"] .modal-footer {
+    border-top-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.04);
+  }
+/* ── Sidebar ── */
+:root[data-theme="dark"] .sidebar {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+    -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+:root[data-theme="dark"] .sidebar-footer { background: rgba(255,255,255,0.02); border-top-color: rgba(255,255,255,0.06); }
+/* ── Topbar / mobile topbar ── */
+:root[data-theme="dark"] .desktop-topbar, :root[data-theme="dark"] .mobile-topbar {
+    background: rgba(18, 20, 32, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+  }
+/* ── Tables ── */
+:root[data-theme="dark"] th {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+  }
+:root[data-theme="dark"] td { border-bottom-color: rgba(255, 255, 255, 0.06); }
+:root[data-theme="dark"] tr:hover td { background: rgba(255, 255, 255, 0.06); }
+/* ── Inputs & selects ── */
+:root[data-theme="dark"] input, :root[data-theme="dark"] textarea, :root[data-theme="dark"] select {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--text-dark);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
+  }
+:root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: var(--text-faint); }
+:root[data-theme="dark"] input:focus, :root[data-theme="dark"] textarea:focus, :root[data-theme="dark"] select:focus {
+    background: rgba(255, 255, 255, 0.13);
+    border-color: rgba(212, 114, 79, 0.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 3px rgba(212, 114, 79, 0.18);
+  }
+/* ── Buttons ── */
+:root[data-theme="dark"] .btn-outline {
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: var(--text-dark);
+  }
+:root[data-theme="dark"] .btn-outline:hover { background: rgba(255, 255, 255, 0.16); }
+/* ── App shell background — swap to dark hero image ── */
+:root[data-theme="dark"] .app-shell {
+    background:
+      linear-gradient(rgba(5, 8, 18, 0.18), rgba(5, 8, 18, 0.10)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+/* ── Login screen — swap to dark hero image ── */
+:root[data-theme="dark"] .login-screen {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.38), rgba(5, 8, 20, 0.28)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+/* ── Landing hero — swap to dark hero image ── */
+:root[data-theme="dark"] .landing-hero {
+    background:
+      linear-gradient(rgba(5, 8, 20, 0.35), rgba(5, 8, 20, 0.25)),
+      url('../assets/darkmood.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+  }
+:root[data-theme="dark"] .login-card {
+    background: rgba(26, 29, 39, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+:root[data-theme="dark"] .login-card h1 { color: var(--text-dark); }
+:root[data-theme="dark"] .login-card .sub { color: var(--text-muted); }
+:root[data-theme="dark"] .login-orb-glass {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+/* ── Bottom nav (mobile pill rail) ── */
+:root[data-theme="dark"] .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
+:root[data-theme="dark"] .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
+:root[data-theme="dark"] .bottom-nav-rail-outer::after { background: linear-gradient(to left,  var(--cream), transparent); }
+:root[data-theme="dark"] .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+:root[data-theme="dark"] .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+:root[data-theme="dark"] .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
+:root[data-theme="dark"] .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
+/* ── Badges ── */
+:root[data-theme="dark"] .badge-paid { background: var(--success-bg); color: var(--success); }
+:root[data-theme="dark"] .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
+:root[data-theme="dark"] .badge-partial { background: var(--warning-bg); color: var(--warning); }
+/* ── Wizard ── */
+:root[data-theme="dark"] .wizard-screen { background: var(--cream); }
+/* ── DropdownMenu / RowActionsMenu ── */
+:root[data-theme="dark"] .dropdown-menu {
+    background: rgba(22, 25, 38, 0.72);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+:root[data-theme="dark"] .dropdown-menu button:hover { background: rgba(255,255,255,0.07); }
+/* ── SearchBar ── */
+:root[data-theme="dark"] .search-bar { background: var(--surface); border-color: var(--border-strong); }
+/* ── Metric card ── */
+:root[data-theme="dark"] .metric-card .label { color: var(--text-muted); }
+:root[data-theme="dark"] .metric-card .value { color: var(--text-dark); }
+/* ── Page header divider ── */
+:root[data-theme="dark"] .page-header { border-bottom-color: var(--border); }
+/* ── Recharts tooltips ── */
+:root[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-dark) !important;
+  }

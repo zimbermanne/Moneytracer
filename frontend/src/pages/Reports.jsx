@@ -15,8 +15,8 @@ function Row({ left, right, bold, color, border }) {
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', fontSize: bold ? 15 : 14,
-      fontWeight: bold ? 700 : 400, padding: '6px 0',
-      borderTop: border ? '1px solid #f0ece1' : 'none', color: color || 'inherit',
+      fontWeight: bold ? 700 : 400, padding: border ? '10px 0 6px' : '6px 0',
+      color: color || 'inherit',
     }}>
       <span>{left}</span><span>{right}</span>
     </div>
