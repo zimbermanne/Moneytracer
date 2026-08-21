@@ -229,49 +229,6 @@ def categories(db: Session = Depends(get_db), current_user: User = Depends(get_c
     return sorted({r[0] for r in rows if r[0]})
 
 
-class MergeCategoriesRequest(BaseModel):
-    keep_category: str
-    merge_categories: List[str]
-
-
-@router.post("/categories/merge")
-def merge_categories(payload: MergeCategoriesRequest, db: Session = Depends(get_db),
-                      current_user: User = Depends(require_manager_up)):
-    """Rename every item currently under any of `merge_categories` to
-    `keep_category`. Unlike item merge, nothing is deleted here — this just
-    relabels rows, so item counts/quantities are untouched. Fixes the
-    'plumbing' / 'Plumbung' / 'Plumbing' style fragmentation in the
-    Inventory Valuation report's Value by Category breakdown."""
-    account_id = get_account_filter(current_user)
-    if account_id is None:
-        raise HTTPException(status_code=403, detail="Superadmin cannot merge categories")
-
-    keep = payload.keep_category.strip()
-    if not keep:
-        raise HTTPException(status_code=400, detail="keep_category cannot be blank")
-    merge_set = {c.strip() for c in payload.merge_categories if c.strip() and c.strip() != keep}
-    if not merge_set:
-        raise HTTPException(status_code=400, detail="No categories to merge")
-
-    query = db.query(InventoryItem).filter(
-        InventoryItem.account_id == account_id,
-        InventoryItem.category.in_(merge_set),
-    )
-    affected = query.all()
-    if not affected:
-        raise HTTPException(status_code=404, detail="No items found under those categories")
-
-    count = len(affected)
-    for item in affected:
-        item.category = keep
-    db.commit()
-    log_activity_for_user(
-        db, current_user, "inventory_category_merge",
-        f"Merged categories {sorted(merge_set)} into '{keep}' ({count} item(s) relabeled)",
-    )
-    return {"keep_category": keep, "merged_categories": sorted(merge_set), "items_relabeled": count}
-
-
 @router.get("/export/spreadsheet")
 def export_items(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(InventoryItem)

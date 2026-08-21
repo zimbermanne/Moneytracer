@@ -92,12 +92,6 @@ function applyPrefs(prefs) {
   root.style.setProperty('--glass-bg-sidebar', `rgba(${rgb}, ${Math.min(a * 1.5, 0.55)})`)
   root.style.setProperty('--glass-border-sidebar', `rgba(${rgb}, ${Math.min(a * 1.4 + 0.13, 0.6)})`)
 
-  // .modal / .login-card were previously hardcoded and never responded to
-  // this slider at all — wire them in with the same 1.5x/1.4x style ratio
-  // used for the sidebar so overlay surfaces stay legible at low intensity.
-  root.style.setProperty('--glass-bg-modal', `rgba(${rgb}, ${Math.min(a * 1.8, 0.6)})`)
-  root.style.setProperty('--glass-border-modal', `rgba(${rgb}, ${Math.min(a * 1.5 + 0.15, 0.65)})`)
-
   // ---- Background image ----
   if (prefs.customBgImage) {
     root.style.setProperty('--app-bg-image', `url("${prefs.customBgImage}")`)

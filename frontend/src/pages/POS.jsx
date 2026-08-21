@@ -4,6 +4,9 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 import ThermalReceipt from '../components/ThermalReceipt.jsx'
+import Modal from '../components/Modal.jsx'
+
+const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
 export default function POS() {
   const api = useApi()
