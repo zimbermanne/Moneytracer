@@ -13,6 +13,7 @@ export function NavigationGuardProvider({ children }) {
   const [isDirty, setIsDirty] = useState(false)
   const [message, setMessage] = useState('You have unsaved changes that will be lost if you leave this page.')
   const [pendingPath, setPendingPath] = useState(null) // null = no prompt, 'BACK' = browser back, or a path string
+  const [onSaveDraft, setOnSaveDraft] = useState(null) // async function to save work as draft
   const navigate = useNavigate()
   const isDirtyRef = useRef(false)
   isDirtyRef.current = isDirty
@@ -64,32 +65,53 @@ export function NavigationGuardProvider({ children }) {
     }
   }, [pendingPath, navigate])
 
+  const saveDraftAndLeave = useCallback(async () => {
+    if (onSaveDraft) {
+      const success = await onSaveDraft()
+      if (success) confirmLeave()
+    }
+  }, [onSaveDraft, confirmLeave])
+
   const cancelLeave = useCallback(() => setPendingPath(null), [])
 
   return (
-    <NavigationGuardContext.Provider value={{ isDirty, setDirty: setIsDirty, setDirtyMessage: setMessage, guardedNavigate }}>
+    <NavigationGuardContext.Provider value={{
+      isDirty,
+      setDirty: setIsDirty,
+      setDirtyMessage: setMessage,
+      guardedNavigate,
+      setOnSaveDraft: setOnSaveDraft
+    }}>
       {children}
       {pendingPath !== null && (
         <div
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            backdropFilter: 'blur(4px)',
           }}
         >
           <div
             className="card"
-            style={{ maxWidth: 380, width: '100%', background: 'var(--surface)', boxShadow: '0 12px 40px rgba(0,0,0,0.3)' }}
+            style={{ maxWidth: 420, width: '100%', background: 'var(--surface)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 22 }}>⚠️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <span style={{ fontSize: 28 }}>🛒</span>
               <h3 style={{ margin: 0 }}>Unsaved sale in progress</h3>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 24 }}>
               {message}
             </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-outline" onClick={cancelLeave}>Stay on this page</button>
-              <button className="btn btn-danger" onClick={confirmLeave}>Discard &amp; Leave</button>
+            <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
+              {onSaveDraft && (
+                <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '10px' }} onClick={saveDraftAndLeave}>
+                  💾 Save as Draft & Leave
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }} onClick={cancelLeave}>Stay on page</button>
+                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }} onClick={confirmLeave}>Discard & Leave</button>
+              </div>
             </div>
           </div>
         </div>

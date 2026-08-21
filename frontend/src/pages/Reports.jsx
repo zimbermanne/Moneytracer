@@ -199,22 +199,30 @@ function LedgerReport({ data, listKey, title }) {
   return (
     <>
       <div className="card-grid">
-        <div className="card metric-card"><div className="label">Total Outstanding</div><div className="value">{money(data.total_outstanding)}</div></div>
-        <div className="card metric-card"><div className="label">Count</div><div className="value">{data.count}</div></div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Total Outstanding</div>
+          <div className="value">{money(data.total_outstanding)}</div>
+        </div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Count</div>
+          <div className="value">{data.count}</div>
+        </div>
         {Object.entries(data.by_status || {}).map(([status, count]) => (
-          <div className="card metric-card" key={status}>
+          <div className="home-kpi-card metric-card" key={status}>
             <div className="label" style={{ textTransform: 'capitalize' }}>{status}</div>
             <div className="value">{count}</div>
           </div>
         ))}
       </div>
+
       {list.length > 0 && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <h3 style={{ marginTop: 0 }}>{title}</h3>
-          {list.map((r, idx) => (
-            <Row key={idx} left={`${r.name} (${r.status})`} right={money(r.outstanding)} />
-          ))}
-        </div>
+        <Accordion title={title} defaultOpen={true}>
+          <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
+            {list.map((r, idx) => (
+              <Row key={idx} left={`${r.name} (${r.status})`} right={money(r.outstanding)} />
+            ))}
+          </div>
+        </Accordion>
       )}
     </>
   )
@@ -224,17 +232,22 @@ function InventoryValuation({ data }) {
   return (
     <>
       <div className="card-grid">
-        <div className="card metric-card"><div className="label">Total Inventory Value</div><div className="value">{money(data.total_value)}</div></div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Total Inventory Value</div>
+          <div className="value">{money(data.total_value)}</div>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 20 }}>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Value by Category</h3>
+
+      <Accordion title="Value by Category" defaultOpen={true}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.by_category).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Top Items by Value</h3>
+      </Accordion>
+
+      <Accordion title="Top Items by Value" defaultOpen={true}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {(data.top_items || []).map((i) => (
             <Row
               key={i.item_name}
@@ -243,7 +256,7 @@ function InventoryValuation({ data }) {
             />
           ))}
         </div>
-      </div>
+      </Accordion>
     </>
   )
 }
@@ -292,33 +305,46 @@ function BalanceSheet({ data }) {
   return (
     <>
       <div className="card-grid" style={{ marginBottom: 20 }}>
-        <div className="card metric-card"><div className="label">Total Assets</div><div className="value">{money(data.total_assets)}</div></div>
-        <div className="card metric-card"><div className="label">Total Liabilities</div><div className="value">{money(data.total_liabilities)}</div></div>
-        <div className="card metric-card"><div className="label">Total Equity</div><div className="value">{money(data.total_equity)}</div></div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Total Assets</div>
+          <div className="value">{money(data.total_assets)}</div>
+        </div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Total Liabilities</div>
+          <div className="value">{money(data.total_liabilities)}</div>
+        </div>
+        <div className="home-kpi-card metric-card">
+          <div className="label">Total Equity</div>
+          <div className="value">{money(data.total_equity)}</div>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Assets</h3>
+
+      <Accordion title="Assets" defaultOpen={true}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.assets || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
           <Row left="Total Assets" right={money(data.total_assets)} bold border />
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Liabilities</h3>
+      </Accordion>
+
+      <Accordion title="Liabilities" defaultOpen={true}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.liabilities || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
           <Row left="Total Liabilities" right={money(data.total_liabilities)} bold border />
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
-          <h3 style={{ marginTop: 0 }}>Equity</h3>
+      </Accordion>
+
+      <Accordion title="Equity" defaultOpen={true}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.equity || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
           <Row left="Total Equity" right={money(data.total_equity)} bold border />
         </div>
-      </div>
+      </Accordion>
     </>
   )
 }

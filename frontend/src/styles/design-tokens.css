@@ -15,11 +15,11 @@
      .login-card, .modal, form inputs). Kept here rather than hardcoded
      per-selector so the whole app's glass look-and-feel stays in sync from
      one place. */
-  --glass-bg:         rgba(255, 255, 255, 0.12);
-  --glass-bg-hover:   rgba(255, 255, 255, 0.20);
-  --glass-border:     rgba(255, 255, 255, 0.25);
-  --glass-blur:       blur(30px);
-  --glass-saturate:   saturate(190%);
+  --glass-bg:         rgba(255, 255, 255, 0.22);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.30);
+  --glass-border:     rgba(255, 255, 255, 0.35);
+  --glass-blur:       blur(40px);
+  --glass-saturate:   saturate(200%);
   --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
   /* Sidebar sits at a different depth than cards, so it needs a slightly
      higher base opacity to read correctly — same recipe, different ratio.
