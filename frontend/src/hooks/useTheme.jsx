@@ -27,6 +27,7 @@ const DEFAULTS = {
   frostKey: 'classic',      // key into FROST_PRESETS, or 'custom'
   customFrostColor: null,   // "r, g, b" string when frostKey === 'custom'
   frostIntensity: 0.12,     // base alpha for --glass-bg (0.04–0.30)
+  customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 
 function hexToRgbString(hex) {
@@ -90,6 +91,13 @@ function applyPrefs(prefs) {
   // defaults used (0.18 vs 0.12 base, 0.35 vs 0.25 border).
   root.style.setProperty('--glass-bg-sidebar', `rgba(${rgb}, ${Math.min(a * 1.5, 0.55)})`)
   root.style.setProperty('--glass-border-sidebar', `rgba(${rgb}, ${Math.min(a * 1.4 + 0.13, 0.6)})`)
+
+  // ---- Background image ----
+  if (prefs.customBgImage) {
+    root.style.setProperty('--app-bg-image', `url("${prefs.customBgImage}")`)
+  } else {
+    root.style.removeProperty('--app-bg-image')
+  }
 }
 
 const ThemeContext = createContext(null)

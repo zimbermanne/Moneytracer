@@ -116,7 +116,7 @@ button {
      dense dashboard/table content stays readable on top of it. */
   background:
     linear-gradient(rgba(247, 244, 238, 0.15), rgba(247, 244, 238, 0.08)),
-    url('../assets/hero-bg.jpg');
+    var(--app-bg-image, url('../assets/hero-bg.jpg'));
   background-size: cover, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
@@ -556,10 +556,10 @@ td, .stat-value, input[type="number"] {
 input, select, textarea {
   padding: 9px 12px;
   border-radius: var(--radius);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-border);
   font-size: 14px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--glass-bg-hover);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   font-family: inherit;
@@ -569,9 +569,9 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: rgba(193, 95, 60, 0.6);
-  background: rgba(255, 255, 255, 0.38);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 3px rgba(193, 95, 60, 0.15);
+  border-color: var(--accent);
+  background: var(--glass-bg-hover);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 3px var(--accent-soft);
 }
 
 /* Selects get a custom chevron (native arrows vary by browser/OS and don't
@@ -1122,10 +1122,7 @@ label {
   align-items: center;
   padding: 10px 24px 0;
   min-height: 48px;
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255,255,255,0.35);
+  background: transparent;
 }
 
 .hamburger {
@@ -3392,7 +3389,7 @@ label {
   }
 :root:not([data-theme]) .sidebar-footer { background: rgba(255,255,255,0.02); border-top-color: rgba(255,255,255,0.06); }
 /* ── Topbar / mobile topbar ── */
-:root:not([data-theme]) .desktop-topbar, :root:not([data-theme]) .mobile-topbar {
+:root:not([data-theme]) .mobile-topbar {
     background: rgba(18, 20, 32, 0.55);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -3436,7 +3433,7 @@ label {
 :root:not([data-theme]) .app-shell {
     background:
       linear-gradient(rgba(5, 8, 18, 0.18), rgba(5, 8, 18, 0.10)),
-      url('../assets/darkmood.jpg');
+      var(--app-bg-image, url('../assets/darkmood.jpg'));
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
@@ -3565,7 +3562,7 @@ label {
   }
 :root[data-theme="dark"] .sidebar-footer { background: rgba(255,255,255,0.02); border-top-color: rgba(255,255,255,0.06); }
 /* ── Topbar / mobile topbar ── */
-:root[data-theme="dark"] .desktop-topbar, :root[data-theme="dark"] .mobile-topbar {
+:root[data-theme="dark"] .mobile-topbar {
     background: rgba(18, 20, 32, 0.55);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -3609,7 +3606,7 @@ label {
 :root[data-theme="dark"] .app-shell {
     background:
       linear-gradient(rgba(5, 8, 18, 0.18), rgba(5, 8, 18, 0.10)),
-      url('../assets/darkmood.jpg');
+      var(--app-bg-image, url('../assets/darkmood.jpg'));
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
