@@ -98,7 +98,7 @@ function ProfitLoss({ data }) {
       </Accordion>
 
       <Accordion title="2. Expenses by Category" defaultOpen={true}>
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.expense_by_category).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -109,7 +109,7 @@ function ProfitLoss({ data }) {
       </Accordion>
 
       <Accordion title="3. Revenue by Item" defaultOpen={false}>
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.revenue_by_item).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -122,7 +122,7 @@ function ProfitLoss({ data }) {
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 15 }}>
             Sorted by gross profit — which items are actually making you money.
           </div>
-          <div style={{ overflowX: 'auto', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+          <div style={{ overflowX: 'auto', background: 'var(--glass-bg)', borderRadius: '12px' }}>
             <table className="pl-table">
               <thead>
                 <tr>
@@ -275,7 +275,7 @@ function TrialBalance({ data }) {
                 <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(acc.balance)}</td>
               </tr>
             ))}
-            <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'rgba(0,0,0,0.05)', fontWeight: 700 }}>
+            <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'var(--glass-bg-hover)', fontWeight: 700 }}>
               <td colSpan={3}>Totals</td>
               <td style={{ textAlign: 'right' }}>{money(data.total_debit)}</td>
               <td style={{ textAlign: 'right' }}>{money(data.total_credit)}</td>

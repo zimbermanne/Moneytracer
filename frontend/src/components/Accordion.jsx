@@ -21,7 +21,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'var(--glass-bg-hover)',
           border: 'none',
           cursor: 'pointer',
           fontWeight: 600,
@@ -30,8 +30,8 @@ export default function Accordion({ title, defaultOpen = false, children }) {
           textAlign: 'left',
           transition: 'background 0.2s ease',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+        onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.08)'}
+        onMouseLeave={(e) => e.currentTarget.style.filter = 'none'}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {title}
