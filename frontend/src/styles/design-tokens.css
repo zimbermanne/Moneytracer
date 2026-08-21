@@ -21,6 +21,12 @@
   --glass-blur:       blur(30px);
   --glass-saturate:   saturate(190%);
   --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
+  /* Sidebar sits at a different depth than cards, so it needs a slightly
+     higher base opacity to read correctly — same recipe, different ratio.
+     Kept as its own token pair (rather than reusing --glass-bg) so the
+     theme customizer in Settings can scale both consistently. */
+  --glass-bg-sidebar:     rgba(255, 255, 255, 0.18);
+  --glass-border-sidebar: rgba(255, 255, 255, 0.35);
 
   /* ---- Core palette ---- */
   --cream:            #F7F4EE;   /* page background */

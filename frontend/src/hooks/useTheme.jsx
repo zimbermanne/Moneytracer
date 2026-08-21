@@ -27,6 +27,7 @@ const DEFAULTS = {
   frostKey: 'classic',      // key into FROST_PRESETS, or 'custom'
   customFrostColor: null,   // "r, g, b" string when frostKey === 'custom'
   frostIntensity: 0.12,     // base alpha for --glass-bg (0.04–0.30)
+  customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 
 function hexToRgbString(hex) {
@@ -84,6 +85,19 @@ function applyPrefs(prefs) {
   root.style.setProperty('--glass-bg', `rgba(${rgb}, ${a})`)
   root.style.setProperty('--glass-bg-hover', `rgba(${rgb}, ${Math.min(a + 0.08, 0.4)})`)
   root.style.setProperty('--glass-border', `rgba(${rgb}, ${Math.min(a + 0.13, 0.5)})`)
+
+  // Sidebar sits at a different depth than cards and reads best a bit more
+  // opaque — same color, same 1.5x/1.4x ratio the original hand-tuned
+  // defaults used (0.18 vs 0.12 base, 0.35 vs 0.25 border).
+  root.style.setProperty('--glass-bg-sidebar', `rgba(${rgb}, ${Math.min(a * 1.5, 0.55)})`)
+  root.style.setProperty('--glass-border-sidebar', `rgba(${rgb}, ${Math.min(a * 1.4 + 0.13, 0.6)})`)
+
+  // ---- Background image ----
+  if (prefs.customBgImage) {
+    root.style.setProperty('--app-bg-image', `url("${prefs.customBgImage}")`)
+  } else {
+    root.style.removeProperty('--app-bg-image')
+  }
 }
 
 const ThemeContext = createContext(null)
