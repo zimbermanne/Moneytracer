@@ -26,7 +26,7 @@ const DEFAULTS = {
   customAccent: null,       // hex string when accentKey === 'custom'
   frostKey: 'classic',      // key into FROST_PRESETS, or 'custom'
   customFrostColor: null,   // "r, g, b" string when frostKey === 'custom'
-  frostIntensity: 0.12,     // base alpha for --glass-bg (0.04–0.30)
+  frostIntensity: 0.22,     // base alpha for --glass-bg (0.04–0.40)
   customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 
