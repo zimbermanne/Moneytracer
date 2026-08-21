@@ -180,6 +180,7 @@ export default function POS() {
             ✎ Salesman (editable prices)
           </button>
         </div>
+        </div>
       </div>
       {saleMode === 'salesman' && (
         <div style={{ fontSize: 12, color: 'var(--warning)', marginBottom: 12 }}>
