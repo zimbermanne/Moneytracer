@@ -20,13 +20,16 @@ from database import SessionLocal
 from models import (
     Invoice, DocumentStatus, Account, ActivityLog, Reminder,
     ComplianceDeadline, DeadlineRecurrence, BankLoan, LoanStatus,
+    JournalEntry,
 )
 from activity import log_activity
 import email_utils
+from ledger import post_loan_interest_accrual_entry
 
 _REMINDER_ACTION = "invoice_reminder_sent"
 _DEADLINE_REMINDER_ACTION = "deadline_reminder_sent"
 _LOAN_REMINDER_ACTION = "loan_reminder_sent"
+_LOAN_ACCRUAL_ACTION = "loan_interest_accrued"
 
 
 def _already_reminded_today(db, invoice_id: int) -> bool:
@@ -208,6 +211,55 @@ def send_loan_payment_reminders():
         db.close()
 
 
+def accrue_loan_interest():
+    """Daily job to check for active loans and post interest accrual entries
+    to the General Ledger for the current month. Ensures the books reflect
+    unpaid interest expenses periodically."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        month_key = now.strftime("%Y-%m")
+
+        loans = db.query(BankLoan).filter(BankLoan.status == LoanStatus.active).all()
+        for loan in loans:
+            # Check if we already accrued for this loan + month
+            marker = f"loan_id={loan.id} month={month_key}"
+            if _already_reminded_today_for(db, _LOAN_ACCRUAL_ACTION, marker):
+                continue
+
+            # For simplicity, we accrue interest for the full month on the due_day_of_month
+            if now.day != loan.due_day_of_month:
+                continue
+
+            # Calculate one month of interest
+            # Simple Interest: principal * rate / 12
+            # Reducing Balance: current_principal * rate / 12
+            rate = (loan.annual_rate / 100) / 12
+
+            if loan.interest_type == "simple":
+                amount = loan.principal * rate
+            else:
+                # Need outstanding principal
+                paid_principal = sum(p.principal_portion for p in loan.payments)
+                principal = max(0.0, loan.principal - paid_principal)
+                amount = principal * rate
+
+            if amount <= 0.01:
+                continue
+
+            try:
+                post_loan_interest_accrual_entry(db, loan.account_id, loan, round(amount, 2), now)
+                log_activity(db, username="system", action=_LOAN_ACCRUAL_ACTION,
+                             details=f"{marker} amount={amount:.2f}", account_id=loan.account_id)
+            except Exception as e:
+                log_activity(db, username="system", action="CRITICAL: loan_accrual_failed",
+                             details=f"{marker} error={e}", account_id=loan.account_id)
+
+        db.commit()
+    finally:
+        db.close()
+
+
 _scheduler = None
 
 
@@ -235,6 +287,13 @@ def start_scheduler():
         "interval", hours=24,
         id="loan_payment_reminders",
         next_run_time=datetime.utcnow() + timedelta(seconds=60),
+        coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        accrue_loan_interest,
+        "interval", hours=24,
+        id="accrue_loan_interest",
+        next_run_time=datetime.utcnow() + timedelta(seconds=120),
         coalesce=True, max_instances=1,
     )
     _scheduler.start()

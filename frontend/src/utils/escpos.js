@@ -238,3 +238,86 @@ export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 42, ext
 
   return b.toBytes()
 }
+
+/**
+ * Build the full byte sequence for a customer statement of accounts —
+ * opening balance, a running-balance ledger of invoiced/received entries,
+ * and the closing balance due. Printed narrower-feeling than a sales
+ * receipt since each ledger line carries a date, so long descriptions get
+ * wrapped onto their own line rather than truncated.
+ * @param {object} statement - { customer_name, date_from, date_to,
+ *   opening_balance, invoiced_amount, amount_received, balance_due, entries }
+ *   entries: [{ date, description, reference, invoiced, received, balance }]
+ * @param {object} company - { name, address, phone, tin, vrn, owner_full_name }
+ * @param {number} charsPerLine - 32 (58mm) or 48 (80mm) at Font A, or the
+ *   wider Font B counts (42 / 64) if the caller sets font(1) itself.
+ */
+export function buildStatementEscPos(statement, company = {}, charsPerLine = 42) {
+  const b = new EscPosBuilder(charsPerLine)
+  const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const shortDate = (d) => new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+  // Font B (smaller) for the whole statement -- same rationale as receipts:
+  // fits noticeably more per line than Font A, which matters here since
+  // ledger rows pack a date, description, and two amounts.
+  b.font(1)
+
+  b.align('center')
+  b.bold(true)
+  b.line(company.name || 'Moneytracer')
+  b.bold(false)
+  if (company.street_address || company.address) b.line(company.street_address || company.address)
+  if (company.phone) b.line(`Tel: ${company.phone}`)
+  if (company.tin) b.line(`TIN: ${company.tin}`)
+  if (company.vrn) b.line(`VRN: ${company.vrn}`)
+  b.hr('=')
+  b.bold(true)
+  b.line('STATEMENT OF ACCOUNT')
+  b.bold(false)
+
+  b.align('left')
+  b.line(`Customer: ${statement.customer_name || ''}`)
+  const from = statement.date_from ? new Date(statement.date_from).toLocaleDateString() : ''
+  const to = statement.date_to ? new Date(statement.date_to).toLocaleDateString() : ''
+  if (from || to) b.line(`Period: ${from} - ${to}`)
+  b.line(`Printed: ${new Date().toLocaleString()}`)
+  b.hr()
+
+  b.row('Opening Balance', `TZS ${money(statement.opening_balance)}`)
+  b.hr('-')
+
+  // Ledger: each entry gets a date+description line, then an
+  // invoiced/received/balance line so the numbers stay aligned and
+  // readable even when the description is long.
+  for (const e of statement.entries || []) {
+    const desc = e.reference ? `${e.description} (${e.reference})` : e.description
+    b.line(`${shortDate(e.date)}  ${desc}`)
+    const parts = []
+    if (e.invoiced) parts.push(`Inv ${money(e.invoiced)}`)
+    if (e.received) parts.push(`Recv ${money(e.received)}`)
+    parts.push(`Bal ${money(e.balance)}`)
+    b.line(`   ${parts.join('  ')}`)
+  }
+  if (!statement.entries || statement.entries.length === 0) {
+    b.line('No activity in this period.')
+  }
+  b.hr()
+
+  b.row('Total Invoiced', `TZS ${money(statement.invoiced_amount)}`)
+  b.row('Total Received', `TZS ${money(statement.amount_received)}`)
+  b.hr('-')
+  b.bold(true)
+  b.doubleSize(true)
+  b.row('BALANCE DUE', money(statement.balance_due))
+  b.doubleSize(false)
+  b.bold(false)
+  b.feed(1)
+
+  b.align('center')
+  b.line('Thank you for your business!')
+  b.bold(true)
+  b.line('END OF STATEMENT')
+  b.bold(false)
+  b.cut()
+
+  return b.toBytes()
+}

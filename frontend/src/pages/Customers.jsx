@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
+import ThermalStatement from '../components/ThermalStatement.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
 function money(n) {
@@ -42,28 +44,50 @@ function IncomeChart({ series }) {
 
 const TABS = ['Overview', 'Invoices', 'Quotations', 'Debts', 'Statement']
 
-function CustomerDetail({ customer, onBack }) {
+function CustomerDetail({ customer, onBack, onEdit, onDelete }) {
   const api = useApi()
+  const { account } = useAuth()
   const [tab, setTab] = useState('Overview')
   const [profile, setProfile] = useState(null)
   const [statement, setStatement] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [printStatement, setPrintStatement] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
     setLoading(true)
     setProfile(null)
     setStatement(null)
     setTab('Overview')
+    setDateFrom('')
+    setDateTo('')
     api.get(`/customers/${customer.id}/profile`)
       .then(setProfile)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [customer.id]) // eslint-disable-line
 
+  const loadStatement = (fromOverride, toOverride) => {
+    const from = fromOverride !== undefined ? fromOverride : dateFrom
+    const to = toOverride !== undefined ? toOverride : dateTo
+    const params = new URLSearchParams()
+    if (from) params.set('date_from', new Date(from).toISOString())
+    if (to) {
+      // Include the whole end day, not just its midnight.
+      const end = new Date(to)
+      end.setHours(23, 59, 59, 999)
+      params.set('date_to', end.toISOString())
+    }
+    const qs = params.toString()
+    setStatement(null)
+    api.get(`/customers/${customer.id}/statement${qs ? `?${qs}` : ''}`).then(setStatement).catch((e) => setError(e.message))
+  }
+
   useEffect(() => {
     if (tab !== 'Statement' || statement) return
-    api.get(`/customers/${customer.id}/statement`).then(setStatement).catch((e) => setError(e.message))
+    loadStatement()
   }, [tab]) // eslint-disable-line
 
   const invoiceColumns = [
@@ -100,7 +124,9 @@ function CustomerDetail({ customer, onBack }) {
     <div className="customer-detail-pane">
       <div className="customer-detail-header">
         <button className="btn btn-outline customer-back-btn" onClick={onBack}>← Back</button>
-        <h2 style={{ margin: 0 }}>{customer.name}</h2>
+        <h2 style={{ margin: 0, flex: 1 }}>{customer.name}</h2>
+        <button className="btn btn-outline" onClick={() => onEdit(customer)}>✎ Edit</button>
+        <button className="btn btn-outline" style={{ color: 'var(--danger)' }} onClick={() => onDelete(customer)}>🗑 Delete</button>
       </div>
 
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
@@ -112,6 +138,10 @@ function CustomerDetail({ customer, onBack }) {
               <div className="value" style={{ fontSize: 16 }}>{profile.phone || '—'}</div>
             </div>
             <div className="card metric-card">
+              <div className="label">Email</div>
+              <div className="value" style={{ fontSize: 16 }}>{profile.email || '—'}</div>
+            </div>
+            <div className="card metric-card">
               <div className="label">Address</div>
               <div className="value" style={{ fontSize: 16 }}>{profile.address || '—'}</div>
             </div>
@@ -119,8 +149,15 @@ function CustomerDetail({ customer, onBack }) {
               <div className="label">TIN Number</div>
               <div className="value" style={{ fontSize: 16 }}>{profile.tin || '—'}</div>
             </div>
+          </div>
+
+          <div className="card-grid" style={{ marginBottom: 16 }}>
             <div className="card metric-card">
-              <div className="label">Outstanding Receivables</div>
+              <div className="label">Total Purchased (Credit)</div>
+              <div className="value">{money(profile.total_purchased)}</div>
+            </div>
+            <div className="card metric-card">
+              <div className="label">Outstanding Receivables (Debit)</div>
               <div className="value">{money(profile.outstanding_receivables)}</div>
             </div>
           </div>
@@ -143,6 +180,12 @@ function CustomerDetail({ customer, onBack }) {
 
           {tab === 'Overview' && (
             <>
+              {profile.notes && (
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="label" style={{ marginBottom: 6 }}>Notes</div>
+                  <div style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>{profile.notes}</div>
+                </div>
+              )}
               <IncomeChart series={profile.income_last_6_months} />
               <div style={{ fontWeight: 700, textAlign: 'right' }}>
                 Total Income (Last 6 Months) — {money(profile.total_income_last_6_months)}
@@ -165,6 +208,26 @@ function CustomerDetail({ customer, onBack }) {
           {tab === 'Statement' && (
             statement ? (
               <div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>From</label>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>To</label>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  </div>
+                  <button className="btn btn-outline" onClick={loadStatement}>Apply</button>
+                  {(dateFrom || dateTo) && (
+                    <button className="btn btn-outline" onClick={() => { setDateFrom(''); setDateTo(''); loadStatement('', '') }}>
+                      Reset to this month
+                    </button>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  <button className="btn btn-outline" onClick={() => setPrintStatement(true)}>
+                    🖨 Print Statement
+                  </button>
+                </div>
                 <div className="card-grid" style={{ marginBottom: 16 }}>
                   <div className="card metric-card">
                     <div className="label">Opening Balance</div>
@@ -189,6 +252,14 @@ function CustomerDetail({ customer, onBack }) {
           )}
         </>
       )}
+
+      {printStatement && statement && (
+        <ThermalStatement
+          statement={statement}
+          company={account}
+          onClose={() => setPrintStatement(false)}
+        />
+      )}
     </div>
   )
 }
@@ -197,12 +268,14 @@ export default function Customers() {
   const api = useApi()
   const [customers, setCustomers] = useState([])
   const [selected, setSelected] = useState(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', address: '', tin_number: '' })
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', tin_number: '', notes: '' })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+  const [deleting, setDeleting] = useState(null) // customer pending delete confirmation
 
   const load = (keepSelection = true) => api.get('/customers/').then((rows) => {
     setCustomers(rows)
@@ -217,15 +290,55 @@ export default function Customers() {
 
   const { query, setQuery, filtered: filteredCustomers } = useSearch(customers, ['name'])
 
-  const submitCreate = async (e) => {
+  const openCreate = () => {
+    setEditingId(null)
+    setForm({ name: '', phone: '', email: '', address: '', tin_number: '', notes: '' })
+    setError('')
+    setShowForm(true)
+  }
+
+  const openEdit = (customer) => {
+    setEditingId(customer.id)
+    setForm({
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+      address: customer.address || '',
+      tin_number: customer.tin_number || '',
+      notes: customer.notes || '',
+    })
+    setError('')
+    setShowForm(true)
+  }
+
+  const submitForm = async (e) => {
     e.preventDefault()
     setSaving(true)
     setError('')
     try {
-      await api.post('/customers/', form)
-      setShowCreate(false)
-      setForm({ name: '', phone: '', address: '', tin_number: '' })
+      if (editingId) {
+        await api.put(`/customers/${editingId}`, form)
+      } else {
+        await api.post('/customers/', form)
+      }
+      setShowForm(false)
       load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleting) return
+    setSaving(true)
+    setError('')
+    try {
+      await api.del(`/customers/${deleting.id}`)
+      setDeleting(null)
+      setSelected((prev) => (prev?.id === deleting.id ? null : prev))
+      load(false)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -260,7 +373,7 @@ export default function Customers() {
           <button className="btn btn-outline" onClick={syncExisting} disabled={syncing}>
             {syncing ? 'Importing…' : 'Import from existing records'}
           </button>
-          <button className="btn btn-gold" onClick={() => setShowCreate(true)}>+ New Customer</button>
+          <button className="btn btn-gold" onClick={openCreate}>+ New Customer</button>
         </div>
       </div>
       {syncMessage && <div className="success-text" style={{ marginBottom: 12 }}>{syncMessage}</div>}
@@ -296,7 +409,12 @@ export default function Customers() {
 
         <div className="customers-detail-pane">
           {selected ? (
-            <CustomerDetail customer={selected} onBack={() => setSelected(null)} />
+            <CustomerDetail
+              customer={selected}
+              onBack={() => setSelected(null)}
+              onEdit={openEdit}
+              onDelete={setDeleting}
+            />
           ) : (
             <div className="customers-detail-placeholder">
               Select a customer on the left to view their profile, invoices, quotations, debts, and statement.
@@ -305,13 +423,15 @@ export default function Customers() {
         </div>
       </div>
 
-      {showCreate && (
-        <Modal title="New Customer" onClose={() => setShowCreate(false)}
+      {showForm && (
+        <Modal title={editingId ? 'Edit Customer' : 'New Customer'} onClose={() => setShowForm(false)}
           footer={<>
-            <button className="btn btn-outline" onClick={() => setShowCreate(false)}>Cancel</button>
-            <button className="btn btn-gold" onClick={submitCreate} disabled={saving}>{saving ? 'Saving…' : 'Save Customer'}</button>
+            <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
+            <button className="btn btn-gold" onClick={submitForm} disabled={saving}>
+              {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save Customer'}
+            </button>
           </>}>
-          <form onSubmit={submitCreate}>
+          <form onSubmit={submitForm}>
             <div className="form-row">
               <label>Name</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus />
@@ -321,6 +441,10 @@ export default function Customers() {
               <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. 255712345678" />
             </div>
             <div className="form-row">
+              <label>Email</label>
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="e.g. customer@example.com" />
+            </div>
+            <div className="form-row">
               <label>Address</label>
               <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </div>
@@ -328,8 +452,29 @@ export default function Customers() {
               <label>TIN Number</label>
               <input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} />
             </div>
+            <div className="form-row">
+              <label>Notes</label>
+              <textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
             {error && <div className="error-text">{error}</div>}
           </form>
+        </Modal>
+      )}
+
+      {deleting && (
+        <Modal title="Delete Customer" onClose={() => setDeleting(null)}
+          footer={<>
+            <button className="btn btn-outline" onClick={() => setDeleting(null)}>Cancel</button>
+            <button className="btn btn-danger" onClick={confirmDelete} disabled={saving}>
+              {saving ? 'Deleting…' : 'Delete Customer'}
+            </button>
+          </>}>
+          <p>
+            Delete <strong>{deleting.name}</strong>? This removes their customer record (contact info and notes).
+            Their existing sales, invoices, quotations, and debts stay on file — they just won't be linked to a
+            customer record anymore.
+          </p>
+          {error && <div className="error-text">{error}</div>}
         </Modal>
       )}
     </div>

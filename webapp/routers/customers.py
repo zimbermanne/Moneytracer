@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Sale, Invoice, Quotation, Debtor, Customer, User, RoleEnum
+from models import Sale, Invoice, Quotation, Debtor, Customer, User, RoleEnum, DocumentStatus
 from auth import get_current_user
 from schemas import (
     CustomerCreate, CustomerUpdate, CustomerOut,
@@ -60,7 +60,7 @@ def lookup_customer_by_name(name: str, db: Session = Depends(get_db),
     customer = q.first()
     if not customer:
         raise HTTPException(status_code=404, detail="No matching customer record")
-    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone,
+    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone, email=customer.email,
                        address=customer.address, tin_number=customer.tin_number,
                        notes=customer.notes, created_at=customer.created_at)
 
@@ -80,7 +80,7 @@ def list_customers(db: Session = Depends(get_db), current_user: User = Depends(g
         invoices = _related(db, Invoice, Invoice.customer_name, c.name, account_id)
         all_dates = [s.created_at for s in sales] + [d.created_at for d in debts] + [i.created_at for i in invoices]
         result.append(CustomerOut(
-            id=c.id, name=c.name, phone=c.phone, address=c.address,
+            id=c.id, name=c.name, phone=c.phone, email=c.email, address=c.address,
             tin_number=c.tin_number, notes=c.notes, created_at=c.created_at,
             total_purchased=round(sum(s.total for s in sales), 2),
             total_owed=round(sum(d.total_owed - d.amount_paid for d in debts), 2),
@@ -103,13 +103,13 @@ def create_customer(payload: CustomerCreate, db: Session = Depends(get_db),
         raise HTTPException(status_code=409, detail="A customer with this name already exists")
 
     customer = Customer(account_id=account_id, name=payload.name.strip(), phone=payload.phone or "",
-                        address=payload.address or "", tin_number=payload.tin_number or "",
+                        email=payload.email or "", address=payload.address or "", tin_number=payload.tin_number or "",
                         notes=payload.notes or "")
     db.add(customer)
     db.commit()
     db.refresh(customer)
     log_activity_for_user(db, current_user, "create_customer", f"Added customer {customer.name}")
-    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone,
+    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone, email=customer.email,
                        address=customer.address, tin_number=customer.tin_number,
                        notes=customer.notes, created_at=customer.created_at)
 
@@ -126,7 +126,7 @@ def update_customer(customer_id: int, payload: CustomerUpdate, db: Session = Dep
     db.commit()
     db.refresh(customer)
     log_activity_for_user(db, current_user, "update_customer", f"Updated customer {customer.name}")
-    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone,
+    return CustomerOut(id=customer.id, name=customer.name, phone=customer.phone, email=customer.email,
                        address=customer.address, tin_number=customer.tin_number,
                        notes=customer.notes, created_at=customer.created_at)
 
@@ -186,11 +186,15 @@ def customer_profile(customer_id: int, db: Session = Depends(get_db),
     ]
 
     return CustomerProfile(
+        customer_id=customer.id,
         customer_name=customer.name,
         phone=customer.phone,
+        email=customer.email,
         address=customer.address,
         tin=customer.tin_number,
         vrn="",
+        notes=customer.notes,
+        total_purchased=round(sum(s.total for s in sales), 2),
         outstanding_receivables=outstanding_receivables,
         income_last_6_months=income_last_6_months,
         total_income_last_6_months=round(sum(p.total for p in income_last_6_months), 2),
@@ -219,21 +223,40 @@ def customer_statement(customer_id: int, date_from: datetime = None, date_to: da
     invoices = _related(db, Invoice, Invoice.customer_name, customer.name, account_id)
     debts = _related(db, Debtor, Debtor.name, customer.name, account_id)
 
-    # Opening balance: everything before the period start.
+    # Opening balance: everything before the period start. An invoice that
+    # was marked paid before the period start nets to zero here — it was
+    # invoiced and settled entirely before this statement's window, so it
+    # shouldn't inflate the opening balance. paid_at falls back to
+    # created_at for invoices paid before this column existed, which still
+    # nets correctly since both dates land in the same "before/after
+    # date_from" bucket for those older records.
     opening_balance = 0.0
     for i in invoices:
         if i.created_at < date_from:
             opening_balance += i.total
+            if i.status == DocumentStatus.paid:
+                paid_date = i.paid_at or i.created_at
+                if paid_date < date_from:
+                    opening_balance -= i.total
     for d in debts:
         if d.created_at < date_from:
             opening_balance += d.total_owed
             opening_balance -= d.amount_paid
 
-    # In-period events.
+    # In-period events. A paid invoice contributes both the original
+    # "invoiced" line (if raised in-period) and a separate "received" line
+    # dated at the moment it was actually paid — mirroring how Debtor
+    # payments are already netted below. Without this, a fully-paid
+    # invoice would stay counted as outstanding forever, since nothing
+    # here previously offset it (see the comment on Invoice.paid_at).
     events = []
     for i in invoices:
         if date_from <= i.created_at <= date_to:
             events.append((i.created_at, f"Invoice {i.invoice_no}", i.invoice_no, i.total, 0.0))
+        if i.status == DocumentStatus.paid:
+            paid_date = i.paid_at or i.created_at
+            if date_from <= paid_date <= date_to:
+                events.append((paid_date, f"Payment received — Invoice {i.invoice_no}", i.invoice_no, 0.0, i.total))
     for d in debts:
         if date_from <= d.created_at <= date_to:
             events.append((d.created_at, d.note or "Credit sale", "", d.total_owed, 0.0))

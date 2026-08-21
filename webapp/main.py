@@ -12,7 +12,7 @@ import models  # noqa: F401 ensures models are registered before create_all
 from migrate import run_migrations
 from seed_pan_african_data import seed_all_pan_african_data
 from rate_limit import limiter
-from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets, attachments, payroll, approvals
+from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, suppliers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets, attachments, payroll, approvals, ar_dashboard
 from scheduler import start_scheduler
 from database import SessionLocal
 
@@ -99,6 +99,7 @@ app.include_router(agent.router)
 app.include_router(invoices.router)
 app.include_router(quotations.router)
 app.include_router(customers.router)
+app.include_router(suppliers.router)
 app.include_router(accounts.router)
 app.include_router(superadmin.router)
 app.include_router(bank_loans.router)
@@ -112,6 +113,7 @@ app.include_router(reference.router)
 app.include_router(attachments.router)
 app.include_router(payroll.router)
 app.include_router(approvals.router)
+app.include_router(ar_dashboard.router)
 
 @app.get("/api/health")
 def health():

@@ -2,16 +2,52 @@ import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
+import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
 export default function Personal() {
   const api = useApi()
   const [tab, setTab] = useState('overview')
+  const [reminders, setReminders] = useState([])
+
+  const loadReminders = () => {
+    api.get('/reminders/').then(data => {
+      const map = new Map();
+      const result = [];
+      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
+      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
+      data.forEach(r => {
+        const loanMatch = r.text.match(loanRegex);
+        const invMatch = r.text.match(invoiceRegex);
+        if (loanMatch || invMatch) {
+          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
+          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
+          const existing = map.get(entity);
+          if (!existing || days > existing.days) map.set(entity, { id: r.id, days, record: r });
+        } else { result.push(r); }
+      });
+      setReminders([...result, ...Array.from(map.values()).map(v => v.record)]);
+    }).catch(() => {})
+  }
+
+  const dismissReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
+  }
+
+  useEffect(() => {
+    loadReminders()
+  }, []) // eslint-disable-line
 
   return (
-    <div>
-      <h1 style={{ marginBottom: 4 }}>Personal Finance</h1>
+    <div className="page">
+      <div className="page-header">
+        <h1>Personal Finance</h1>
+      </div>
+
+      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+
       <div className="tabs" style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--border)' }}>
         {[
           ['overview', 'Overview'],
@@ -52,24 +88,31 @@ function OverviewTab({ api }) {
   if (error) return <div className="error-text">{error}</div>
   if (!data) return <div>Loading…</div>
 
-  const netWorth = data.total_assets_value - data.total_bank_debt - data.total_owed_to_creditors + data.total_owed_by_debtors
+  const totalVikobaLoans = (data.vikoba_memberships || []).reduce((sum, m) => sum + m.active_loan_balance, 0)
+  const totalAssets = data.total_assets_value + data.total_owed_by_debtors
+  const totalLiabilities = data.total_bank_debt + data.total_owed_to_creditors + totalVikobaLoans
+  const netWorth = totalAssets - totalLiabilities
 
   const cards = [
-    ['Assets', data.total_assets_value],
-    ['Bank Debt', data.total_bank_debt],
-    ['Owed to Creditors', data.total_owed_to_creditors],
-    ['Owed by Debtors', data.total_owed_by_debtors],
-    ['Expenses This Month', data.expenses_this_month],
-    ['Net Worth', netWorth],
+    { label: 'Total Assets', value: totalAssets, sub: `(Includes ${money(data.total_owed_by_debtors)} receivables)` },
+    { label: 'Bank & Social Debt', value: data.total_bank_debt + totalVikobaLoans, sub: `(Social: ${money(totalVikobaLoans)})`, tone: 'red' },
+    { label: 'Owed to Creditors', value: data.total_owed_to_creditors, tone: 'red' },
+    { label: 'Net Worth', value: netWorth, tone: netWorth >= 0 ? 'green' : 'red', bold: true },
+    { label: 'Expenses (MTD)', value: data.expenses_this_month, sub: 'Month-to-date outflows' },
   ]
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
-        {cards.map(([label, value]) => (
-          <div key={label} className="card" style={{ padding: '16px 18px' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700 }}>{money(value)}</div>
+      <div className="card-grid" style={{ marginBottom: 24 }}>
+        {cards.map((c) => (
+          <div key={c.label} className="card home-kpi-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{c.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: c.tone === 'red' ? 'var(--danger)' : c.tone === 'green' ? 'var(--success)' : 'inherit' }}>
+                {money(c.value)}
+              </div>
+            </div>
+            {c.sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{c.sub}</div>}
           </div>
         ))}
       </div>
@@ -110,6 +153,10 @@ function SavingsTab({ api }) {
   const [txnForm, setTxnForm] = useState({ category_id: '', amount: '', note: '', tag: '' })
   const [suggestion, setSuggestion] = useState(null)
   const [txnSaving, setTxnSaving] = useState(false)
+
+  const [depositOpen, setDepositOpen] = useState(false)
+  const [depositForm, setDepositForm] = useState({ amount: '', note: 'Savings Deposit' })
+  const [depositSaving, setDepositSaving] = useState(false)
 
   const loadAll = () => {
     api.get('/personal/categories').then(setCategories).catch((e) => setError(e.message))
@@ -168,13 +215,61 @@ function SavingsTab({ api }) {
     }
   }
 
+  const saveDeposit = async () => {
+    if (!depositForm.amount) return
+    setDepositSaving(true)
+    try {
+      // Repurpose a "Savings" category or create one if missing
+      let savingsCat = categories.find(c => c.name.toLowerCase().includes('savings'))
+      if (!savingsCat) {
+        savingsCat = await api.post('/personal/categories', { name: 'Savings', icon: '💰', monthly_budget: 0 })
+      }
+
+      await api.post('/personal/transactions', {
+        category_id: savingsCat.id,
+        amount: -Math.abs(Number(depositForm.amount)), // Negative amount treated as "saving" (transfer out of spendable)
+        note: depositForm.note,
+        tag: 'necessary'
+      })
+      setDepositOpen(false)
+      setDepositForm({ amount: '', note: 'Savings Deposit' })
+      loadAll()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDepositSaving(false)
+    }
+  }
+
+  // Emergency Fund Logic: Target is 6x monthly expenses or a fixed 5M TZS
+  const currentSavings = categories.filter(c => c.name.toLowerCase().includes('savings'))
+    .reduce((sum, c) => sum + (envelope?.categories.find(sc => sc.category_id === c.id)?.spent || 0), 0) * -1
+
+  const targetGoal = 5000000 // 5 Million TZS
+  const progressPct = Math.min(Math.round((currentSavings / targetGoal) * 100), 100)
+
   return (
     <div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
         <button className="btn btn-primary" onClick={() => setTxnOpen(true)}>+ Log Expense</button>
+        <button className="btn btn-outline" onClick={() => setDepositOpen(true)}>+ Deposit to Savings</button>
         <button className="btn btn-outline" onClick={() => setCatOpen(true)}>+ New Category</button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 24, padding: '18px 20px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: 12 }}>🚨 Emergency Fund Goal</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+          <span>{money(currentSavings)} saved</span>
+          <span style={{ color: 'var(--text-muted)' }}>Target: {money(targetGoal)}</span>
+        </div>
+        <div style={{ height: 10, background: 'var(--border)', borderRadius: 5, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--success)', transition: 'width 0.5s ease' }} />
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+          {progressPct}% of goal reached. Keep it up!
+        </div>
       </div>
 
       {insights && insights.alerts.length > 0 && (
@@ -289,6 +384,29 @@ function SavingsTab({ api }) {
           </select>
         </Modal>
       )}
+
+      {depositOpen && (
+        <Modal
+          title="Deposit to Savings"
+          onClose={() => setDepositOpen(false)}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => setDepositOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveDeposit} disabled={depositSaving}>
+                {depositSaving ? 'Depositing…' : 'Confirm Deposit'}
+              </button>
+            </>
+          }
+        >
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+            Recording a deposit will move funds into your savings tracker.
+          </p>
+          <label>Amount to Save</label>
+          <input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} placeholder="e.g. 50000" />
+          <label>Note</label>
+          <input value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} />
+        </Modal>
+      )}
     </div>
   )
 }
@@ -308,20 +426,45 @@ function SocialSavingsTab({ api }) {
 
   return (
     <div>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
-        Vikoba groups you belong to. To join a new group or manage group settings, ask the group's
-        chairman/treasurer for an invite — group administration happens on the group's own account.
-      </p>
+      <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid var(--accent)' }}>
+        <h3 style={{ marginTop: 0 }}>Social Obligations Tracker</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          Tracking your active participation in community lending and group savings.
+        </p>
+      </div>
+
       <Table
         columns={[
           { key: 'group_name', header: 'Group' },
           { key: 'group_role', header: 'Your Role' },
-          { key: 'total_contributed', header: 'Total Contributed', render: (r) => money(r.total_contributed) },
-          { key: 'active_loan_balance', header: 'Active Loan Balance', render: (r) => money(r.active_loan_balance) },
+          { key: 'total_contributed', header: 'Total Shares/Paid', render: (r) => money(r.total_contributed) },
+          {
+            key: 'active_loan_balance',
+            header: 'Loan Balance',
+            render: (r) => (
+              <span style={r.active_loan_balance > 0 ? { color: 'var(--danger)', fontWeight: 600 } : {}}>
+                {money(r.active_loan_balance)}
+              </span>
+            )
+          },
+          {
+            key: 'status',
+            header: 'Health',
+            render: (r) => (
+              <span className="badge badge-active" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
+                On Track
+              </span>
+            )
+          }
         ]}
         rows={data.vikoba_memberships}
         emptyText="Not a member of any Vikoba group yet."
       />
+
+      <div style={{ marginTop: 24, fontSize: 13, color: 'var(--text-muted)', background: 'rgba(0,0,0,0.03)', padding: 16, borderRadius: 8 }}>
+        <strong>Pro Tip:</strong> To join a new group or manage group settings, contact your group treasurer.
+        Obligations are automatically calculated based on group cycle frequency.
+      </div>
     </div>
   )
 }

@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
+import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
 const emptyForm = () => ({
-  lender_name: '', principal: '', interest_type: 'simple', annual_rate: '',
-  start_date: '', due_day_of_month: 1, term_months: '', grace_period_days: 0, notes: '',
+  lender_name: '', principal: '', interest_type: 'reducing_balance', annual_rate: '',
+  start_date: new Date().toISOString().slice(0, 10), due_day_of_month: 1, term_months: '12', grace_period_days: 0, notes: '',
 })
 
-function currentBalance(loan) {
-  const paidPrincipal = (loan.payments || []).reduce((s, p) => s + p.principal_portion, 0)
-  return Math.round((loan.principal - paidPrincipal) * 100) / 100
+/**
+ * Calculates Monthly EMI for display purposes.
+ */
+function calculateEMI(principal, rate, months) {
+  const p = Number(principal);
+  const r = (Number(rate) / 100) / 12;
+  const n = Number(months);
+  if (!p || !r || !n) return 0;
+  return (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
 
 export default function BankLoans() {
@@ -34,12 +41,41 @@ export default function BankLoans() {
   const [roadmapLoading, setRoadmapLoading] = useState(false)
   const [payAmount, setPayAmount] = useState('')
   const [paying, setPaying] = useState(false)
+  const [reminders, setReminders] = useState([])
+
+  const loadReminders = () => {
+    api.get('/reminders/').then(data => {
+      const map = new Map();
+      const result = [];
+      const loanRegex = /Payment to (.*) is due (\d+) day\(s\) overdue/;
+      const invoiceRegex = /\((.*)\) is (\d+) day\(s\) overdue/;
+      data.forEach(r => {
+        const loanMatch = r.text.match(loanRegex);
+        const invMatch = r.text.match(invoiceRegex);
+        if (loanMatch || invMatch) {
+          const entity = loanMatch ? loanMatch[1] : `Invoice (${invMatch[1]})`;
+          const days = parseInt(loanMatch ? loanMatch[2] : invMatch[2], 10);
+          const existing = map.get(entity);
+          if (!existing || days > existing.days) map.set(entity, { id: r.id, days, record: r });
+        } else { result.push(r); }
+      });
+      setReminders([...result, ...Array.from(map.values()).map(v => v.record)]);
+    }).catch(() => {})
+  }
+
+  const dismissReminder = (id) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+    api.patch(`/reminders/${id}/done`, {}).catch(loadReminders)
+  }
 
   const load = () => {
     setListLoading(true)
     api.get('/bank-loans/').then(setLoans).catch((e) => setError(e.message)).finally(() => setListLoading(false))
   }
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load()
+    loadReminders()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openNew = () => { setForm(emptyForm()); setError(''); setOpen(true) }
 
@@ -111,9 +147,27 @@ export default function BankLoans() {
   }
 
   const columns = [
-    { key: 'lender_name', header: t('bankLoans.lender') },
+    { key: 'lender_name', header: t('bankLoans.lender'), render: (r) => (
+      <div>
+        <div style={{ fontWeight: 600 }}>{r.lender_name}</div>
+        {r.days_overdue > 0 && (
+          <span className="badge badge-unpaid" style={{ fontSize: 10, marginTop: 4 }}>
+             {r.days_overdue} {t('deadlines.daysOverdue')}
+          </span>
+        )}
+      </div>
+    )},
     { key: 'principal', header: t('bankLoans.principal'), render: (r) => money(r.principal) },
-    { key: 'balance', header: t('bankLoans.currentBalance'), render: (r) => money(currentBalance(r)) },
+    { key: 'balance', header: t('bankLoans.currentBalance'), render: (r) => (
+      <div>
+        <div style={{ fontWeight: 700 }}>{money(r.total_balance)}</div>
+        {r.accrued_interest > 0 && (
+          <div style={{ fontSize: 11, color: 'var(--danger)' }}>
+            Inc. {money(r.accrued_interest)} interest
+          </div>
+        )}
+      </div>
+    )},
     { key: 'interest_type', header: t('bankLoans.interestType'), render: (r) => r.interest_type === 'simple' ? t('bankLoans.simple') : t('bankLoans.reducingBalance') },
     { key: 'annual_rate', header: t('bankLoans.annualRate'), render: (r) => `${r.annual_rate}%` },
     { key: 'status', header: t('documents.status'), render: (r) => <span className={`badge badge-${r.status === 'active' ? 'sent' : r.status === 'closed' ? 'paid' : 'unpaid'}`}>{t(`bankLoans.status.${r.status}`)}</span> },
@@ -128,7 +182,7 @@ export default function BankLoans() {
     },
   ]
 
-  const totalOutstanding = loans.filter((l) => l.status === 'active').reduce((s, l) => s + currentBalance(l), 0)
+  const totalOutstanding = loans.filter((l) => l.status === 'active').reduce((s, l) => s + (l.total_balance || 0), 0)
 
   return (
     <div className="page">
@@ -136,6 +190,9 @@ export default function BankLoans() {
         <h1>{t('bankLoans.title')}</h1>
         <button className="btn btn-primary" onClick={openNew}>+ {t('bankLoans.newLoan')}</button>
       </div>
+
+      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+
       {error && !detail && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div className="card-grid" style={{ marginBottom: 20 }}>
@@ -179,6 +236,16 @@ export default function BankLoans() {
             </select></div>
           <div className="form-row"><label>{t('bankLoans.annualRate')}</label>
             <input type="number" value={form.annual_rate} onChange={(e) => setForm({ ...form, annual_rate: e.target.value })} /></div>
+
+          {form.principal && form.annual_rate && form.term_months && (
+            <div className="card" style={{ marginBottom: 16, background: 'var(--success-bg)', border: '1px solid var(--success)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Estimated Monthly EMI</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>
+                {money(calculateEMI(form.principal, form.annual_rate, form.term_months))}
+              </div>
+            </div>
+          )}
+
           <div className="form-row"><label>{t('bankLoans.startDate')} *</label>
             <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
           <div className="form-row"><label>{t('bankLoans.dueDay')}</label>
@@ -194,20 +261,31 @@ export default function BankLoans() {
 
       {detail && (
         <Modal
-          title={`${detail.lender_name} — ${money(currentBalance(detail))} ${t('bankLoans.outstanding')}`}
+          title={`${detail.lender_name} — ${money(detail.total_balance)} ${t('bankLoans.outstanding')}`}
           onClose={() => setDetail(null)}
           footer={(<button className="btn btn-outline" onClick={() => setDetail(null)}>{t('common.close')}</button>)}
         >
           {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div className="card" style={{ padding: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('bankLoans.principal')}</div>
+              <div style={{ fontWeight: 600 }}>{money(detail.outstanding_principal)}</div>
+            </div>
+            <div className="card" style={{ padding: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Accrued Interest</div>
+              <div style={{ fontWeight: 600, color: 'var(--danger)' }}>{money(detail.accrued_interest)}</div>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              {t('bankLoans.principal')}: {money(detail.principal)} · {detail.annual_rate}% {t('bankLoans.annualRate').toLowerCase()} ·{' '}
+              Total Original: {money(detail.principal)} · {detail.annual_rate}% {t('bankLoans.annualRate').toLowerCase()} ·{' '}
               {detail.interest_type === 'simple' ? t('bankLoans.simple') : t('bankLoans.reducingBalance')}
             </div>
           </div>
 
-          {detail.status === 'active' && currentBalance(detail) > 0 && (
+          {detail.status === 'active' && detail.total_balance > 0 && (
             <div className="form-row" style={{ alignItems: 'flex-end', display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
                 <label>{t('bankLoans.logPayment')}</label>

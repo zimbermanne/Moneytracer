@@ -7,6 +7,7 @@ import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import { apiUrl } from '../api-config.js'
+import { downloadFile, openPdfForPrint } from '../utils/download.js'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
@@ -132,41 +133,12 @@ export default function Debtors() {
 
   const [pdfBusyId, setPdfBusyId] = useState(null)
 
-  const fetchDebitNoteBlob = async (d) => {
-    const res = await fetch(apiUrl(`/api/ledgers/debtors/${d.id}/debit-note/pdf`), { credentials: 'include' })
-    if (!res.ok) throw new Error('Debit note generation failed')
-    return res.blob()
+  const downloadDebitNote = (d) => {
+    downloadFile(apiUrl(`/api/ledgers/debtors/${d.id}/debit-note/pdf`), `DebitNote-${d.name.replace(/\s+/g, '-')}.pdf`)
   }
 
-  const downloadDebitNote = async (d) => {
-    setPdfBusyId(d.id)
-    try {
-      const blob = await fetchDebitNoteBlob(d)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `DebitNote-${d.name.replace(/\s+/g, '-')}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setPdfBusyId(null)
-    }
-  }
-
-  const printDebitNote = async (d) => {
-    setPdfBusyId(d.id)
-    try {
-      const blob = await fetchDebitNoteBlob(d)
-      const url = URL.createObjectURL(blob)
-      const win = window.open(url, '_blank')
-      if (win) win.onload = () => { try { win.print() } catch {} }
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setPdfBusyId(null)
-    }
+  const printDebitNote = (d) => {
+    openPdfForPrint(apiUrl(`/api/ledgers/debtors/${d.id}/debit-note/pdf`))
   }
 
   const columns = [
