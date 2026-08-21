@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
-    LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence, AssetCategory,
+    LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence, AssetType, AssetCategory,
     LedgerAccountType, Attachment, RecurringInvoice, ExchangeRate, Employee, Payslip,
     Approval, Budget,
 )
