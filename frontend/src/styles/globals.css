@@ -163,11 +163,6 @@ button {
 }
 
 .card {
-  /* Canonical glass recipe — driven by the --glass-* tokens in
-     design-tokens.css. .sidebar / .login-card / .modal use their own
-     hand-tuned opacity/blur variants of this same recipe (each surface
-     sits at a different depth/size so needs slightly different values to
-     read correctly), so they aren't wired to these tokens directly. */
   background: var(--glass-bg) !important;
   backdrop-filter: var(--glass-blur) var(--glass-saturate);
   -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
@@ -175,21 +170,28 @@ button {
   border-radius: 20px;
   box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
   padding: 18px;
-  transition: background 0.3s ease;
+  transition: all 0.3s var(--ease);
 }
 
 .card:hover {
   background: var(--glass-bg-hover) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 .home-kpi-card {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-radius: 16px;
   padding: 1.25rem;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+:root[data-theme="dark"] .home-kpi-card {
+  background: rgba(26, 29, 39, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .glass-panel {

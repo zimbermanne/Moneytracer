@@ -19,10 +19,60 @@ export default function POS() {
   const [receipt, setReceipt] = useState(null)
   const [showPrintReceipt, setShowPrintReceipt] = useState(false)
   const [busy, setBusy] = useState(false)
-  const { setDirty, setDirtyMessage } = useNavigationGuard()
+  const [drafts, setDrafts] = useState([])
+  const [showDrafts, setShowDrafts] = useState(false)
+  const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
+
+  const saveCartAsDraft = async () => {
+    if (cart.length === 0) return true
+    try {
+      await api.post('/drafts/', {
+        customer_name: customerName,
+        items: cart,
+        total_amount: total
+      })
+      loadDrafts()
+      return true
+    } catch (e) {
+      alert(`Failed to save draft: ${e.message}`)
+      return false
+    }
+  }
+
+  const resumeDraft = (draft) => {
+    if (cart.length > 0 && !confirm('Replace current cart with this draft?')) return
+    try {
+      const items = JSON.parse(draft.items_json)
+      setCart(items)
+      setCustomerName(draft.customer_name)
+      setShowDrafts(false)
+    } catch (e) {
+      alert('Failed to load draft items')
+    }
+  }
+
+  const deleteDraft = async (id) => {
+    if (!confirm('Delete this draft?')) return
+    try {
+      await api.del(`/drafts/${id}`)
+      loadDrafts()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  useEffect(() => {
+    setOnSaveDraft(() => saveCartAsDraft)
+    return () => setOnSaveDraft(null)
+  }, [cart, customerName, total]) // eslint-disable-line
+
+  const loadDrafts = () => {
+    api.get('/drafts/').then(setDrafts).catch(() => {})
+  }
 
   useEffect(() => {
     api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
+    loadDrafts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -107,7 +157,13 @@ export default function POS() {
     <div className="page">
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <h1>Point of Sale</h1>
-        <div className="mode-switch">
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {drafts.length > 0 && (
+            <button className="btn btn-outline" onClick={() => setShowDrafts(true)}>
+              📋 Drafts <span className="badge badge-sent" style={{ marginLeft: 6 }}>{drafts.length}</span>
+            </button>
+          )}
+          <div className="mode-switch">
           <button
             className={saleMode === 'pos' ? 'active' : ''}
             onClick={() => switchMode('pos')}
@@ -265,6 +321,32 @@ export default function POS() {
           company={account}
           onClose={() => setShowPrintReceipt(false)}
         />
+      )}
+
+      {showDrafts && (
+        <Modal
+          title="Saved Drafts"
+          onClose={() => setShowDrafts(false)}
+          footer={<button className="btn btn-outline" onClick={() => setShowDrafts(false)}>Close</button>}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {drafts.map((d) => (
+              <div key={d.id} className="card" style={{ padding: 14, background: 'var(--surface-sunken)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{d.customer_name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(d.created_at).toLocaleString()}</div>
+                  </div>
+                  <div style={{ fontWeight: 700, color: 'var(--accent)' }}>{money(d.total_amount)}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary" style={{ flex: 1, fontSize: 12 }} onClick={() => resumeDraft(d)}>Resume Sale</button>
+                  <button className="btn btn-outline" style={{ color: 'var(--danger)' }} onClick={() => deleteDraft(d.id)}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal>
       )}
     </div>
   )

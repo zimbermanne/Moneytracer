@@ -19,11 +19,27 @@ const PAID_UNPAID_COLORS = { Paid: '#34c07a', Unpaid: '#e0722f' }
 // assigned by array position within a sorted (by amount) list.
 const CUSTOMER_DONUT_COLORS = ['#e0722f', '#4f7cff', '#8a63ff', '#ff6b6b', '#34c07a', '#ffb347']
 
-function KpiCard({ label, value, tone }) {
+function KpiCard({ label, value, health, onClick }) {
+  const isCritical = health === 'critical';
+  const isWarning = health === 'warning';
+  const isHealthy = health === 'healthy';
+
   return (
-    <div className="card metric-card">
+    <div
+      className="home-kpi-card metric-card"
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative' }}
+    >
       <div className="label">{label}</div>
-      <div className="value" style={tone ? { color: tone } : undefined}>{value}</div>
+      <div className="value" style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
+      {(isCritical || isWarning || isHealthy) && (
+        <div style={{
+          position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: '50%',
+          backgroundColor: isCritical ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--success)',
+          boxShadow: `0 0 8px ${isCritical ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--success)'}`,
+          animation: isCritical ? 'pulse 2s infinite' : 'none'
+        }} />
+      )}
     </div>
   )
 }
@@ -210,12 +226,12 @@ export default function ARDashboard() {
         <>
           {/* Summary KPIs */}
           <div className="card-grid" style={{ marginBottom: 16 }}>
-            <KpiCard label="Total Unpaid" value={money(data.summary.total_unpaid)} />
-            <KpiCard label="Total Overdue" value={money(data.summary.total_overdue)} tone="#e0722f" />
+            <KpiCard label="Total Unpaid" value={money(data.summary.total_unpaid)} health={data.summary.total_unpaid > 0 ? 'warning' : 'healthy'} />
+            <KpiCard label="Total Overdue" value={money(data.summary.total_overdue)} health={data.summary.total_overdue > 0 ? 'critical' : 'healthy'} />
             <KpiCard label="Unpaid Invoices" value={data.summary.unpaid_count} />
-            <KpiCard label="Overdue Invoices" value={data.summary.overdue_count} tone={data.summary.overdue_count > 0 ? '#e0722f' : undefined} />
-            <KpiCard label="Avg. Days Overdue" value={data.summary.avg_days_overdue} />
-            <KpiCard label="Total Paid (period)" value={money(data.summary.total_paid)} tone="#34c07a" />
+            <KpiCard label="Overdue Invoices" value={data.summary.overdue_count} health={data.summary.overdue_count > 0 ? 'critical' : 'healthy'} />
+            <KpiCard label="Avg. Days Overdue" value={data.summary.avg_days_overdue} health={data.summary.avg_days_overdue > 30 ? 'critical' : data.summary.avg_days_overdue > 0 ? 'warning' : 'healthy'} />
+            <KpiCard label="Total Paid (period)" value={money(data.summary.total_paid)} health="healthy" />
           </div>
 
           {/* Quick-stat rings */}

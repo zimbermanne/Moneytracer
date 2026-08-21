@@ -9,7 +9,7 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
   }
   return (
     <div className="card responsive-table" style={{ overflowX: 'auto', padding: 0 }}>
-      <table>
+      <table className="pl-table">
         <thead>
           <tr>
             {columns.map((col) => <th key={col.key}>{col.header}</th>)}
