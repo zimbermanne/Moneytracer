@@ -27,6 +27,11 @@
      theme customizer in Settings can scale both consistently. */
   --glass-bg-sidebar:     rgba(255, 255, 255, 0.18);
   --glass-border-sidebar: rgba(255, 255, 255, 0.35);
+  /* .modal / .login-card sit above everything (overlay depth) so they read
+     best noticeably more opaque than cards — same recipe, own ratio, now
+     actually driven by the customizer instead of being hardcoded. */
+  --glass-bg-modal:     rgba(255, 255, 255, 0.25);
+  --glass-border-modal: rgba(255, 255, 255, 0.40);
 
   /* ---- Core palette ---- */
   --cream:            #F7F4EE;   /* page background */

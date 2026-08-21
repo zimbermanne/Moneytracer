@@ -169,7 +169,7 @@ export default function AppearanceSettings() {
           max="0.30"
           step="0.01"
           value={prefs.frostIntensity}
-          onChange={(e) => update({ frostIntensity: parseFloat(e.target.value) })}
+          onChange={(e) => update({ frostIntensity: Math.round(parseFloat(e.target.value) * 100) / 100 })}
           style={{ width: '100%' }}
         />
       </div>
