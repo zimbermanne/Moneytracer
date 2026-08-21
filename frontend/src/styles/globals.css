@@ -418,6 +418,40 @@ th {
 
 tr:hover td { background: rgba(255, 255, 255, 0.10); }
 
+/* Clean borderless look for every Table.jsx-based grid (Inventory Ledger,
+   Sales, Purchases, Customers, etc.) — matches the .pl-table treatment
+   already used on the Profit & Loss report, so tables read consistently
+   across the whole app instead of P&L looking newer/cleaner than the rest. */
+.responsive-table table {
+  border: none;
+}
+
+.responsive-table th {
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.responsive-table td {
+  border: none;
+}
+
+.responsive-table tr:hover td {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .responsive-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+}
+
+:root[data-theme="dark"] .responsive-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
 /* ==========================================================================
    Numeric type treatments
    - Table cells / stat numbers / numeric inputs get a typewriter face,
@@ -711,10 +745,10 @@ label {
 }
 
 .modal {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-modal);
   backdrop-filter: blur(35px) saturate(200%);
   -webkit-backdrop-filter: blur(35px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--glass-border-modal);
   border-radius: 24px;
   padding: 24px;
   width: 420px;
@@ -1552,10 +1586,10 @@ label {
 }
 
 .login-card {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-modal);
   backdrop-filter: blur(35px) saturate(200%);
   -webkit-backdrop-filter: blur(35px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--glass-border-modal);
   border-radius: 24px;
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.25),

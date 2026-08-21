@@ -86,7 +86,15 @@ export default function Expenses() {
             <button className="btn btn-primary" onClick={save}>Save</button>
           </>)}
         >
-          <div className="form-row"><label>Category</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
+          <div className="form-row">
+            <label>Category</label>
+            <input list="expense-category-list" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <datalist id="expense-category-list">
+              {[...new Set(expenses.map((e) => e.category).filter(Boolean))].sort().map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
           <div className="form-row"><label>Description</label><input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="form-row"><label>Amount</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
         </Modal>
