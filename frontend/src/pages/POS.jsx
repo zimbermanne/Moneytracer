@@ -26,6 +26,8 @@ export default function POS() {
   const [showDrafts, setShowDrafts] = useState(false)
   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
 
+  const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0)
+
   const saveCartAsDraft = async () => {
     if (cart.length === 0) return true
     try {
@@ -128,8 +130,6 @@ export default function POS() {
   }
 
   const removeLine = (item_id) => setCart((prev) => prev.filter((c) => c.item_id !== item_id))
-
-  const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0)
 
   const checkout = async () => {
     if (cart.length === 0) return
