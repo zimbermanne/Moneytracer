@@ -1179,21 +1179,12 @@ label {
    .desktop-topbar hides, and the .bottom-nav pill-rail appears fixed
    to the viewport bottom. */
 @media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 68px;
-    bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 10px);
-    left: 12px;
-    height: auto;
-    max-width: 80vw;
-    transform: translateX(-120%);
-    z-index: 60;
-    width: 260px;
-    box-shadow: var(--shadow-lg);
+  .sidebar,
+  .sidebar.mobile-open {
+    display: none !important;
   }
-  .sidebar.mobile-open { transform: translateX(0); }
 
-  .hamburger { display: block; }
+  .hamburger { display: none; }
   .mobile-topbar { display: flex; }
 
   .mobile-info-row {
