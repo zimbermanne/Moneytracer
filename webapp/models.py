@@ -228,6 +228,21 @@ class Sale(Base):
     item = relationship("InventoryItem", back_populates="sales")
 
 
+class PosDraft(Base):
+    """A parked POS cart, saved so a cashier can pause a sale and resume it
+    later without losing the items already scanned/added."""
+    __tablename__ = "pos_drafts"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    customer_name = Column(String(150), default="Walk-in")
+    items_json = Column(Text, default="[]")
+    total_amount = Column(Float, default=0)
+    created_by = Column(String(80), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class Purchase(Base):
     __tablename__ = "purchases"
     __table_args__ = schema_args(SCHEMA_BUSINESS)

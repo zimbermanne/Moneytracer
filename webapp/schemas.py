@@ -345,6 +345,22 @@ class CheckoutResponse(BaseModel):
     total: float
 
 
+class PosDraftCreate(BaseModel):
+    customer_name: Optional[str] = "Walk-in"
+    items: List[dict]
+    total_amount: float = 0
+
+
+class PosDraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    customer_name: str
+    items_json: str
+    total_amount: float
+    created_by: str
+    created_at: datetime
+
+
 # ---------- Purchases ----------
 class PurchaseCreate(BaseModel):
     item_name: str
