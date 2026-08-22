@@ -597,6 +597,17 @@ def list_journal_entries(
     for entry in entries:
         lines = []
         for line in entry.lines:
+            # When filtering by a specific account, only that account's own
+            # line(s) within the entry belong on its ledger — the entry's
+            # other lines (the offsetting debit/credit on a different
+            # account) aren't part of this account's history. Without this,
+            # every entry's lines summed together always nets to the
+            # compound entry's total debit == total credit (that's the
+            # definition of "balanced"), so debit/credit/balance below would
+            # be identical and the running balance would stay at zero
+            # regardless of the actual account.
+            if account_id_filter is not None and line.chart_account_id != account_id_filter:
+                continue
             # line.account can be None if the chart-of-accounts row it points
             # at was ever deleted — without this guard, `.code`/`.name` on
             # None raises AttributeError and takes the whole endpoint down.

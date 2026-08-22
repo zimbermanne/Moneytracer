@@ -290,9 +290,9 @@ function TrialBalance({ data }) {
             ))}
             <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'var(--glass-bg-hover)', fontWeight: 700 }}>
               <td colSpan={3}>Totals</td>
-              <td style={{ textAlign: 'right' }}>{money(data.total_debit)}</td>
-              <td style={{ textAlign: 'right' }}>{money(data.total_credit)}</td>
-              <td style={{ textAlign: 'right' }}>{money(data.total_balance)}</td>
+              <td style={{ textAlign: 'right' }}>{money(data.total_debits)}</td>
+              <td style={{ textAlign: 'right' }}>{money(data.total_credits)}</td>
+              <td style={{ textAlign: 'right' }}>{money((data.total_debits || 0) - (data.total_credits || 0))}</td>
             </tr>
           </tbody>
         </table>
