@@ -171,6 +171,19 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
     db.commit()
     for s in sales:
         db.refresh(s)
+    # Post each cart line to the general ledger (Dr Cash/AR, Cr Revenue [+ VAT
+    # Payable], and Dr COGS / Cr Inventory when cost is known) — reuses the
+    # same post_sale_entry() helper record_sale() already posts through, so
+    # POS checkouts stop being the only sale path that never touches the
+    # ledger. Mirrors record_sale()'s failure handling: a ledger-posting
+    # error must never roll back a checkout that's already been given to the
+    # customer as a printed receipt — log it as critical and let it be
+    # reconciled manually instead.
+    for s in sales:
+        try:
+            post_sale_entry(db, account_id, s, created_by=current_user.username)
+        except ValueError as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
     overridden = sum(1 for line, s in zip(payload.lines, sales) if is_salesman_mode and line.unit_price is not None)
     mode_label = f"salesman mode, {overridden} price override(s)" if is_salesman_mode else "pos mode"
     log_activity_for_user(db, current_user, "pos_checkout",
