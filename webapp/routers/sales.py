@@ -7,11 +7,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Sale, InventoryItem, Debtor, DebtorItem, User, PaymentMode, LedgerStatus, RoleEnum
+from models import Sale, InventoryItem, Debtor, DebtorItem, User, PaymentMode, LedgerStatus, RoleEnum, PaymentMethod
 from schemas import SaleCreate, SaleOut, CheckoutRequest, CheckoutResponse
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
-from ledger import post_sale_entry, find_journal_entry_by_reference, reverse_journal_entry, FiscalPeriodLockedError
+from ledger import (
+    post_sale_entry, find_journal_entry_by_reference, reverse_journal_entry,
+    FiscalPeriodLockedError, ensure_default_payment_methods,
+)
+
+
+def _resolve_payment_method(db: Session, account_id: int, payment_method_id):
+    """Look up + validate a POS Payment Method for this tenant. Seeds the
+    default set on first use so a fresh account always has something to pick
+    from. Returns None if no id was given (legacy payment_mode-only path)."""
+    if payment_method_id is None:
+        return None
+    ensure_default_payment_methods(db, account_id)
+    method = (
+        db.query(PaymentMethod)
+        .filter(PaymentMethod.id == payment_method_id, PaymentMethod.account_id == account_id)
+        .first()
+    )
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+    return method
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
 
@@ -51,6 +71,9 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
         unit_price = payload.unit_price if payload.unit_price is not None else item.selling_price
         item_name = item.name
 
+    payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
+    is_credit_sale = (payment_method.is_credit if payment_method else payload.payment_mode == PaymentMode.credit)
+
     total = unit_price * payload.quantity
     sale = Sale(
         account_id=account_id,
@@ -61,13 +84,14 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
         cost_price_at_sale=item.cost_price if item else None,
         total=total,
         payment_mode=payload.payment_mode,
+        payment_method_id=payment_method.id if payment_method else None,
         customer_name=payload.customer_name or "Walk-in",
         sold_by=current_user.username,
         receipt_no=f"RCT-{uuid.uuid4().hex[:8].upper()}",
     )
     db.add(sale)
 
-    if payload.payment_mode == PaymentMode.credit:
+    if is_credit_sale:
         debtor = Debtor(
             account_id=account_id,
             name=payload.customer_name or "Walk-in",
@@ -114,6 +138,9 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
             raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.name}")
         items_map[line.item_id] = item
 
+    payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
+    is_credit_sale = (payment_method.is_credit if payment_method else payload.payment_mode == PaymentMode.credit)
+
     receipt_no = f"RCT-{uuid.uuid4().hex[:8].upper()}"
     sales = []
     grand_total = 0.0
@@ -139,6 +166,7 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
             cost_price_at_sale=item.cost_price,
             total=total,
             payment_mode=payload.payment_mode,
+            payment_method_id=payment_method.id if payment_method else None,
             customer_name=payload.customer_name or "Walk-in",
             sold_by=current_user.username,
             receipt_no=receipt_no,
@@ -146,7 +174,7 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
         db.add(sale)
         sales.append(sale)
 
-    if payload.payment_mode == PaymentMode.credit:
+    if is_credit_sale:
         debtor = Debtor(
             account_id=account_id,
             name=payload.customer_name or "Walk-in",

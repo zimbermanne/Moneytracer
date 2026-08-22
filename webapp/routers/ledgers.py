@@ -10,16 +10,18 @@ from sqlalchemy import func, and_
 from database import get_db
 from models import (
     Debtor, DebtorItem, Creditor, CreditorItem, User, LedgerStatus, RoleEnum,
-    FiscalPeriod, FiscalPeriodStatus, ChartOfAccount, JournalEntry, JournalLine
+    FiscalPeriod, FiscalPeriodStatus, ChartOfAccount, JournalEntry, JournalLine,
+    LedgerAccountType, PaymentMethod,
 )
 from schemas import (
     DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, CreditorUpdate, CreditorOut,
     LedgerOut, PaymentRequest, FiscalPeriodCreate, FiscalPeriodOut,
-    ChartOfAccountOut, JournalEntryOut, JournalEntryCreate, JournalLineOut
+    ChartOfAccountOut, JournalEntryOut, JournalEntryCreate, JournalLineOut,
+    PaymentMethodOut, PaymentMethodCreate, PaymentMethodUpdate,
 )
 from auth import get_current_user, require_manager_up, require_admin
 from activity import log_activity_for_user
-from ledger import post_journal_entry, FiscalPeriodLockedError
+from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods
 from routers.invoices import get_account_details
 
 router = APIRouter(prefix="/api/ledgers", tags=["ledgers"])
@@ -526,10 +528,19 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
     # Compute running balance per account in a single grouped query instead
     # of one query per account — with a real chart of accounts + years of
     # transactions this was slow enough to time out the request entirely.
+    #
+    # Debit-minus-credit is only the correct "balance" sign for Asset/Expense
+    # accounts, whose normal balance is a debit. Liability/Equity/Revenue
+    # accounts carry a normal *credit* balance, so summing debit - credit for
+    # them was flipping every liability/equity/revenue balance negative (or
+    # showing ~0 net whenever debits and credits happened to be similar in
+    # size) instead of reporting the actual amount owed/earned. We fetch raw
+    # debit/credit sums here and flip the sign per account_type below.
     balance_query = (
         db.query(
             JournalLine.chart_account_id,
-            (func.sum(JournalLine.debit) - func.sum(JournalLine.credit)).label("balance"),
+            func.sum(JournalLine.debit).label("total_debit"),
+            func.sum(JournalLine.credit).label("total_credit"),
         )
         .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
         .filter(
@@ -540,7 +551,19 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
     if account_id is not None:
         balance_query = balance_query.filter(JournalEntry.account_id == account_id)
     balance_rows = balance_query.group_by(JournalLine.chart_account_id).all()
-    account_balances = {row.chart_account_id: row.balance or 0 for row in balance_rows}
+
+    accounts_by_id = {a.id: a for a in accounts}
+    account_balances = {}
+    for row in balance_rows:
+        acc = accounts_by_id.get(row.chart_account_id)
+        total_debit = row.total_debit or 0
+        total_credit = row.total_credit or 0
+        if acc is not None and acc.account_type in (
+            LedgerAccountType.liability, LedgerAccountType.equity, LedgerAccountType.revenue,
+        ):
+            account_balances[row.chart_account_id] = total_credit - total_debit
+        else:
+            account_balances[row.chart_account_id] = total_debit - total_credit
 
     # Build nested tree structure. `seen` guards against a corrupted
     # parent_id cycle (e.g. A -> B -> A) recursing forever and taking the
@@ -564,6 +587,134 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
         return children
 
     return build_tree(parent_id=None)
+
+
+# ---------- POS Payment Methods (mapped to Chart of Accounts) ----------
+
+def _payment_method_out(m: PaymentMethod) -> PaymentMethodOut:
+    return PaymentMethodOut(
+        id=m.id,
+        name=m.name,
+        chart_account_id=m.chart_account_id,
+        chart_account_code=m.chart_account.code if m.chart_account else "",
+        chart_account_name=m.chart_account.name if m.chart_account else "",
+        is_credit=m.is_credit,
+        is_active=m.is_active,
+        sort_order=m.sort_order,
+    )
+
+
+@router.get("/payment-methods", response_model=List[PaymentMethodOut])
+def list_payment_methods(
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Dynamic list of POS Payment Methods for this tenant, each mapped to its
+    Cash/Bank/AR account — seeded with the standard starter set on first
+    call. This is what the POS payment dropdown fetches instead of the old
+    hard-coded cash/mobile_money/credit choices."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin has no payment methods")
+    methods = ensure_default_payment_methods(db, account_id)
+    if not include_inactive:
+        methods = [m for m in methods if m.is_active]
+    methods = sorted(methods, key=lambda m: (m.sort_order, m.name))
+    return [_payment_method_out(m) for m in methods]
+
+
+@router.post("/payment-methods", response_model=PaymentMethodOut)
+def create_payment_method(
+    payload: PaymentMethodCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Add a new POS Payment Method mapped to an existing Chart of Accounts
+    entry (e.g. a second mobile-money till or a newly opened bank account)."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot manage payment methods")
+    chart_account = db.query(ChartOfAccount).filter(
+        ChartOfAccount.id == payload.chart_account_id, ChartOfAccount.account_id == account_id
+    ).first()
+    if not chart_account:
+        raise HTTPException(status_code=404, detail="Chart of accounts entry not found")
+    method = PaymentMethod(
+        account_id=account_id,
+        name=payload.name,
+        chart_account_id=payload.chart_account_id,
+        is_credit=payload.is_credit,
+        sort_order=payload.sort_order,
+    )
+    db.add(method)
+    db.commit()
+    db.refresh(method)
+    log_activity_for_user(db, current_user, "payment_method_create", f"Added payment method {method.name}")
+    return _payment_method_out(method)
+
+
+@router.put("/payment-methods/{method_id}", response_model=PaymentMethodOut)
+def update_payment_method(
+    method_id: int,
+    payload: PaymentMethodUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Rename a payment method, re-map it to a different Chart of Accounts
+    account, reorder it, or deactivate it (soft-delete — past sales keep
+    pointing at it so old journal entries/receipts stay accurate)."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot manage payment methods")
+    method = db.query(PaymentMethod).filter(
+        PaymentMethod.id == method_id, PaymentMethod.account_id == account_id
+    ).first()
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+
+    if payload.chart_account_id is not None:
+        chart_account = db.query(ChartOfAccount).filter(
+            ChartOfAccount.id == payload.chart_account_id, ChartOfAccount.account_id == account_id
+        ).first()
+        if not chart_account:
+            raise HTTPException(status_code=404, detail="Chart of accounts entry not found")
+        method.chart_account_id = payload.chart_account_id
+    if payload.name is not None:
+        method.name = payload.name
+    if payload.is_credit is not None:
+        method.is_credit = payload.is_credit
+    if payload.is_active is not None:
+        method.is_active = payload.is_active
+    if payload.sort_order is not None:
+        method.sort_order = payload.sort_order
+
+    db.commit()
+    db.refresh(method)
+    log_activity_for_user(db, current_user, "payment_method_update", f"Updated payment method {method.name}")
+    return _payment_method_out(method)
+
+
+@router.delete("/payment-methods/{method_id}")
+def delete_payment_method(
+    method_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Soft-delete (deactivate) rather than hard-delete, since historical
+    Sale rows may still reference this method's id via payment_method_id."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot manage payment methods")
+    method = db.query(PaymentMethod).filter(
+        PaymentMethod.id == method_id, PaymentMethod.account_id == account_id
+    ).first()
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+    method.is_active = False
+    db.commit()
+    log_activity_for_user(db, current_user, "payment_method_delete", f"Deactivated payment method {method.name}")
+    return {"detail": "Payment method deactivated"}
 
 
 # ---------- Journal Entries ----------

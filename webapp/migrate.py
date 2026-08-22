@@ -63,6 +63,11 @@ _SCHEMA_MIGRATIONS = {
         # Snapshot of the item's cost at time of sale, so historical gross
         # margin doesn't silently shift when the item's current cost changes.
         ("cost_price_at_sale", "FLOAT", None),
+        # Which specific mapped Cash/Bank/Mobile-Money/Debtors account this
+        # sale's payment landed in — see models.PaymentMethod. Nullable:
+        # existing sales predate Payment Methods and fall back to the old
+        # payment_mode-based account lookup in ledger.post_sale_entry().
+        ("payment_method_id", "INTEGER", None),
     ],
     ("business", "purchases"): [
         # Proper FK to inventory instead of relying solely on name-matching.
@@ -169,6 +174,62 @@ def _migrate_po_approved_enum_value(engine: Engine, is_sqlite: bool):
         print("[migrate] added 'approved' value to purchaseorderstatus enum")
 
 
+def _migrate_renumber_chart_of_accounts(engine: Engine, inspector):
+    """One-time renumber to match the POS Payment Method spec exactly:
+    1200 = Debtors/Accounts Receivable, Inventory moved to 1210.
+
+    Before this, 1100 was Accounts Receivable and 1200 was Inventory. Simply
+    changing _STANDARD_CHART's codes going forward would leave every
+    existing tenant's historical ChartOfAccount rows (and every JournalLine
+    that points at them) still labeled with the old codes — ensure_default_*
+    only ever inserts missing codes, it never rewrites existing ones. That
+    would silently split each tenant's AR and Inventory history across two
+    different rows (old code + newly-seeded new code) instead of just
+    renaming the account in place.
+
+    Runs UPDATE chart_of_accounts SET code = ... WHERE code = ... AND
+    account_id = <tenant>, per tenant, in the safe order (move 1200 out of
+    the way to 1210 first, THEN move 1100 into 1200) so the two never
+    collide. journal_lines/JournalLine keep pointing at the same
+    chart_account_id the whole time — only the .code label changes, so
+    balances and history are unaffected. Idempotent: a tenant with no row
+    still coded "1100" or old "1200"/Inventory has nothing to do.
+    """
+    table = "chart_of_accounts"
+    if table not in set(inspector.get_table_names()):
+        return  # create_all() will create it fresh with the new codes
+
+    with engine.begin() as conn:
+        rows = conn.execute(text(
+            f"SELECT id, account_id, code FROM {table} WHERE code IN ('1100', '1200', '1210')"
+        )).fetchall()
+        if not rows:
+            return
+
+        by_account = {}
+        for row in rows:
+            by_account.setdefault(row.account_id, {})[row.code] = row.id
+
+        moved = 0
+        for account_id, codes in by_account.items():
+            # A "1210" already present means this tenant has already been
+            # through this migration (or was seeded fresh post-fix) — skip,
+            # otherwise a second run would treat the *new* 1200 (Debtors) as
+            # the old Inventory row and wrongly bump it to 1210 again.
+            if "1210" in codes:
+                continue
+            if "1200" in codes:
+                conn.execute(text(f"UPDATE {table} SET code = '1210' WHERE id = :id"), {"id": codes["1200"]})
+                moved += 1
+            if "1100" in codes:
+                conn.execute(text(f"UPDATE {table} SET code = '1200' WHERE id = :id"), {"id": codes["1100"]})
+                moved += 1
+
+        if moved:
+            print(f"[migrate] renumbered {moved} chart-of-accounts row(s): "
+                  f"old Inventory 1200 -> 1210, old Accounts Receivable 1100 -> 1200")
+
+
 def run_migrations(engine: Engine):
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
@@ -205,3 +266,4 @@ def run_migrations(engine: Engine):
 
     _migrate_inventory_sku_constraint(engine, inspector, is_sqlite)
     _migrate_po_approved_enum_value(engine, is_sqlite)
+    _migrate_renumber_chart_of_accounts(engine, inspector)

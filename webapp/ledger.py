@@ -21,7 +21,10 @@ Sale/Purchase/Expense row in each router. It's intentionally decoupled
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from models import ChartOfAccount, JournalEntry, JournalLine, LedgerAccountType, FiscalPeriod, FiscalPeriodStatus
+from models import (
+    ChartOfAccount, JournalEntry, JournalLine, LedgerAccountType, FiscalPeriod,
+    FiscalPeriodStatus, PaymentMethod,
+)
 
 
 class FiscalPeriodLockedError(ValueError):
@@ -52,9 +55,20 @@ def get_locked_period(db: Session, account_id: int, when: datetime) -> FiscalPer
 # via parent_id without touching this list.
 _STANDARD_CHART = [
     ("1000", "Cash", LedgerAccountType.asset),
-    ("1010", "Bank", LedgerAccountType.asset),
-    ("1100", "Accounts Receivable", LedgerAccountType.asset),
-    ("1200", "Inventory", LedgerAccountType.asset),
+    # Sub-accounts a POS Payment Method can be mapped to — see
+    # ensure_default_payment_methods() below. Kept alongside the original
+    # "1000 Cash" umbrella account (still used as the fallback debit target
+    # for any sale with no payment_method_id set).
+    ("1001", "Cash In Hand", LedgerAccountType.asset),
+    ("1002", "Vodacom Lipa Namba", LedgerAccountType.asset),
+    ("1003", "Tigo Lipa Namba", LedgerAccountType.asset),
+    ("1010", "Bank Account", LedgerAccountType.asset),
+    # Matches the spec exactly: 1200 = Debtors / Accounts Receivable.
+    # Inventory moved to 1210 to free this code up — existing tenants'
+    # historical data is carried over automatically, see
+    # _migrate_renumber_chart_of_accounts() in migrate.py.
+    ("1200", "Debtors / Accounts Receivable", LedgerAccountType.asset),
+    ("1210", "Inventory", LedgerAccountType.asset),
     ("1300", "Fixed Assets", LedgerAccountType.asset),
     ("1310", "Accumulated Depreciation", LedgerAccountType.asset),  # Contra-asset
     ("1400", "Financial Investments", LedgerAccountType.asset),
@@ -97,6 +111,50 @@ def ensure_default_chart_of_accounts(db: Session, account_id: int) -> dict:
         for row in existing.values():
             db.refresh(row)
     return existing
+
+
+# name -> (chart_account_code, is_credit). Seeded once per tenant, matching
+# the codes registered in _STANDARD_CHART above. A tenant can rename these,
+# add more (e.g. a second mobile-money till), deactivate ones they don't
+# use, or repoint one at a different account — see routers/ledgers.py
+# payment-methods endpoints.
+_DEFAULT_PAYMENT_METHODS = [
+    ("Cash", "1001", False),
+    ("Vodacom Lipa Namba", "1002", False),
+    ("Tigo Lipa Namba", "1003", False),
+    ("Bank Transfer", "1010", False),
+    ("Credit (Debtors)", "1200", True),
+]
+
+
+def ensure_default_payment_methods(db: Session, account_id: int) -> list:
+    """Return this tenant's active PaymentMethod rows, seeding the standard
+    starter set (mapped to the standard chart of accounts) the first time
+    it's needed. Idempotent — safe to call on every request."""
+    chart = ensure_default_chart_of_accounts(db, account_id)
+    existing = (
+        db.query(PaymentMethod)
+        .filter(PaymentMethod.account_id == account_id)
+        .all()
+    )
+    if existing:
+        return existing
+
+    created = []
+    for order, (name, code, is_credit) in enumerate(_DEFAULT_PAYMENT_METHODS):
+        row = PaymentMethod(
+            account_id=account_id,
+            name=name,
+            chart_account_id=chart[code].id,
+            is_credit=is_credit,
+            sort_order=order,
+        )
+        db.add(row)
+        created.append(row)
+    db.commit()
+    for row in created:
+        db.refresh(row)
+    return created
 
 
 def post_journal_entry(db: Session, account_id: int, description: str, lines: list,
@@ -147,10 +205,24 @@ def post_journal_entry(db: Session, account_id: int, description: str, lines: li
 
 
 def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) -> JournalEntry:
-    """Dr Cash/Accounts Receivable, Cr Sales Revenue + VAT Payable (Output) — plus Dr COGS / Cr
-    Inventory for the cost side, when a cost is known."""
+    """Dr the mapped Payment Method's Cash/Bank/AR account, Cr Sales Revenue
+    (4000) + VAT Payable (Output) — plus Dr COGS / Cr Inventory for the cost
+    side, when a cost is known.
+
+    The debit account is resolved in this order:
+      1. sale.payment_method.chart_account.code — the cashier's chosen POS
+         Payment Method (Cash In Hand, a specific mobile-money till, Bank,
+         Debtors, ...), set on checkout via payment_method_id.
+      2. Fall back to the legacy payment_mode enum (cash -> 1000, credit ->
+         1100) for sales recorded before Payment Methods existed, or through
+         any caller that doesn't set payment_method_id.
+    """
     lines = []
-    cash_or_ar_code = "1100" if getattr(sale, "payment_mode", None) and sale.payment_mode.value == "credit" else "1000"
+    payment_method = getattr(sale, "payment_method", None)
+    if payment_method is not None and payment_method.chart_account is not None:
+        cash_or_ar_code = payment_method.chart_account.code
+    else:
+        cash_or_ar_code = "1200" if getattr(sale, "payment_mode", None) and sale.payment_mode.value == "credit" else "1000"
     
     # Get tax rate from sale if available, otherwise 0
     tax_rate = getattr(sale, "tax_rate", 0) or 0
@@ -172,7 +244,7 @@ def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) 
     cost = (sale.cost_price_at_sale or 0) * (sale.quantity or 0)
     if cost:
         lines.append(("5000", cost, 0))
-        lines.append(("1200", 0, cost))
+        lines.append(("1210", 0, cost))
 
     # Cost lines unbalance the revenue lines above unless summed together —
     # post as one entry so debits/credits both include the cost pair.
@@ -198,11 +270,11 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     if tax_rate > 0 and tax_amount > 0:
         # VAT-registered purchase: split inventory and input VAT
         net_inventory = purchase.total - tax_amount
-        lines.append(("1200", net_inventory, 0))
+        lines.append(("1210", net_inventory, 0))
         lines.append(("2110", tax_amount, 0))  # VAT Receivable (Input)
     else:
         # Non-VAT purchase: full amount to inventory
-        lines.append(("1200", purchase.total, 0))
+        lines.append(("1210", purchase.total, 0))
     
     lines.append(("1000", 0, purchase.total))
     

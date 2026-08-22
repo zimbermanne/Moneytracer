@@ -14,7 +14,8 @@ export default function POS() {
   const [items, setItems] = useState([])
   const [cart, setCart] = useState([]) // [{item_id, name, price, original_price, qty, stock}]
   const [saleMode, setSaleMode] = useState('pos') // 'pos' = locked prices, 'salesman' = editable
-  const [paymentMode, setPaymentMode] = useState('cash')
+  const [paymentMethods, setPaymentMethods] = useState([]) // dynamic, from Settings > Payment Methods
+  const [paymentMethodId, setPaymentMethodId] = useState(null)
   const [customerName, setCustomerName] = useState('Walk-in')
   const [customerPhone, setCustomerPhone] = useState('')
   const [search, setSearch] = useState('')
@@ -77,6 +78,10 @@ export default function POS() {
 
   useEffect(() => {
     api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
+    api.get('/ledgers/payment-methods').then((methods) => {
+      setPaymentMethods(methods)
+      if (methods.length > 0) setPaymentMethodId((prev) => prev ?? methods[0].id)
+    }).catch(() => {}) // POS still works with the legacy cash/credit default if this fails
     loadDrafts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -131,6 +136,9 @@ export default function POS() {
 
   const removeLine = (item_id) => setCart((prev) => prev.filter((c) => c.item_id !== item_id))
 
+  const selectedPaymentMethod = paymentMethods.find((m) => m.id === paymentMethodId)
+  const isCreditSale = selectedPaymentMethod ? selectedPaymentMethod.is_credit : false
+
   const checkout = async () => {
     if (cart.length === 0) return
     setBusy(true)
@@ -138,12 +146,16 @@ export default function POS() {
     try {
       const res = await api.post('/sales/checkout', {
         lines: cart.map((c) => ({ item_id: c.item_id, quantity: c.qty, unit_price: c.price })),
-        payment_mode: paymentMode,
+        // payment_mode kept for backward compatibility (credit-sale detection
+        // on older backends); payment_method_id is what actually decides
+        // which Cash/Bank/Mobile-Money account gets debited in the ledger.
+        payment_mode: isCreditSale ? 'credit' : 'cash',
+        payment_method_id: paymentMethodId,
         customer_name: customerName || 'Walk-in',
-        customer_phone: paymentMode === 'credit' ? customerPhone : '',
+        customer_phone: isCreditSale ? customerPhone : '',
         sale_mode: saleMode,
       })
-      setReceipt({ ...res, customer_name: customerName || 'Walk-in', payment_mode: paymentMode, created_at: new Date().toISOString() })
+      setReceipt({ ...res, customer_name: customerName || 'Walk-in', payment_mode: selectedPaymentMethod?.name || 'Cash', created_at: new Date().toISOString() })
       setCart([])
       const refreshed = await api.get('/inventory/')
       setItems(refreshed)
@@ -261,14 +273,20 @@ export default function POS() {
                   <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                 </div>
                 <div className="form-row">
-                  <label>Payment Mode</label>
-                  <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
-                    <option value="cash">Cash</option>
-                    <option value="credit">Credit (Deni)</option>
-                    <option value="mobile_money">Mobile Money</option>
+                  <label>Payment Method</label>
+                  <select
+                    value={paymentMethodId ?? ''}
+                    onChange={(e) => setPaymentMethodId(Number(e.target.value))}
+                  >
+                    {paymentMethods.length === 0 && <option value="">Loading payment methods…</option>}
+                    {paymentMethods.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}{m.is_credit ? ' (Deni)' : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                {paymentMode === 'credit' && (
+                {isCreditSale && (
                   <div className="form-row">
                     <label>Customer phone</label>
                     <input

@@ -220,12 +220,18 @@ class Sale(Base):
     cost_price_at_sale = Column(Float, nullable=True)
     total = Column(Float, default=0)
     payment_mode = Column(Enum(PaymentMode), default=PaymentMode.cash)
+    # Which specific Cash/Bank/Mobile-Money till the payment landed in, so the
+    # ledger can debit the exact account instead of a single generic "Cash"
+    # bucket. Nullable: legacy sales predate this field and fall back to the
+    # old payment_mode-based mapping in ledger.post_sale_entry().
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
     customer_name = Column(String(150), default="Walk-in")
     sold_by = Column(String(80), default="")
     receipt_no = Column(String(40), default="")
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     item = relationship("InventoryItem", back_populates="sales")
+    payment_method = relationship("PaymentMethod")
 
 
 class PosDraft(Base):
@@ -1043,6 +1049,27 @@ class ChartOfAccount(Base):
     parent = relationship("ChartOfAccount", remote_side=[id], backref="children")
     # Journal lines that reference this account
     journal_lines = relationship("JournalLine", back_populates="account")
+
+
+class PaymentMethod(Base):
+    """A POS payment method (Cash, a mobile-money till, a bank account, store
+    credit, ...) mapped to the Asset/Cash & Bank account it should hit in the
+    Chart of Accounts. Replaces the old hard-coded cash/mobile_money/credit
+    enum on the POS dropdown — a tenant can add as many tills/accounts as
+    they actually use, and each one knows exactly which ledger account to
+    debit on checkout."""
+    __tablename__ = "payment_methods"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)  # e.g. "Vodacom Lipa Namba"
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False)
+    is_credit = Column(Boolean, default=False)  # True = "sell on credit" (Debtors), not an immediate cash/bank hit
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    chart_account = relationship("ChartOfAccount")
 
 
 class JournalEntry(Base):

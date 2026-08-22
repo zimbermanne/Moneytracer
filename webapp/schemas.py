@@ -306,6 +306,7 @@ class SaleCreate(BaseModel):
     quantity: float = 1
     unit_price: Optional[float] = None
     payment_mode: PaymentMode = PaymentMode.cash
+    payment_method_id: Optional[int] = None
     customer_name: Optional[str] = "Walk-in"
 
 
@@ -319,6 +320,7 @@ class SaleOut(BaseModel):
     cost_price_at_sale: Optional[float] = None
     total: float
     payment_mode: PaymentMode
+    payment_method_id: Optional[int] = None
     customer_name: str
     sold_by: str
     receipt_no: str
@@ -334,6 +336,7 @@ class CheckoutLine(BaseModel):
 class CheckoutRequest(BaseModel):
     lines: List[CheckoutLine]
     payment_mode: PaymentMode = PaymentMode.cash
+    payment_method_id: Optional[int] = None
     customer_name: Optional[str] = "Walk-in"
     customer_phone: Optional[str] = ""
     sale_mode: Optional[str] = "pos"  # "pos" = locked prices, "salesman" = prices editable
@@ -1312,6 +1315,33 @@ class ChartOfAccountOut(BaseModel):
 
 
 ChartOfAccountOut.model_rebuild()
+
+
+class PaymentMethodOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    chart_account_id: int
+    chart_account_code: str = ""
+    chart_account_name: str = ""
+    is_credit: bool
+    is_active: bool
+    sort_order: int
+
+
+class PaymentMethodCreate(BaseModel):
+    name: str
+    chart_account_id: int
+    is_credit: bool = False
+    sort_order: int = 0
+
+
+class PaymentMethodUpdate(BaseModel):
+    name: Optional[str] = None
+    chart_account_id: Optional[int] = None
+    is_credit: Optional[bool] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
 
 
 class JournalLineOut(BaseModel):
