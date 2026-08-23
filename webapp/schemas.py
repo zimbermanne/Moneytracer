@@ -1278,6 +1278,36 @@ class SpendingGroupProgress(BaseModel):
     members_on_track: int
 
 
+class SavingsSchemeProfileCreate(BaseModel):
+    name: str
+    group_type: str = ""
+    contribution_amount: Optional[float] = None
+    cycle_frequency: str = "monthly"
+    member_names: str = ""
+    notes: str = ""
+
+
+class SavingsSchemeProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    group_type: Optional[str] = None
+    contribution_amount: Optional[float] = None
+    cycle_frequency: Optional[str] = None
+    member_names: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class SavingsSchemeProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    group_type: str
+    contribution_amount: Optional[float]
+    cycle_frequency: str
+    member_names: str
+    notes: str
+    created_at: datetime
+
+
 # ---------------------------------------------------------------------------
 # Smart tracking (rule-based, no external AI)
 # ---------------------------------------------------------------------------

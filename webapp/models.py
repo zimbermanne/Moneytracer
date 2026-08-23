@@ -863,6 +863,33 @@ class SpendingGroupContribution(Base):
 
 
 # ---------------------------------------------------------------------------
+# Lightweight savings-scheme profile — a record that "I'm part of a Vikoba/
+# chama/stokvel called X", owned by ANY account type (business or personal),
+# with none of the operational machinery of a real community tenant: no
+# login, no treasurer role, no Contribution/Payout/GroupLoan rows. Deliberately
+# NOT a SavingsGroup — a SavingsGroup is a full community-type tenant that
+# someone actively operates; this is just a personal note about a scheme
+# someone belongs to. account_id is not unique — one account can log several.
+# ---------------------------------------------------------------------------
+
+class SavingsSchemeProfile(Base):
+    __tablename__ = "savings_scheme_profiles"
+    __table_args__ = schema_args(SCHEMA_PERSONAL)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    group_type = Column(String(50), default="")  # free-text cultural label (VICOBA, Vibati, Chama, Stokvel, Susu...)
+    contribution_amount = Column(Float, nullable=True)
+    cycle_frequency = Column(Enum(CycleFrequency), default=CycleFrequency.monthly)
+    member_names = Column(Text, default="")  # freeform, comma or newline separated — not real member rows
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    account = relationship("Account")
+
+
+# ---------------------------------------------------------------------------
 # Bank loans (business borrowing FROM a bank/lender) — distinct from
 # GroupLoan above (a member borrowing from a Vikoba's own pooled fund).
 # ---------------------------------------------------------------------------

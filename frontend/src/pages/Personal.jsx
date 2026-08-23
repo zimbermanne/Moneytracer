@@ -567,6 +567,155 @@ function SocialSavingsTab({ api }) {
         <strong>Pro Tip:</strong> To join a new group or manage group settings, contact your group treasurer.
         Obligations are automatically calculated based on group cycle frequency.
       </div>
+
+      <SavingsSchemeProfiles api={api} />
+    </div>
+  )
+}
+
+// ---------- Savings Scheme Profiles ----------
+// Lightweight, informal records ("I'm part of a Vikoba called X") — not
+// operated groups. No treasurer, no logins, no real contribution ledger.
+// Deliberately kept visually and functionally separate from the table
+// above, which tracks actual operated-group membership.
+
+function SavingsSchemeProfiles({ api }) {
+  const [profiles, setProfiles] = useState([])
+  const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm] = useState({ name: '', group_type: '', contribution_amount: '', cycle_frequency: 'monthly', member_names: '', notes: '' })
+  const [saving, setSaving] = useState(false)
+
+  const load = () => api.get('/personal/savings-schemes').then(setProfiles).catch((e) => setError(e.message))
+  useEffect(() => { load() }, []) // eslint-disable-line
+
+  const openNew = () => {
+    setEditingId(null)
+    setForm({ name: '', group_type: '', contribution_amount: '', cycle_frequency: 'monthly', member_names: '', notes: '' })
+    setOpen(true)
+  }
+
+  const openEdit = (p) => {
+    setEditingId(p.id)
+    setForm({
+      name: p.name, group_type: p.group_type || '',
+      contribution_amount: p.contribution_amount ?? '', cycle_frequency: p.cycle_frequency || 'monthly',
+      member_names: p.member_names || '', notes: p.notes || '',
+    })
+    setOpen(true)
+  }
+
+  const save = async () => {
+    if (!form.name.trim()) { setError('A name for the scheme is required.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      const body = {
+        name: form.name.trim(),
+        group_type: form.group_type,
+        contribution_amount: form.contribution_amount === '' ? null : Number(form.contribution_amount),
+        cycle_frequency: form.cycle_frequency,
+        member_names: form.member_names,
+        notes: form.notes,
+      }
+      if (editingId) {
+        await api.patch(`/personal/savings-schemes/${editingId}`, body)
+      } else {
+        await api.post('/personal/savings-schemes', body)
+      }
+      setOpen(false)
+      load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const remove = async (id) => {
+    try {
+      await api.del(`/personal/savings-schemes/${id}`)
+      load()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <div>
+          <h3 style={{ marginBottom: 4 }}>Savings Scheme Profiles</h3>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 0, maxWidth: 480 }}>
+            Informal notes about schemes you're part of — not an operated group ledger.
+            No treasurer, no logins, just a record of what exists.
+          </p>
+        </div>
+        <button className="btn btn-outline" onClick={openNew}>+ Add Scheme</button>
+      </div>
+
+      {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
+
+      {profiles.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
+          No savings scheme profiles yet.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {profiles.map((p) => (
+            <div key={p.id} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                  {p.group_type && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.group_type}</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12 }} onClick={() => openEdit(p)}>Edit</button>
+                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12, color: 'var(--danger)' }} onClick={() => remove(p.id)}>Delete</button>
+                </div>
+              </div>
+              <div style={{ fontSize: 13, marginTop: 8, color: 'var(--text-muted)' }}>
+                {p.contribution_amount ? `${money(p.contribution_amount)} / ${p.cycle_frequency}` : 'No fixed contribution set'}
+              </div>
+              {p.member_names && <div style={{ fontSize: 12, marginTop: 6 }}>Members: {p.member_names}</div>}
+              {p.notes && <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-muted)' }}>{p.notes}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <Modal
+          title={editingId ? 'Edit Savings Scheme' : 'Add Savings Scheme'}
+          onClose={() => setOpen(false)}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          }
+        >
+          <label>Name</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mama Group VICOBA" />
+          <label>Type (optional)</label>
+          <input value={form.group_type} onChange={(e) => setForm({ ...form, group_type: e.target.value })} placeholder="e.g. VICOBA, Chama, Stokvel" />
+          <label>Contribution Amount (optional)</label>
+          <input type="number" value={form.contribution_amount} onChange={(e) => setForm({ ...form, contribution_amount: e.target.value })} />
+          <label>Cycle Frequency</label>
+          <select value={form.cycle_frequency} onChange={(e) => setForm({ ...form, cycle_frequency: e.target.value })}>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <label>Members (optional, freeform)</label>
+          <input value={form.member_names} onChange={(e) => setForm({ ...form, member_names: e.target.value })} placeholder="e.g. Amina, John, Fatuma" />
+          <label>Notes (optional)</label>
+          <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </Modal>
+      )}
     </div>
   )
 }

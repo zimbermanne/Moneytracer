@@ -55,6 +55,7 @@ const ChartOfAccounts = lazy(() => import('./pages/ChartOfAccounts.jsx'))
 const GeneralLedger = lazy(() => import('./pages/GeneralLedger.jsx'))
 const Payroll = lazy(() => import('./pages/Payroll.jsx'))
 const Budgets = lazy(() => import('./pages/Budgets.jsx'))
+const GroupLedger = lazy(() => import('./pages/GroupLedger.jsx'))
 
 function pageTitle(pathname, t) {
   const key = PAGE_TITLE_KEYS[pathname]
@@ -204,6 +205,7 @@ function PrivateRoutes() {
         <Route path="/deadlines" element={<Deadlines />} />
         <Route path="/assets" element={<Assets />} />
         <Route path="/personal" element={<Personal />} />
+        <Route path="/community/ledger" element={<GroupLedger />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
       </Suspense>

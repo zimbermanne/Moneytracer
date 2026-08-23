@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import (
     User, SpendingCategory, SpendingTransaction, SpendingGroup,
-    SpendingGroupMember, SpendingGroupContribution,
+    SpendingGroupMember, SpendingGroupContribution, SavingsSchemeProfile,
     Asset, BankLoan, LoanStatus, Debtor, Creditor, Expense,
     GroupMember, Contribution, GroupLoan, GroupLoanStatus, SavingsGroup,
 )
@@ -20,6 +20,7 @@ from schemas import (
     EnvelopeSummary, EnvelopeCategorySummary, HabitSummary,
     SpendingGroupCreate, SpendingGroupOut, SpendingGroupContributionCreate,
     SpendingGroupProgress,
+    SavingsSchemeProfileCreate, SavingsSchemeProfileUpdate, SavingsSchemeProfileOut,
     CategorySuggestion, RecurringExpense, SpendingAlert, SmartInsights,
     PersonalOverview, VikobaMembershipSummary,
 )
@@ -354,6 +355,59 @@ def group_progress(group_id: int, db: Session = Depends(get_db),
         total_saved=total_saved, goal_amount=group.goal_amount, percent=percent,
         member_count=len(members), members_on_track=on_track,
     )
+
+
+# ---------------------------------------------------------------------------
+# Savings scheme profiles — lightweight records ("I'm part of a Vikoba
+# called X"), open to any account type. Deliberately separate from the
+# SavingsGroup/community-tenant machinery above: no login, no treasurer
+# role, no per-member rows, no Contribution/Payout/GroupLoan tracking.
+# ---------------------------------------------------------------------------
+
+@router.get("/savings-schemes", response_model=List[SavingsSchemeProfileOut])
+def list_savings_schemes(db: Session = Depends(get_db), user: User = Depends(require_account_user)):
+    return db.query(SavingsSchemeProfile).filter(
+        SavingsSchemeProfile.account_id == user.account_id
+    ).order_by(SavingsSchemeProfile.created_at.desc()).all()
+
+
+@router.post("/savings-schemes", response_model=SavingsSchemeProfileOut)
+def create_savings_scheme(payload: SavingsSchemeProfileCreate, db: Session = Depends(get_db),
+                           user: User = Depends(require_account_user)):
+    profile = SavingsSchemeProfile(account_id=user.account_id, **payload.model_dump())
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    log_activity_for_user(db, user, "Added savings scheme profile", profile.name)
+    return profile
+
+
+@router.patch("/savings-schemes/{profile_id}", response_model=SavingsSchemeProfileOut)
+def update_savings_scheme(profile_id: int, payload: SavingsSchemeProfileUpdate,
+                           db: Session = Depends(get_db), user: User = Depends(require_account_user)):
+    profile = db.query(SavingsSchemeProfile).filter(
+        SavingsSchemeProfile.id == profile_id, SavingsSchemeProfile.account_id == user.account_id,
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Savings scheme profile not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(profile, field, value)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+@router.delete("/savings-schemes/{profile_id}")
+def delete_savings_scheme(profile_id: int, db: Session = Depends(get_db),
+                           user: User = Depends(require_account_user)):
+    profile = db.query(SavingsSchemeProfile).filter(
+        SavingsSchemeProfile.id == profile_id, SavingsSchemeProfile.account_id == user.account_id,
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Savings scheme profile not found")
+    db.delete(profile)
+    db.commit()
+    return {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------

@@ -61,43 +61,48 @@ export function NavIcon({ slug }) {
 
 // NAV is built from a function so labels re-translate whenever the
 // active language changes (t comes from the component, not module scope).
+//
+// 'community' accounts are Vikoba/social-savings groups, not businesses —
+// they never see business-operational items (POS, sales, purchases,
+// invoicing, inventory, accounting, reports, payroll). They get their own
+// Group Ledger instead (see the community-only item below).
 function buildNav(t) {
   return [
     { type: 'item', label: t('nav.home'), icon: 'home', path: '/app' },
-    { type: 'item', label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos', accountTypes: ['business', 'community'] },
+    { type: 'item', label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos', accountTypes: ['business'] },
     {
-      type: 'group', label: t('nav.salesGroup'), key: 'sales', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.salesGroup'), key: 'sales', accountTypes: ['business'],
       children: [
         { label: t('nav.salesHistory'), icon: 'sales-history', path: '/app/sales' },
         { label: t('nav.customers'), icon: 'customers', path: '/app/customers' },
       ],
     },
-    { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
-    { type: 'item', label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard', accountTypes: ['business', 'community'] },
+    { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard', accountTypes: ['business'] },
     {
-      type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business'],
       children: [
         { label: t('nav.purchasesLedger'), icon: 'purchases-ledger', path: '/app/purchases' },
         { label: t('nav.purchaseOrders'), icon: 'purchase-order', path: '/app/purchase-orders' },
         { label: t('nav.suppliers'), icon: 'customers', path: '/app/suppliers' },
       ],
     },
-    { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
+    { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors', accountTypes: ['business', 'personal'] },
     {
-      type: 'group', label: t('nav.proformaGroup'), key: 'proforma', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.proformaGroup'), key: 'proforma', accountTypes: ['business'],
       children: [
         { label: t('nav.invoices'), icon: 'invoice', path: '/app/invoices' },
         { label: t('nav.quotations'), icon: 'quotation', path: '/app/quotations' },
       ],
     },
     {
-      type: 'group', label: t('nav.inventoryGroup'), key: 'inventory', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.inventoryGroup'), key: 'inventory', accountTypes: ['business'],
       children: [
         { label: t('nav.inventoryLedger'), icon: 'inventory-ledger', path: '/app/inventory' },
       ],
     },
     {
-      type: 'group', label: t('nav.accountingGroup'), key: 'accounting', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.accountingGroup'), key: 'accounting', accountTypes: ['business'],
       children: [
         { label: t('nav.chartOfAccounts'), icon: 'chart-of-accounts', path: '/app/accounting/chart-of-accounts' },
         { label: t('nav.generalLedger'), icon: 'trialbalance', path: '/app/accounting/general-ledger' },
@@ -107,7 +112,7 @@ function buildNav(t) {
       ],
     },
     {
-      type: 'group', label: t('nav.reportsGroup'), key: 'reports', accountTypes: ['business', 'community'],
+      type: 'group', label: t('nav.reportsGroup'), key: 'reports', accountTypes: ['business'],
       children: [
         { label: t('nav.profitLoss'), icon: 'profit-asn-loss', path: '/app/reports/profit-loss' },
         { label: t('nav.financialSummary'), icon: 'financial-samary', path: '/app/reports/financial-summary' },
@@ -117,12 +122,13 @@ function buildNav(t) {
         { label: t('nav.inventoryValuation'), icon: 'inventory', path: '/app/reports/inventory-valuation' },
       ],
     },
-    { type: 'item', label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses' },
-    { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans' },
-    { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets' },
-    { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business', 'community'] },
-    { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'community'] },
-    { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal' },
+    { type: 'item', label: t('nav.groupLedger'), icon: 'personal-accounting', path: '/app/community/ledger', accountTypes: ['community'] },
+    { type: 'item', label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business'] },
+    { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.deadlines'), icon: 'deadline', path: '/app/deadlines' },
     { type: 'item', label: t('nav.activityLogsItem'), icon: 'activity-logs', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
     { type: 'item', label: t('nav.settingsItem'), icon: 'settings', path: '/app/settings' },
@@ -180,6 +186,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/bank-loans': 'nav.bankLoans',
   '/app/assets': 'nav.assets',
   '/app/personal': 'nav.personal',
+  '/app/community/ledger': 'nav.groupLedger',
   '/app/deadlines': 'nav.deadlines',
   '/app/activity': 'nav.activityLogsItem',
   '/app/settings': 'nav.settingsItem',
