@@ -143,6 +143,7 @@ function SavingsTab({ api }) {
   const [envelope, setEnvelope] = useState(null)
   const [habit, setHabit] = useState(null)
   const [insights, setInsights] = useState(null)
+  const [transactions, setTransactions] = useState([])
   const [error, setError] = useState('')
 
   const [catOpen, setCatOpen] = useState(false)
@@ -151,11 +152,21 @@ function SavingsTab({ api }) {
 
   const [txnOpen, setTxnOpen] = useState(false)
   const [txnForm, setTxnForm] = useState({ category_id: '', amount: '', note: '', tag: '' })
+  const [editingTxnId, setEditingTxnId] = useState(null)
   const [suggestion, setSuggestion] = useState(null)
   const [txnSaving, setTxnSaving] = useState(false)
 
+  // Emergency fund: a real SpendingGroup the user owns (goal_amount/target_date
+  // are user-set, not hardcoded), with deposits recorded as group contributions
+  // instead of sign-flipped expense transactions.
+  const [goalGroup, setGoalGroup] = useState(null)
+  const [goalProgress, setGoalProgress] = useState(null)
+  const [goalSetupOpen, setGoalSetupOpen] = useState(false)
+  const [goalForm, setGoalForm] = useState({ name: 'Emergency Fund', goal_amount: '' })
+  const [goalSaving, setGoalSaving] = useState(false)
+
   const [depositOpen, setDepositOpen] = useState(false)
-  const [depositForm, setDepositForm] = useState({ amount: '', note: 'Savings Deposit' })
+  const [depositForm, setDepositForm] = useState({ amount: '' })
   const [depositSaving, setDepositSaving] = useState(false)
 
   const loadAll = () => {
@@ -163,6 +174,35 @@ function SavingsTab({ api }) {
     api.get('/personal/dashboard/envelope').then(setEnvelope).catch(() => {})
     api.get('/personal/dashboard/habit').then(setHabit).catch(() => {})
     api.get('/personal/dashboard/insights').then(setInsights).catch(() => {})
+    api.get('/personal/transactions').then(setTransactions).catch(() => {})
+    api.get('/personal/groups').then((groups) => {
+      // A personal emergency fund is modeled as a single-member SpendingGroup
+      // the user created for themself — this reuses the same goal/progress
+      // machinery as shared savings groups instead of a hardcoded target.
+      const own = groups.find((g) => g.name === 'Emergency Fund') || groups[0] || null
+      setGoalGroup(own)
+      if (own) {
+        api.get(`/personal/groups/${own.id}/progress`).then(setGoalProgress).catch(() => {})
+      }
+    }).catch(() => {})
+  }
+
+  const saveGoal = async () => {
+    if (!goalForm.goal_amount) return
+    setGoalSaving(true)
+    try {
+      const group = await api.post('/personal/groups', {
+        name: goalForm.name.trim() || 'Emergency Fund',
+        goal_amount: Number(goalForm.goal_amount),
+      })
+      setGoalGroup(group)
+      setGoalSetupOpen(false)
+      loadAll()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setGoalSaving(false)
+    }
   }
 
   useEffect(() => { loadAll() }, []) // eslint-disable-line
@@ -198,13 +238,19 @@ function SavingsTab({ api }) {
     setTxnSaving(true)
     setError('')
     try {
-      await api.post('/personal/transactions', {
+      const body = {
         category_id: Number(txnForm.category_id),
         amount: Number(txnForm.amount),
         note: txnForm.note || '',
         tag: txnForm.tag || null,
-      })
+      }
+      if (editingTxnId) {
+        await api.patch(`/personal/transactions/${editingTxnId}`, body)
+      } else {
+        await api.post('/personal/transactions', body)
+      }
       setTxnOpen(false)
+      setEditingTxnId(null)
       setTxnForm({ category_id: '', amount: '', note: '', tag: '' })
       setSuggestion(null)
       loadAll()
@@ -215,24 +261,30 @@ function SavingsTab({ api }) {
     }
   }
 
+  const openEditTxn = (t) => {
+    setEditingTxnId(t.id)
+    setTxnForm({ category_id: String(t.category_id), amount: String(t.amount), note: t.note || '', tag: t.tag || '' })
+    setTxnOpen(true)
+  }
+
+  const deleteTransaction = async (id) => {
+    try {
+      await api.del(`/personal/transactions/${id}`)
+      loadAll()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   const saveDeposit = async () => {
-    if (!depositForm.amount) return
+    if (!depositForm.amount || !goalGroup) return
     setDepositSaving(true)
     try {
-      // Repurpose a "Savings" category or create one if missing
-      let savingsCat = categories.find(c => c.name.toLowerCase().includes('savings'))
-      if (!savingsCat) {
-        savingsCat = await api.post('/personal/categories', { name: 'Savings', icon: '💰', monthly_budget: 0 })
-      }
-
-      await api.post('/personal/transactions', {
-        category_id: savingsCat.id,
-        amount: -Math.abs(Number(depositForm.amount)), // Negative amount treated as "saving" (transfer out of spendable)
-        note: depositForm.note,
-        tag: 'necessary'
+      await api.post(`/personal/groups/${goalGroup.id}/contribute`, {
+        amount: Number(depositForm.amount),
       })
       setDepositOpen(false)
-      setDepositForm({ amount: '', note: 'Savings Deposit' })
+      setDepositForm({ amount: '' })
       loadAll()
     } catch (e) {
       setError(e.message)
@@ -241,35 +293,43 @@ function SavingsTab({ api }) {
     }
   }
 
-  // Emergency Fund Logic: Target is 6x monthly expenses or a fixed 5M TZS
-  const currentSavings = categories.filter(c => c.name.toLowerCase().includes('savings'))
-    .reduce((sum, c) => sum + (envelope?.categories.find(sc => sc.category_id === c.id)?.spent || 0), 0) * -1
-
-  const targetGoal = 5000000 // 5 Million TZS
-  const progressPct = Math.min(Math.round((currentSavings / targetGoal) * 100), 100)
+  const currentSavings = goalProgress?.total_saved || 0
+  const targetGoal = goalProgress?.goal_amount || goalGroup?.goal_amount || 0
+  const progressPct = targetGoal ? Math.min(Math.round((currentSavings / targetGoal) * 100), 100) : 0
 
   return (
     <div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
-        <button className="btn btn-primary" onClick={() => setTxnOpen(true)}>+ Log Expense</button>
-        <button className="btn btn-outline" onClick={() => setDepositOpen(true)}>+ Deposit to Savings</button>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={() => { setEditingTxnId(null); setTxnForm({ category_id: '', amount: '', note: '', tag: '' }); setTxnOpen(true) }}>+ Log Expense</button>
+        <button className="btn btn-outline" onClick={() => goalGroup ? setDepositOpen(true) : setGoalSetupOpen(true)}>+ Deposit to Savings</button>
         <button className="btn btn-outline" onClick={() => setCatOpen(true)}>+ New Category</button>
       </div>
 
       <div className="card" style={{ marginBottom: 24, padding: '18px 20px' }}>
         <h3 style={{ marginTop: 0, marginBottom: 12 }}>🚨 Emergency Fund Goal</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-          <span>{money(currentSavings)} saved</span>
-          <span style={{ color: 'var(--text-muted)' }}>Target: {money(targetGoal)}</span>
-        </div>
-        <div style={{ height: 10, background: 'var(--border)', borderRadius: 5, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--success)', transition: 'width 0.5s ease' }} />
-        </div>
-        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-          {progressPct}% of goal reached. Keep it up!
-        </div>
+        {goalGroup ? (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span>{money(currentSavings)} saved</span>
+              <span style={{ color: 'var(--text-muted)' }}>Target: {money(targetGoal)}</span>
+            </div>
+            <div style={{ height: 10, background: 'var(--border)', borderRadius: 5, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--success)', transition: 'width 0.5s ease' }} />
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+              {progressPct}% of goal reached. Keep it up!
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            No savings goal set yet.{' '}
+            <span style={{ color: 'var(--accent, #C15F3C)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setGoalSetupOpen(true)}>
+              Set your target
+            </span>
+          </div>
+        )}
       </div>
 
       {insights && insights.alerts.length > 0 && (
@@ -327,6 +387,50 @@ function SavingsTab({ api }) {
         </>
       )}
 
+      {transactions.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24 }}>Transaction History</h3>
+          <Table
+            columns={[
+              { key: 'spent_at', header: 'Date', render: (r) => new Date(r.spent_at).toLocaleDateString() },
+              { key: 'category_id', header: 'Category', render: (r) => {
+                const c = categories.find((cat) => cat.id === r.category_id)
+                return c ? `${c.icon} ${c.name}` : '—'
+              } },
+              { key: 'note', header: 'Note' },
+              { key: 'amount', header: 'Amount', render: (r) => money(r.amount) },
+              { key: 'actions', header: '', stopRowClick: true, render: (r) => (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12 }} onClick={() => openEditTxn(r)}>Edit</button>
+                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12, color: 'var(--danger)' }} onClick={() => deleteTransaction(r.id)}>Delete</button>
+                </div>
+              ) },
+            ]}
+            rows={transactions.slice(0, 25)}
+          />
+        </>
+      )}
+
+      {goalSetupOpen && (
+        <Modal
+          title="Set Savings Goal"
+          onClose={() => setGoalSetupOpen(false)}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => setGoalSetupOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveGoal} disabled={goalSaving}>
+                {goalSaving ? 'Saving…' : 'Save Goal'}
+              </button>
+            </>
+          }
+        >
+          <label>Goal Name</label>
+          <input value={goalForm.name} onChange={(e) => setGoalForm({ ...goalForm, name: e.target.value })} />
+          <label>Target Amount (TZS)</label>
+          <input type="number" value={goalForm.goal_amount} onChange={(e) => setGoalForm({ ...goalForm, goal_amount: e.target.value })} placeholder="e.g. 5000000" />
+        </Modal>
+      )}
+
       {catOpen && (
         <Modal
           title="New Category"
@@ -351,11 +455,11 @@ function SavingsTab({ api }) {
 
       {txnOpen && (
         <Modal
-          title="Log Expense"
-          onClose={() => setTxnOpen(false)}
+          title={editingTxnId ? 'Edit Expense' : 'Log Expense'}
+          onClose={() => { setTxnOpen(false); setEditingTxnId(null) }}
           footer={
             <>
-              <button className="btn btn-outline" onClick={() => setTxnOpen(false)}>Cancel</button>
+              <button className="btn btn-outline" onClick={() => { setTxnOpen(false); setEditingTxnId(null) }}>Cancel</button>
               <button className="btn btn-primary" onClick={saveTransaction} disabled={txnSaving}>
                 {txnSaving ? 'Saving…' : 'Save'}
               </button>
@@ -399,12 +503,10 @@ function SavingsTab({ api }) {
           }
         >
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-            Recording a deposit will move funds into your savings tracker.
+            Recording a deposit will move funds into your "{goalGroup?.name}" savings goal.
           </p>
           <label>Amount to Save</label>
           <input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} placeholder="e.g. 50000" />
-          <label>Note</label>
-          <input value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} />
         </Modal>
       )}
     </div>

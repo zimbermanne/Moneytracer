@@ -1218,6 +1218,19 @@ class SpendingTransactionOut(BaseModel):
     spent_at: datetime
 
 
+class SpendingTransactionUpdate(BaseModel):
+    category_id: Optional[int] = None
+    amount: Optional[float] = None
+    note: Optional[str] = None
+    tag: Optional[str] = None
+
+
+class SpendingCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    icon: Optional[str] = None
+    monthly_budget: Optional[float] = None
+
+
 class EnvelopeCategorySummary(BaseModel):
     category_id: int
     category_name: str

@@ -15,8 +15,8 @@ from models import (
     GroupMember, Contribution, GroupLoan, GroupLoanStatus, SavingsGroup,
 )
 from schemas import (
-    SpendingCategoryCreate, SpendingCategoryOut,
-    SpendingTransactionCreate, SpendingTransactionOut,
+    SpendingCategoryCreate, SpendingCategoryOut, SpendingCategoryUpdate,
+    SpendingTransactionCreate, SpendingTransactionOut, SpendingTransactionUpdate,
     EnvelopeSummary, EnvelopeCategorySummary, HabitSummary,
     SpendingGroupCreate, SpendingGroupOut, SpendingGroupContributionCreate,
     SpendingGroupProgress,
@@ -48,6 +48,39 @@ def create_category(payload: SpendingCategoryCreate, db: Session = Depends(get_d
     return category
 
 
+@router.patch("/categories/{category_id}", response_model=SpendingCategoryOut)
+def update_category(category_id: int, payload: SpendingCategoryUpdate,
+                     db: Session = Depends(get_db), user: User = Depends(require_account_user)):
+    category = db.query(SpendingCategory).filter(
+        SpendingCategory.id == category_id, SpendingCategory.account_id == user.account_id,
+    ).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(category, field, value)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+@router.delete("/categories/{category_id}")
+def delete_category(category_id: int, db: Session = Depends(get_db),
+                     user: User = Depends(require_account_user)):
+    category = db.query(SpendingCategory).filter(
+        SpendingCategory.id == category_id, SpendingCategory.account_id == user.account_id,
+    ).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    in_use = db.query(SpendingTransaction).filter(
+        SpendingTransaction.category_id == category_id
+    ).first()
+    if in_use:
+        raise HTTPException(status_code=400, detail="Category has transactions; reassign or delete those first")
+    db.delete(category)
+    db.commit()
+    return {"status": "ok"}
+
+
 # ---------- Transactions ----------
 
 @router.post("/transactions", response_model=SpendingTransactionOut)
@@ -73,6 +106,43 @@ def list_transactions(db: Session = Depends(get_db), user: User = Depends(requir
     return db.query(SpendingTransaction).filter(
         SpendingTransaction.account_id == user.account_id
     ).order_by(SpendingTransaction.spent_at.desc()).all()
+
+
+@router.patch("/transactions/{transaction_id}", response_model=SpendingTransactionOut)
+def update_transaction(transaction_id: int, payload: SpendingTransactionUpdate,
+                        db: Session = Depends(get_db), user: User = Depends(require_account_user)):
+    txn = db.query(SpendingTransaction).filter(
+        SpendingTransaction.id == transaction_id, SpendingTransaction.account_id == user.account_id,
+    ).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "category_id" in updates:
+        category = db.query(SpendingCategory).filter(
+            SpendingCategory.id == updates["category_id"], SpendingCategory.account_id == user.account_id,
+        ).first()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+    for field, value in updates.items():
+        setattr(txn, field, value)
+    db.commit()
+    db.refresh(txn)
+    return txn
+
+
+@router.delete("/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int, db: Session = Depends(get_db),
+                        user: User = Depends(require_account_user)):
+    txn = db.query(SpendingTransaction).filter(
+        SpendingTransaction.id == transaction_id, SpendingTransaction.account_id == user.account_id,
+    ).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    db.delete(txn)
+    db.commit()
+    return {"status": "ok"}
 
 
 # ---------- Auto-categorization ----------
@@ -208,6 +278,14 @@ def create_group(payload: SpendingGroupCreate, db: Session = Depends(get_db),
     return group
 
 
+@router.get("/groups", response_model=List[SpendingGroupOut])
+def list_groups(db: Session = Depends(get_db), user: User = Depends(require_account_user)):
+    member_group_ids = db.query(SpendingGroupMember.group_id).filter(
+        SpendingGroupMember.account_id == user.account_id
+    ).subquery()
+    return db.query(SpendingGroup).filter(SpendingGroup.id.in_(member_group_ids)).all()
+
+
 @router.post("/groups/{invite_code}/join", response_model=SpendingGroupOut)
 def join_group(invite_code: str, db: Session = Depends(get_db),
                 user: User = Depends(require_account_user)):
@@ -250,6 +328,13 @@ def group_progress(group_id: int, db: Session = Depends(get_db),
     group = db.query(SpendingGroup).filter(SpendingGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+
+    is_member = db.query(SpendingGroupMember).filter(
+        SpendingGroupMember.group_id == group_id,
+        SpendingGroupMember.account_id == user.account_id,
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
 
     members = db.query(SpendingGroupMember).filter(SpendingGroupMember.group_id == group_id).all()
     contributions = db.query(SpendingGroupContribution).filter(
