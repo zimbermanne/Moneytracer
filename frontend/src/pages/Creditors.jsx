@@ -6,10 +6,11 @@ import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import { useSearch } from '../hooks/useSearch.js'
+import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
-const emptyForm = () => ({ name: '', phone: '', total_owed: 0, note: '', items: [] })
+const emptyForm = () => ({ name: '', phone: '', tin_number: '', total_owed: 0, note: '', items: [] })
 const emptyLine = () => ({ item_id: null, description: '', quantity: 1, unit_price: 0 })
 
 function statusBadge(status) {
@@ -26,7 +27,7 @@ function itemsSummary(items) {
 
 export default function Creditors() {
   const api = useApi()
-  const { user } = useAuth()
+  const { user, account } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
 
   const [creditors, setCreditors] = useState([])
@@ -41,6 +42,7 @@ export default function Creditors() {
 
   const [payTarget, setPayTarget] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
+  const [reconcileTarget, setReconcileTarget] = useState(null)
 
   const load = () => {
     setListLoading(true)
@@ -56,7 +58,7 @@ export default function Creditors() {
   const openEdit = (c) => {
     setEditingId(c.id)
     setForm({
-      name: c.name, phone: c.phone || '', total_owed: c.total_owed, note: c.note || '',
+      name: c.name, phone: c.phone || '', tin_number: c.tin_number || '', total_owed: c.total_owed, note: c.note || '',
       created_at: c.created_at,
       items: (c.items || []).map((it) => ({
         item_id: it.item_id, description: it.description, quantity: it.quantity, unit_price: it.unit_price,
@@ -92,7 +94,7 @@ export default function Creditors() {
     setError('')
     try {
       const payload = {
-        name: form.name.trim(), phone: form.phone, total_owed: Number(form.total_owed) || 0,
+        name: form.name.trim(), phone: form.phone, tin_number: form.tin_number, total_owed: Number(form.total_owed) || 0,
         note: form.note,
         items: form.items
           .filter((l) => l.description.trim())
@@ -148,6 +150,7 @@ export default function Creditors() {
             onClick: () => { setPayTarget(r); setPayAmount(0) },
             hidden: r.status === 'paid',
           },
+          { label: 'Reconcile Account', onClick: () => setReconcileTarget({ phone: r.phone || '', tin_number: r.tin_number || '' }) },
           { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin },
         ]} />
       ),
@@ -163,7 +166,10 @@ export default function Creditors() {
     <div className="page">
       <div className="page-header">
         <h1>Creditors Ledger</h1>
-        <button className="btn btn-primary" onClick={openNew}>+ Add Creditor</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={() => setReconcileTarget({})}>Reconcile Account</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Add Creditor</button>
+        </div>
       </div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', marginBottom: 14 }}>
@@ -185,6 +191,7 @@ export default function Creditors() {
         >
           <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+          <div className="form-row"><label>TIN</label><input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} placeholder="Optional — used to reconcile with debtor records" /></div>
           <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
           <div className="form-row"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
           {editingId && (
@@ -242,6 +249,15 @@ export default function Creditors() {
           </div>
           <div className="form-row"><label>Amount Paid</label><input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
         </Modal>
+      )}
+
+      {reconcileTarget && (
+        <ReconciliationStatement
+          initialPhone={reconcileTarget.phone || ''}
+          initialTin={reconcileTarget.tin_number || ''}
+          company={account}
+          onClose={() => setReconcileTarget(null)}
+        />
       )}
     </div>
   )

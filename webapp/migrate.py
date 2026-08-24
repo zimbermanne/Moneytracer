@@ -66,6 +66,15 @@ _MIGRATIONS = {
 # These tables live in the per-track Postgres schema (a no-op filter under
 # SQLite, where everything is unqualified — see database.USE_SCHEMAS).
 _SCHEMA_MIGRATIONS = {
+    ("business", "debtors"): [
+        # Reconciliation key alongside phone — see models.Debtor.tin_number
+        # and routers/ledgers.py:reconcile_party().
+        ("tin_number", "VARCHAR(50)", "''"),
+    ],
+    ("business", "creditors"): [
+        # Mirrors debtors.tin_number — see models.Creditor.tin_number.
+        ("tin_number", "VARCHAR(50)", "''"),
+    ],
     ("business", "sales"): [
         # Snapshot of the item's cost at time of sale, so historical gross
         # margin doesn't silently shift when the item's current cost changes.

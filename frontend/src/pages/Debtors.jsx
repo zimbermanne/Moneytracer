@@ -6,13 +6,14 @@ import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import DebtorStatement from '../components/DebtorStatement.jsx'
+import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import { apiUrl } from '../api-config.js'
 import { downloadFile, openPdfForPrint } from '../utils/download.js'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
-const emptyForm = () => ({ name: '', phone: '', total_owed: 0, note: '', items: [] })
+const emptyForm = () => ({ name: '', phone: '', tin_number: '', total_owed: 0, note: '', items: [] })
 const emptyLine = () => ({ item_id: null, description: '', quantity: 1, unit_price: 0 })
 
 function statusBadge(status) {
@@ -45,6 +46,7 @@ export default function Debtors() {
   const [payTarget, setPayTarget] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
   const [printTarget, setPrintTarget] = useState(null)
+  const [reconcileTarget, setReconcileTarget] = useState(null)
 
   const load = () => {
     setListLoading(true)
@@ -60,7 +62,7 @@ export default function Debtors() {
   const openEdit = (d) => {
     setEditingId(d.id)
     setForm({
-      name: d.name, phone: d.phone || '', total_owed: d.total_owed, note: d.note || '',
+      name: d.name, phone: d.phone || '', tin_number: d.tin_number || '', total_owed: d.total_owed, note: d.note || '',
       created_at: d.created_at,
       items: (d.items || []).map((it) => ({
         item_id: it.item_id, description: it.description, quantity: it.quantity, unit_price: it.unit_price,
@@ -96,7 +98,7 @@ export default function Debtors() {
     setError('')
     try {
       const payload = {
-        name: form.name.trim(), phone: form.phone, total_owed: Number(form.total_owed) || 0,
+        name: form.name.trim(), phone: form.phone, tin_number: form.tin_number, total_owed: Number(form.total_owed) || 0,
         note: form.note,
         items: form.items
           .filter((l) => l.description.trim())
@@ -165,6 +167,7 @@ export default function Debtors() {
           { label: 'Print Debit Note', onClick: () => printDebitNote(r), disabled: pdfBusyId === r.id },
           { label: 'Download Debit Note (PDF)', onClick: () => downloadDebitNote(r), disabled: pdfBusyId === r.id },
           { label: 'Print Thermal Statement', onClick: () => setPrintTarget(r) },
+          { label: 'Reconcile Account', onClick: () => setReconcileTarget({ phone: r.phone || '', tin_number: r.tin_number || '' }) },
           { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin },
         ]} />
       ),
@@ -180,7 +183,10 @@ export default function Debtors() {
     <div className="page">
       <div className="page-header">
         <h1>Debtors</h1>
-        <button className="btn btn-primary" onClick={openNew}>+ Add Debtor</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={() => setReconcileTarget({})}>Reconcile Account</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Add Debtor</button>
+        </div>
       </div>
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', marginBottom: 14 }}>
@@ -241,6 +247,7 @@ export default function Debtors() {
           <div className="debtor-form-grid">
             <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client or company name" /></div>
             <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +255 7XX XXX XXX" /></div>
+            <div className="form-row"><label>TIN</label><input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} placeholder="Optional — used to reconcile with creditor records" /></div>
             <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
             {editingId && (
               <div className="form-row">
@@ -306,6 +313,15 @@ export default function Debtors() {
           debtor={printTarget}
           company={account}
           onClose={() => setPrintTarget(null)}
+        />
+      )}
+
+      {reconcileTarget && (
+        <ReconciliationStatement
+          initialPhone={reconcileTarget.phone || ''}
+          initialTin={reconcileTarget.tin_number || ''}
+          company={account}
+          onClose={() => setReconcileTarget(null)}
         />
       )}
     </div>

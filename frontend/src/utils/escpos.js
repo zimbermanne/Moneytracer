@@ -484,3 +484,104 @@ export function buildDebtorStatementEscPos(debtor, company = {}, charsPerLine = 
 
   return b.toBytes()
 }
+
+/**
+ * Reconciliation statement: a party who is simultaneously (or was, at
+ * different times) both a Debtor and a Creditor, merged into one
+ * chronological ledger with a running net balance. Tied together by phone
+ * or TIN (see routers/ledgers.py:reconcile_party), never by name — so the
+ * printed slip always states which identifier the match was made on, since
+ * that's the fact that makes the statement trustworthy.
+ *
+ * statement shape (ReconciliationStatement from the API): { party_name,
+ *   phone, tin_number, matched_on, total_debit, total_credit, net_balance,
+ *   entries: [{ date, kind: 'debit'|'credit', doc_no, reference, amount,
+ *   paid, balance }] }
+ */
+export function buildReconciliationStatementEscPos(statement, company = {}, charsPerLine = 42) {
+  const b = new EscPosBuilder(charsPerLine)
+  const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const shortDate = (d) => d ? new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: '2-digit' }) : ''
+  const currency = company.currency || 'TZS'
+  b.font(1)
+
+  b.align('center')
+  b.bold(true)
+  b.line(company.name || 'Moneytracer')
+  b.bold(false)
+  if (company.street_address || company.address) b.line(company.street_address || company.address)
+  if (company.phone) b.line(`Tel: ${company.phone}`)
+  if (company.tin) b.line(`TIN: ${company.tin}`)
+  b.hr('=')
+  b.bold(true)
+  b.doubleSize(true)
+  b.line('RECONCILIATION STATEMENT')
+  b.doubleSize(false)
+  b.bold(false)
+
+  b.align('left')
+  b.line(`Party:   ${statement.party_name || ''}`)
+  if (statement.phone) b.line(`Phone:   ${statement.phone}`)
+  if (statement.tin_number) b.line(`TIN:     ${statement.tin_number}`)
+  // Always state the match basis on the printed slip — without this, the
+  // statement can't be trusted to be about the correct combined account
+  // rather than two different people who happen to share a name.
+  const matchLabel = { phone: 'Phone', tin: 'TIN', 'phone+tin': 'Phone + TIN' }[statement.matched_on] || statement.matched_on
+  b.line(`Matched on: ${matchLabel}`)
+  b.line(`Printed: ${new Date().toLocaleString()}`)
+  b.hr()
+
+  // One line per transaction, each carrying its own running net balance —
+  // debits (they owe us) push the balance up, credits (we owe them) pull
+  // it down, so the reader can see exactly when the relationship crossed
+  // from debtor to creditor or back, not just the final number.
+  const entries = statement.entries || []
+  if (entries.length > 0) {
+    entries.forEach((e) => {
+      const label = e.kind === 'debit' ? 'DEBIT (owed to us)' : 'CREDIT (we owe)'
+      b.bold(true)
+      b.line(`${e.doc_no}  ${shortDate(e.date)}`)
+      b.bold(false)
+      if (e.reference) b.wrapLine(`  ${e.reference}`, 2)
+      b.row(`  ${label}`, `${currency} ${money(e.amount)}`)
+      if (e.paid) b.row('  Paid', `${currency} ${money(e.paid)}`)
+      b.row('  Running Balance', `${currency} ${money(e.balance)}`)
+      b.line('')
+    })
+  } else {
+    b.line('No transactions on record.')
+  }
+  b.hr()
+
+  b.bold(true)
+  b.line('ACCOUNT SUMMARY')
+  b.bold(false)
+  b.row('Total Debit (owed to us)', `${currency} ${money(statement.total_debit)}`)
+  b.row('Total Credit (we owe)', `${currency} ${money(statement.total_credit)}`)
+  b.hr('-')
+
+  // Sign-aware label, same rule as the debtor statement above: never print
+  // a bare negative number to a customer — state plainly who owes whom.
+  const net = statement.net_balance || 0
+  b.bold(true)
+  b.doubleSize(true)
+  if (net < 0) {
+    b.row('WE OWE PARTY', `${currency} ${money(Math.abs(net))}`)
+  } else if (net > 0) {
+    b.row('PARTY OWES US', `${currency} ${money(net)}`)
+  } else {
+    b.line('FULLY RECONCILED — TZS 0')
+  }
+  b.doubleSize(false)
+  b.bold(false)
+  b.feed(1)
+
+  b.align('center')
+  b.line('Thank you for your business!')
+  b.bold(true)
+  b.line('END OF STATEMENT')
+  b.bold(false)
+  b.cut()
+
+  return b.toBytes()
+}

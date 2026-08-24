@@ -18,6 +18,7 @@ from schemas import (
     LedgerOut, PaymentRequest, FiscalPeriodCreate, FiscalPeriodOut,
     ChartOfAccountOut, JournalEntryOut, JournalEntryCreate, JournalLineOut,
     PaymentMethodOut, PaymentMethodCreate, PaymentMethodUpdate,
+    ReconciliationEntry, ReconciliationStatement,
 )
 from auth import get_current_user, require_manager_up, require_admin
 from activity import log_activity_for_user
@@ -421,6 +422,105 @@ def pay_creditor(creditor_id: int, payload: PaymentRequest, db: Session = Depend
     db.refresh(creditor)
     log_activity_for_user(db, current_user, "creditor_payment", f"Paid {creditor.name} {payload.amount}")
     return creditor
+
+
+# ---------- Reconciliation (tie a Debtor and a Creditor to the same party) ----------
+#
+# A customer can independently become a supplier we owe money to (or vice
+# versa) — e.g. a shop that buys from us on credit also sells us goods on
+# credit. Debtor.name and Creditor.name are free text and often won't match
+# exactly (nicknames, "Juma Store" vs "Juma General Store"), so name can't be
+# the tie. Phone and TIN are the two identifiers a business actually treats
+# as "this is the same account" — so reconciliation matches on those, never
+# on name.
+
+def _normalize_phone(phone: str) -> str:
+    """Strip everything but digits, and drop a leading country/trunk prefix
+    so '+255 712 345 678', '0712345678', and '255712345678' all normalize to
+    the same '712345678' — otherwise formatting differences alone would make
+    two rows for the same person look unrelated."""
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if len(digits) > 9:
+        digits = digits[-9:]  # last 9 digits = the actual subscriber number
+    return digits
+
+
+@router.get("/reconcile", response_model=ReconciliationStatement)
+def reconcile_party(
+    phone: Optional[str] = Query(None, description="Phone number to match on (either format)"),
+    tin: Optional[str] = Query(None, description="TIN to match on"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Pull every Debtor row and every Creditor row tied to the same
+    real-world party — matched on phone and/or TIN, never on name — and
+    return them merged into one chronological statement with a running net
+    balance. Positive net_balance = the party owes the business overall;
+    negative = the business owes the party overall, netting out debtor and
+    creditor positions instead of showing them as two unrelated ledgers."""
+    if not phone and not tin:
+        raise HTTPException(status_code=400, detail="Provide a phone number or TIN to reconcile on")
+
+    account_id = get_account_filter(current_user)
+    norm_phone = _normalize_phone(phone) if phone else None
+    tin_clean = tin.strip() if tin else None
+
+    def _scoped(model):
+        q = db.query(model)
+        if account_id is not None:
+            q = q.filter(model.account_id == account_id)
+        return q.all()
+
+    debtors = [d for d in _scoped(Debtor)
+               if (norm_phone and _normalize_phone(d.phone) == norm_phone)
+               or (tin_clean and d.tin_number and d.tin_number.strip() == tin_clean)]
+    creditors = [c for c in _scoped(Creditor)
+                 if (norm_phone and _normalize_phone(c.phone) == norm_phone)
+                 or (tin_clean and c.tin_number and c.tin_number.strip() == tin_clean)]
+
+    if not debtors and not creditors:
+        raise HTTPException(status_code=404, detail="No debtor or creditor records match that phone/TIN")
+
+    matched_phone = norm_phone and any(_normalize_phone(r.phone) == norm_phone for r in debtors + creditors)
+    matched_tin = tin_clean and any(r.tin_number and r.tin_number.strip() == tin_clean for r in debtors + creditors)
+    matched_on = "phone+tin" if (matched_phone and matched_tin) else ("phone" if matched_phone else "tin")
+
+    party_name = (debtors + creditors)[0].name
+    raw_entries = []
+    for d in debtors:
+        raw_entries.append((d.created_at, "debit", f"DN-{d.id:06d}", d.note or "", d.total_owed, d.amount_paid, d.id))
+    for c in creditors:
+        raw_entries.append((c.created_at, "credit", f"CN-{c.id:06d}", c.note or "", c.total_owed, c.amount_paid, c.id))
+    raw_entries.sort(key=lambda e: e[0] or datetime.min)
+
+    entries: List[ReconciliationEntry] = []
+    running = 0.0
+    total_debit = 0.0
+    total_credit = 0.0
+    for date, kind, doc_no, reference, amount, paid, source_id in raw_entries:
+        outstanding = amount - paid
+        if kind == "debit":
+            running += outstanding
+            total_debit += amount
+        else:
+            running -= outstanding
+            total_credit += amount
+        entries.append(ReconciliationEntry(
+            date=date, kind=kind, doc_no=doc_no, reference=reference,
+            amount=amount, paid=paid, balance=running,
+            source_id=source_id, source_table="debtors" if kind == "debit" else "creditors",
+        ))
+
+    return ReconciliationStatement(
+        party_name=party_name,
+        phone=phone or "",
+        tin_number=tin or "",
+        matched_on=matched_on,
+        total_debit=total_debit,
+        total_credit=total_credit,
+        net_balance=running,
+        entries=entries,
+    )
 
 
 # ---------- Fiscal Periods ----------

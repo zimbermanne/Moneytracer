@@ -628,6 +628,7 @@ class DebtorItemOut(BaseModel):
 class DebtorCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
+    tin_number: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
     items: List[DebtorItemIn] = []
@@ -636,6 +637,7 @@ class DebtorCreate(BaseModel):
 class DebtorUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
+    tin_number: Optional[str] = None
     total_owed: Optional[float] = None
     note: Optional[str] = None
     items: Optional[List[DebtorItemIn]] = None  # omit to leave items untouched; [] clears them
@@ -646,6 +648,7 @@ class DebtorOut(BaseModel):
     id: int
     name: str
     phone: str
+    tin_number: str = ""
     total_owed: float
     amount_paid: float
     status: LedgerStatus
@@ -747,6 +750,7 @@ class CreditorItemOut(BaseModel):
 class CreditorCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
+    tin_number: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
     items: List[CreditorItemIn] = []
@@ -755,6 +759,7 @@ class CreditorCreate(BaseModel):
 class CreditorUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
+    tin_number: Optional[str] = None
     total_owed: Optional[float] = None
     note: Optional[str] = None
     items: Optional[List[CreditorItemIn]] = None  # omit to leave items untouched; [] clears them
@@ -765,12 +770,39 @@ class CreditorOut(BaseModel):
     id: int
     name: str
     phone: str
+    tin_number: str = ""
     total_owed: float
     amount_paid: float
     status: LedgerStatus
     note: str
     created_at: datetime
     items: List[CreditorItemOut] = []
+
+
+# ---------- Debtor <-> Creditor reconciliation (same real-world party can be   ----------
+# ---------- both a debtor and a creditor; tied together by phone or TIN)      ----------
+
+class ReconciliationEntry(BaseModel):
+    date: datetime
+    kind: str            # "debit" (they owe us — Debtor row) | "credit" (we owe them — Creditor row)
+    doc_no: str           # e.g. "DN-000012" / "CN-000003"
+    reference: str = ""   # receipt/PO number, note text
+    amount: float          # total_owed for this row
+    paid: float             # amount_paid for this row
+    balance: float           # running net balance after this entry (+ve = they owe us)
+    source_id: int
+    source_table: str    # "debtors" | "creditors"
+
+
+class ReconciliationStatement(BaseModel):
+    party_name: str
+    phone: str = ""
+    tin_number: str = ""
+    matched_on: str = ""      # "phone" | "tin" | "phone+tin"
+    total_debit: float          # sum of Debtor.total_owed matched
+    total_credit: float          # sum of Creditor.total_owed matched
+    net_balance: float            # +ve = customer/party owes us, -ve = we owe them
+    entries: List[ReconciliationEntry]
 
 
 class LedgerOut(BaseModel):

@@ -383,6 +383,11 @@ class Debtor(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
     phone = Column(String(40), default="")
+    # TIN, alongside phone, is how a Debtor row is tied back to the same
+    # real-world party as a Creditor row for reconciliation — see
+    # routers/ledgers.py:reconcile_party(). Optional: most walk-in debtors
+    # never provide one, so matching falls back to phone in that case.
+    tin_number = Column(String(50), default="")
     total_owed = Column(Float, default=0)
     amount_paid = Column(Float, default=0)
     status = Column(Enum(LedgerStatus), default=LedgerStatus.unpaid)
@@ -419,6 +424,10 @@ class Creditor(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
     phone = Column(String(40), default="")
+    # Mirrors Debtor.tin_number — same reconciliation key, since a supplier
+    # can independently become a debtor (e.g. they owe us for a return) and
+    # we need to tie the two rows to one real-world party.
+    tin_number = Column(String(50), default="")
     total_owed = Column(Float, default=0)
     amount_paid = Column(Float, default=0)
     status = Column(Enum(LedgerStatus), default=LedgerStatus.unpaid)
