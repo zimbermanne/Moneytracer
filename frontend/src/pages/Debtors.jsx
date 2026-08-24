@@ -5,6 +5,7 @@ import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
+import DebtorStatement from '../components/DebtorStatement.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import { apiUrl } from '../api-config.js'
 import { downloadFile, openPdfForPrint } from '../utils/download.js'
@@ -28,7 +29,7 @@ function itemsSummary(items) {
 
 export default function Debtors() {
   const api = useApi()
-  const { user } = useAuth()
+  const { user, account } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
 
   const [debtors, setDebtors] = useState([])
@@ -43,6 +44,7 @@ export default function Debtors() {
 
   const [payTarget, setPayTarget] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
+  const [printTarget, setPrintTarget] = useState(null)
 
   const load = () => {
     setListLoading(true)
@@ -162,6 +164,7 @@ export default function Debtors() {
           },
           { label: 'Print Debit Note', onClick: () => printDebitNote(r), disabled: pdfBusyId === r.id },
           { label: 'Download Debit Note (PDF)', onClick: () => downloadDebitNote(r), disabled: pdfBusyId === r.id },
+          { label: 'Print Thermal Statement', onClick: () => setPrintTarget(r) },
           { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin },
         ]} />
       ),
@@ -199,6 +202,14 @@ export default function Debtors() {
                 disabled={pdfBusyId === editingId}
               >
                 {pdfBusyId === editingId ? 'Preparing…' : '⬇ Debit Note (PDF)'}
+              </button>
+            )}
+            {editingId && (
+              <button
+                className="btn btn-outline"
+                onClick={() => setPrintTarget(debtors.find((d) => d.id === editingId))}
+              >
+                🖨 Thermal Statement
               </button>
             )}
             <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
@@ -288,6 +299,14 @@ export default function Debtors() {
           </div>
           <div className="form-row"><label>Amount Paid</label><input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} /></div>
         </Modal>
+      )}
+
+      {printTarget && (
+        <DebtorStatement
+          debtor={printTarget}
+          company={account}
+          onClose={() => setPrintTarget(null)}
+        />
       )}
     </div>
   )

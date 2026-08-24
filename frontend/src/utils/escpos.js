@@ -98,6 +98,43 @@ export class EscPosBuilder {
     return this
   }
 
+  /** Print text wrapped at charsPerLine on whole-word boundaries (falls back
+   * to a hard break only if a single word is longer than the line itself).
+   * Optional indent is applied to every wrapped line after the first, so a
+   * long item description reads as one indented block instead of the
+   * printer's own mid-word wrap, which is what makes wrapped text hard to
+   * scan on a receipt. */
+  wrapLine(str = '', indent = 0) {
+    const width = this.charsPerLine
+    const pad = ' '.repeat(indent)
+    const words = String(str).split(/\s+/).filter(Boolean)
+    let current = ''
+    let first = true
+    const flush = () => {
+      this.line((first ? '' : pad) + current)
+      first = false
+      current = ''
+    }
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word
+      const maxWidth = width - (first ? 0 : indent)
+      if (candidate.length > maxWidth && current) {
+        flush()
+        current = word
+      } else if (candidate.length > maxWidth) {
+        // Single word longer than the line — hard-break it rather than
+        // overflow, since the printer won't wrap it cleanly either.
+        this.line((first ? '' : pad) + candidate.slice(0, maxWidth))
+        current = candidate.slice(maxWidth)
+        first = false
+      } else {
+        current = candidate
+      }
+    }
+    if (current || words.length === 0) flush()
+    return this
+  }
+
   /** Two-column row: label on the left, value right-aligned. Wraps the
    * label onto its own line first if there isn't room to fit both. */
   row(left = '', right = '') {
@@ -179,6 +216,10 @@ export class EscPosBuilder {
 export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 42, extra = {}) {
   const b = new EscPosBuilder(charsPerLine)
   const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  // This is a multi-country app — company.currency is the tenant's own
+  // ISO 4217 code (KES, GHS, XOF, ...), set from their account's country.
+  // TZS is only the fallback for tenants who haven't set one.
+  const currency = company.currency || 'TZS'
   const { logoBitmap, customerPhone, customerTin, qrData, landingUrl } = extra
   // Font B (smaller) for the whole receipt -- harmonizes sizing and is
   // what actually lets more characters fit per line on 58mm paper, unlike
@@ -220,7 +261,7 @@ export function buildReceiptEscPos(receipt, company = {}, charsPerLine = 42, ext
   b.hr()
 
   b.bold(true)
-  b.row('TOTAL', `TZS ${money(receipt.total)}`)
+  b.row('TOTAL', `${currency} ${money(receipt.total)}`)
   b.bold(false)
   b.feed(1)
 
@@ -256,6 +297,7 @@ export function buildStatementEscPos(statement, company = {}, charsPerLine = 42)
   const b = new EscPosBuilder(charsPerLine)
   const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
   const shortDate = (d) => new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+  const currency = company.currency || 'TZS'
   // Font B (smaller) for the whole statement -- same rationale as receipts:
   // fits noticeably more per line than Font A, which matters here since
   // ledger rows pack a date, description, and two amounts.
@@ -282,7 +324,7 @@ export function buildStatementEscPos(statement, company = {}, charsPerLine = 42)
   b.line(`Printed: ${new Date().toLocaleString()}`)
   b.hr()
 
-  b.row('Opening Balance', `TZS ${money(statement.opening_balance)}`)
+  b.row('Opening Balance', `${currency} ${money(statement.opening_balance)}`)
   b.hr('-')
 
   // Ledger: each entry gets a date+description line, then an
@@ -302,15 +344,136 @@ export function buildStatementEscPos(statement, company = {}, charsPerLine = 42)
   }
   b.hr()
 
-  b.row('Total Invoiced', `TZS ${money(statement.invoiced_amount)}`)
-  b.row('Total Received', `TZS ${money(statement.amount_received)}`)
+  b.row('Total Invoiced', `${currency} ${money(statement.invoiced_amount)}`)
+  b.row('Total Received', `${currency} ${money(statement.amount_received)}`)
   b.hr('-')
   b.bold(true)
   b.doubleSize(true)
-  b.row('BALANCE DUE', money(statement.balance_due))
+  b.row('BALANCE DUE', `${currency} ${money(statement.balance_due)}`)
   b.doubleSize(false)
   b.bold(false)
   b.feed(1)
+
+  b.align('center')
+  b.line('Thank you for your business!')
+  b.bold(true)
+  b.line('END OF STATEMENT')
+  b.bold(false)
+  b.cut()
+
+  return b.toBytes()
+}
+
+/**
+ * Item-level thermal statement for a Debtor (informal credit-sale ledger) —
+ * distinct from buildStatementEscPos (Customer, invoice-based AR): a Debtor
+ * has no per-transaction invoiced/received ledger, just a list of items
+ * bought on credit (DebtorItem) plus a manually-tracked total_owed/
+ * amount_paid. total_owed is the authoritative figure — it does NOT
+ * necessarily equal the sum of the printed item lines (see Debtor model
+ * docstring), so both are shown rather than one derived from the other.
+ *
+ * Formatting choices are aimed at readability on a narrow physical printer,
+ * not just fitting characters in: each item gets its own numbered block
+ * (name, then qty/price/line-total clearly labeled on the next line) rather
+ * than cramming everything onto one row, long names word-wrap with a
+ * hanging indent instead of the printer's own mid-word cut, and every
+ * money figure repeats the tenant's currency code so nothing reads as a
+ * bare, ambiguous number — this is a multi-country app, so that code comes
+ * from company.currency (set per-account from the tenant's country, see
+ * routers/accounts.py + african_currencies.py), not a fixed "TZS".
+ *
+ * debtor shape: { name, phone, note, total_owed, amount_paid, created_at,
+ *   items: [{ description, quantity, unit_price, created_at }] }
+ */
+export function buildDebtorStatementEscPos(debtor, company = {}, charsPerLine = 42) {
+  const b = new EscPosBuilder(charsPerLine)
+  const money = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  const shortDate = (d) => d ? new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: '2-digit' }) : ''
+  // Multi-country app — always print the tenant's own currency (set from
+  // their account's country, see routers/accounts.py), not a fixed one.
+  const currency = company.currency || 'TZS'
+  b.font(1)
+
+  b.align('center')
+  b.bold(true)
+  b.line(company.name || 'Moneytracer')
+  b.bold(false)
+  if (company.street_address || company.address) b.line(company.street_address || company.address)
+  if (company.phone) b.line(`Tel: ${company.phone}`)
+  if (company.tin) b.line(`TIN: ${company.tin}`)
+  if (company.vrn) b.line(`VRN: ${company.vrn}`)
+  b.hr('=')
+  b.bold(true)
+  b.doubleSize(true)
+  b.line('DEBTOR STATEMENT')
+  b.doubleSize(false)
+  b.bold(false)
+
+  b.align('left')
+  b.line(`Client:  ${debtor.name || ''}`)
+  if (debtor.phone) b.line(`Phone:   ${debtor.phone}`)
+  b.line(`Since:   ${shortDate(debtor.created_at)}`)
+  b.line(`Printed: ${new Date().toLocaleString()}`)
+  b.hr()
+
+  // Each item is its own clearly-separated block:
+  //   1. Item name (word-wrapped, hanging indent if it runs long)
+  //      Qty: 2   Price: <currency> 5,000   = <currency> 10,000
+  // rather than one dense row, so a client reading a printed slip can
+  // follow quantity -> unit price -> line total without doing the math.
+  const items = debtor.items || []
+  if (items.length > 0) {
+    b.bold(true)
+    b.line('ITEMS BOUGHT ON CREDIT')
+    b.bold(false)
+    let itemsTotal = 0
+    items.forEach((it, idx) => {
+      const qty = Number(it.quantity) || 0
+      const unit = Number(it.unit_price) || 0
+      const lineTotal = qty * unit
+      itemsTotal += lineTotal
+      const dateStr = shortDate(it.created_at)
+      b.wrapLine(`${idx + 1}. ${it.description}${dateStr ? ` (${dateStr})` : ''}`, 3)
+      b.line(`   Qty: ${qty}   Price: ${currency} ${money(unit)}`)
+      b.row('   Subtotal', `${currency} ${money(lineTotal)}`)
+      if (idx < items.length - 1) b.line('')
+    })
+    b.hr('-')
+    b.bold(true)
+    b.row('Items Total', `${currency} ${money(itemsTotal)}`)
+    b.bold(false)
+  } else {
+    b.line('No items on record for this debt.')
+  }
+  b.hr()
+
+  // Total Owed is the authoritative balance the business tracks — shown
+  // plainly, never mixed with or overwritten by the items total above,
+  // since the two aren't guaranteed to match (see docstring).
+  b.bold(true)
+  b.line('ACCOUNT SUMMARY')
+  b.bold(false)
+  b.row('Total Owed', `${currency} ${money(debtor.total_owed)}`)
+  b.row('Amount Paid', `${currency} ${money(debtor.amount_paid)}`)
+  b.hr('-')
+  const balance = (debtor.total_owed || 0) - (debtor.amount_paid || 0)
+  b.bold(true)
+  b.doubleSize(true)
+  if (balance < 0) {
+    b.row('OVERPAID BY', `${currency} ${money(Math.abs(balance))}`)
+  } else {
+    b.row('BALANCE DUE', `${currency} ${money(balance)}`)
+  }
+  b.doubleSize(false)
+  b.bold(false)
+  b.feed(1)
+
+  if (debtor.note) {
+    b.align('left')
+    b.wrapLine(`Note: ${debtor.note}`, 6)
+    b.feed(1)
+  }
 
   b.align('center')
   b.line('Thank you for your business!')

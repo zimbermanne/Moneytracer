@@ -7,6 +7,7 @@ from models import Account, User, RoleEnum, Country, RevenueAuthority, ExchangeR
 from schemas import AccountOut, AccountUpdate, AccountWithUsersOut, ExchangeRateCreate, ExchangeRateOut
 from auth import require_superadmin, require_admin, get_current_user
 from activity import log_activity_for_user
+from african_currencies import default_currency_for_country
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
@@ -84,6 +85,14 @@ def update_my_account(payload: AccountUpdate, db: Session = Depends(get_db),
             # non-zero rate — don't clobber a manually-configured rate.
             if "tax_rate" not in provided and not account.tax_rate:
                 account.tax_rate = authority.default_vat_rate or 0
+
+        # Same auto-fill pattern for currency: default from the country's
+        # official currency (all 54 African markets, see
+        # african_currencies.py) unless the request explicitly sets one or
+        # the account was already manually configured away from the
+        # original "TZS" fallback.
+        if "currency" not in provided and (not account.currency or account.currency == "TZS"):
+            account.currency = default_currency_for_country(country_name)
 
     for field, value in provided.items():
         setattr(account, field, value)

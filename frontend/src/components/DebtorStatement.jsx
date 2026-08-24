@@ -1,28 +1,31 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
-import { buildStatementEscPos } from '../utils/escpos.js'
+import { buildDebtorStatementEscPos } from '../utils/escpos.js'
 import {
   isBluetoothSupported, connectPrinter, printBytes, getConnectedPrinterName, disconnectPrinter,
 } from '../utils/thermalPrinter.js'
 
-const PAPER_WIDTH_KEY = 'moneytracer_receipt_paper_width' // shared with ThermalReceipt — one printer setting per user
+const PAPER_WIDTH_KEY = 'moneytracer_receipt_paper_width' // shared with ThermalReceipt/ThermalStatement — one printer setting per user
 
 function money(n) {
   return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 
 /**
- * Narrow, receipt-formatted preview of a customer's statement of accounts,
- * with the same two print paths as ThermalReceipt: the browser's system
- * print dialog (any driver-installed printer), or direct Web Bluetooth
- * ESC/POS printing (Chrome/Edge desktop + Android only).
+ * Narrow, receipt-formatted print view of a single Debtor's item-level
+ * statement — item name, quantity, date recorded, unit price, and running
+ * total_owed/amount_paid/balance. Distinct from ThermalStatement (used for
+ * Customers/invoices): a Debtor has no invoiced/received ledger, just a
+ * flat list of items bought on credit (DebtorItem) plus a manually-tracked
+ * total_owed. total_owed does not necessarily equal the sum of the printed
+ * items (see Debtor model docstring) — both are shown, never one derived
+ * from the other, so the printed balance always matches what's owed.
  *
- * statement shape: { customer_name, date_from, date_to, opening_balance,
- *   invoiced_amount, amount_received, balance_due,
- *   entries: [{ date, description, reference, invoiced, received, balance }] }
+ * debtor shape: { name, phone, note, total_owed, amount_paid, created_at,
+ *   items: [{ description, quantity, unit_price, created_at }] }
  * company shape: the full Account object — name, street_address, phone, tin, vrn.
  */
-export default function ThermalStatement({ statement, company, onClose }) {
+export default function DebtorStatement({ debtor, company, onClose }) {
   const [paperWidth, setPaperWidth] = useState(() => localStorage.getItem(PAPER_WIDTH_KEY) || '58')
   const [btBusy, setBtBusy] = useState(false)
   const [btPrinterName, setBtPrinterName] = useState(getConnectedPrinterName())
@@ -45,7 +48,7 @@ export default function ThermalStatement({ statement, company, onClose }) {
         setBtPrinterName(conn.name)
       }
       const charsPerLine = paperWidth === '80' ? 64 : 42 // Font B char counts, not Font A's 48/32
-      const bytes = buildStatementEscPos(statement, company, charsPerLine)
+      const bytes = buildDebtorStatementEscPos(debtor, company, charsPerLine)
       await printBytes(bytes)
       setNotice('Sent to printer.')
     } catch (e) {
@@ -61,10 +64,15 @@ export default function ThermalStatement({ statement, company, onClose }) {
     setNotice('Printer disconnected.')
   }
 
-  const entries = statement.entries || []
+  const items = debtor.items || []
+  const itemsTotal = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0)
+  const balance = (debtor.total_owed || 0) - (debtor.amount_paid || 0)
+  // Multi-country app — always show the tenant's own currency (set from
+  // their account's country), not a fixed "TZS".
+  const currency = company?.currency || 'TZS'
 
   return (
-    <Modal title={`Statement — ${statement.customer_name || ''}`} onClose={onClose} isDirty={false} footer={(
+    <Modal title={`Debtor Statement — ${debtor.name || ''}`} onClose={onClose} isDirty={false} footer={(
       <>
         <button className="btn btn-outline" onClick={onClose}>Close</button>
         {isBluetoothSupported() && (
@@ -106,54 +114,60 @@ export default function ThermalStatement({ statement, company, onClose }) {
         {company?.tin && <div className="receipt-center">TIN: {company.tin}</div>}
         {company?.vrn && <div className="receipt-center">VRN: {company.vrn}</div>}
         <div className="receipt-hr" />
-        <div className="receipt-center receipt-bold">STATEMENT OF ACCOUNT</div>
+        <div className="receipt-center receipt-bold receipt-large">DEBTOR STATEMENT</div>
 
-        <div style={{ marginTop: 4 }}>Customer: {statement.customer_name}</div>
-        {(statement.date_from || statement.date_to) && (
-          <div>
-            Period: {statement.date_from ? new Date(statement.date_from).toLocaleDateString() : ''}
-            {' – '}
-            {statement.date_to ? new Date(statement.date_to).toLocaleDateString() : ''}
-          </div>
-        )}
+        <div style={{ marginTop: 4 }}>Client: {debtor.name}</div>
+        {debtor.phone && <div>Phone: {debtor.phone}</div>}
+        <div>Since: {debtor.created_at ? new Date(debtor.created_at).toLocaleDateString() : ''}</div>
         <div>Printed: {new Date().toLocaleString()}</div>
         <div className="receipt-hr" />
 
-        <div className="receipt-row">
-          <span>Opening Balance</span>
-          <span>{company?.currency || 'TZS'} {money(statement.opening_balance)}</span>
-        </div>
-        <div className="receipt-hr" />
-
-        {entries.length > 0 ? entries.map((e, i) => (
-          <div key={i} className="receipt-line">
+        {items.length > 0 && <div className="receipt-bold">ITEMS BOUGHT ON CREDIT</div>}
+        {items.length > 0 ? items.map((it, i) => (
+          <div key={i} className="receipt-line" style={{ marginBottom: 6 }}>
             <div>
-              {new Date(e.date).toLocaleDateString()} — {e.description}{e.reference ? ` (${e.reference})` : ''}
+              {i + 1}. {it.description}
+              {it.created_at ? ` (${new Date(it.created_at).toLocaleDateString()})` : ''}
             </div>
-            <div className="receipt-row receipt-small">
-              <span>{e.invoiced ? `Inv ${money(e.invoiced)}` : ''} {e.received ? `Recv ${money(e.received)}` : ''}</span>
-              <span>Bal {money(e.balance)}</span>
+            <div className="receipt-small" style={{ paddingInlineStart: 12 }}>
+              Qty: {it.quantity}&nbsp;&nbsp;&nbsp;Price: {currency} {money(it.unit_price)}
+            </div>
+            <div className="receipt-row receipt-small" style={{ paddingInlineStart: 12 }}>
+              <span>Subtotal</span>
+              <span>{currency} {money((Number(it.quantity) || 0) * (Number(it.unit_price) || 0))}</span>
             </div>
           </div>
         )) : (
-          <div className="receipt-center">No activity in this period.</div>
+          <div className="receipt-center">No items on record for this debt.</div>
+        )}
+        {items.length > 0 && (
+          <>
+            <div className="receipt-hr" />
+            <div className="receipt-row receipt-bold">
+              <span>Items Total</span>
+              <span>{currency} {money(itemsTotal)}</span>
+            </div>
+          </>
         )}
         <div className="receipt-hr" />
 
+        <div className="receipt-bold">ACCOUNT SUMMARY</div>
         <div className="receipt-row">
-          <span>Total Invoiced</span>
-          <span>TZS {money(statement.invoiced_amount)}</span>
+          <span>Total Owed</span>
+          <span>{currency} {money(debtor.total_owed)}</span>
         </div>
         <div className="receipt-row">
-          <span>Total Received</span>
-          <span>TZS {money(statement.amount_received)}</span>
+          <span>Amount Paid</span>
+          <span>{currency} {money(debtor.amount_paid)}</span>
         </div>
         <div className="receipt-hr" />
 
         <div className="receipt-row receipt-bold receipt-large">
-          <span>BALANCE DUE</span>
-          <span>TZS {money(statement.balance_due)}</span>
+          <span>{balance < 0 ? 'OVERPAID BY' : 'BALANCE DUE'}</span>
+          <span>{currency} {money(Math.abs(balance))}</span>
         </div>
+
+        {debtor.note && <div style={{ marginTop: 8 }}>Note: {debtor.note}</div>}
 
         <div className="receipt-center" style={{ marginTop: 10 }}>Thank you for your business!</div>
         <div className="receipt-center receipt-bold" style={{ marginTop: 6 }}>END OF STATEMENT</div>

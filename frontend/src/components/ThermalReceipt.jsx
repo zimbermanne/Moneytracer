@@ -163,7 +163,7 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
 
         <div className="receipt-row receipt-bold receipt-large">
           <span>TOTAL</span>
-          <span>TZS {money(receipt.total)}</span>
+          <span>{company?.currency || 'TZS'} {money(receipt.total)}</span>
         </div>
 
         <div className="receipt-center" style={{ marginTop: 10 }}>Thank you for your business!</div>

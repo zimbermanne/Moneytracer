@@ -3,7 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, field_validator
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
-    AccountType, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
+    AccountType, CogsMethod, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
     LoanInterestType, LoanStatus, DeadlineType, DeadlineRecurrence, AssetType, AssetCategory,
     LedgerAccountType, Attachment, RecurringInvoice, ExchangeRate, Employee, Payslip,
     Approval, Budget,
@@ -172,6 +172,7 @@ class AccountUpdate(BaseModel):
     email: Optional[str] = None
     logo_url: Optional[str] = None
     tax_rate: Optional[float] = None
+    currency: Optional[str] = None
     invoice_prefix: Optional[str] = None
     payment_terms_days: Optional[int] = None
     bank_name: Optional[str] = None
@@ -181,6 +182,7 @@ class AccountUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_suspended: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
+    cogs_method: Optional[CogsMethod] = None
     # plan / admin_notes deliberately omitted here — see update_my_account's
     # explicit block on them, same pattern as is_suspended. Tenant admins
     # change everything else on this model; those two are superadmin-only
@@ -206,6 +208,7 @@ class AccountOut(BaseModel):
     email: str
     logo_url: str
     tax_rate: float
+    currency: str = "TZS"
     invoice_prefix: str
     payment_terms_days: int
     bank_name: Optional[str] = ""
@@ -217,6 +220,7 @@ class AccountOut(BaseModel):
     onboarding_completed: bool
     created_at: datetime
     plan: Optional[str] = "free"
+    cogs_method: CogsMethod = CogsMethod.accrual
 
 
 class AccountWithUsersOut(AccountOut):

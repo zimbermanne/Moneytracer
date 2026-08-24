@@ -22,9 +22,18 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from models import (
-    ChartOfAccount, JournalEntry, JournalLine, LedgerAccountType, FiscalPeriod,
-    FiscalPeriodStatus, PaymentMethod,
+    Account, ChartOfAccount, CogsMethod, JournalEntry, JournalLine, LedgerAccountType,
+    FiscalPeriod, FiscalPeriodStatus, PaymentMethod,
 )
+
+
+def _get_cogs_method(db: Session, account_id: int) -> CogsMethod:
+    """Look up this tenant's cash/accrual setting. Missing account or null
+    column (pre-migration rows) both fall back to accrual, the historical
+    default — never silently switch a tenant's accounting method."""
+    account = db.query(Account).filter(Account.id == account_id).first()
+    method = getattr(account, "cogs_method", None) if account else None
+    return method or CogsMethod.accrual
 
 
 class FiscalPeriodLockedError(ValueError):
@@ -241,10 +250,16 @@ def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) 
         # Non-VAT sale: full amount to revenue
         lines.append(("4000", 0, sale.total))
 
-    cost = (sale.cost_price_at_sale or 0) * (sale.quantity or 0)
-    if cost:
-        lines.append(("5000", cost, 0))
-        lines.append(("1210", 0, cost))
+    # Under accrual, the cost of what sold moves from Inventory into COGS
+    # right now. Under cash-basis, that cost was already expensed in full
+    # when the stock was purchased (see post_purchase_entry) — posting it
+    # again here would double-count it, so cash-basis tenants skip this
+    # pair entirely.
+    if _get_cogs_method(db, account_id) == CogsMethod.accrual:
+        cost = (sale.cost_price_at_sale or 0) * (sale.quantity or 0)
+        if cost:
+            lines.append(("5000", cost, 0))
+            lines.append(("1210", 0, cost))
 
     # Cost lines unbalance the revenue lines above unless summed together —
     # post as one entry so debits/credits both include the cost pair.
@@ -259,22 +274,31 @@ def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) 
 
 
 def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str = None) -> JournalEntry:
-    """Dr Inventory + VAT Receivable (Input), Cr Cash/Accounts Payable."""
+    """Accrual (default): Dr Inventory + VAT Receivable (Input), Cr Cash/AP —
+    stock is capitalized as an asset until it sells.
+
+    Cash-basis (per-tenant opt-in via Account.cogs_method): Dr Cost of Goods
+    Sold (5000) + VAT Receivable (Input), Cr Cash/AP instead — the purchase
+    reduces profit immediately. See CogsMethod docstring in models.py. When
+    cash-basis is on, post_sale_entry() skips its own cost/Inventory lines
+    for the same tenant so the cost is never expensed twice.
+    """
     lines = []
-    
+    cost_code = "5000" if _get_cogs_method(db, account_id) == CogsMethod.cash else "1210"
+
     # Get tax rate from purchase if available (for future VAT support)
     # Currently Purchase model doesn't have tax_rate/tax_amount, but we'll add the structure
     tax_rate = getattr(purchase, "tax_rate", 0) or 0
     tax_amount = getattr(purchase, "tax_amount", 0) or 0
     
     if tax_rate > 0 and tax_amount > 0:
-        # VAT-registered purchase: split inventory and input VAT
-        net_inventory = purchase.total - tax_amount
-        lines.append(("1210", net_inventory, 0))
+        # VAT-registered purchase: split cost/inventory and input VAT
+        net_cost = purchase.total - tax_amount
+        lines.append((cost_code, net_cost, 0))
         lines.append(("2110", tax_amount, 0))  # VAT Receivable (Input)
     else:
-        # Non-VAT purchase: full amount to inventory
-        lines.append(("1210", purchase.total, 0))
+        # Non-VAT purchase: full amount to cost/inventory
+        lines.append((cost_code, purchase.total, 0))
     
     lines.append(("1000", 0, purchase.total))
     

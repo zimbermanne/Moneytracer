@@ -15,6 +15,29 @@ class RoleEnum(str, enum.Enum):
     member = "member"  # read-only community-group member login (own records only)
 
 
+class CogsMethod(str, enum.Enum):
+    """How this tenant recognizes the cost of purchased stock.
+
+    accrual (default): the historically correct behavior — a Purchase
+    capitalizes into Inventory (1210), and Cost of Goods Sold (5000) is
+    only recognized when the item actually sells, matched against
+    Sale.cost_price_at_sale. Inventory on the balance sheet reflects
+    unsold stock value.
+
+    cash: purchases hit Cost of Goods Sold (5000) immediately instead of
+    Inventory, and sales no longer post a separate cost/COGS line (the
+    cost was already expensed at purchase — posting it again at sale
+    would double-count it). This trades balance-sheet accuracy (no
+    Inventory asset value, no period-matching between when stock is
+    bought and when it's sold) for immediate visibility into purchase
+    spend on the P&L — the way many small cash-basis businesses actually
+    think about their money. InventoryItem.quantity still tracks physical
+    stock either way; only the monetary ledger treatment changes.
+    """
+    accrual = "accrual"
+    cash = "cash"
+
+
 class BusinessStructure(str, enum.Enum):
     solo = "solo"
     company = "company"
@@ -46,6 +69,12 @@ class Account(Base):
     logo_url = Column(String(255), default="")
     tax_rate = Column(Float, default=0)
     revenue_authority_id = Column(Integer, ForeignKey("revenue_authorities.id"), nullable=True)  # Reference to country's tax authority
+    # ISO 4217 currency code (e.g. "TZS", "KES", "GHS", "XOF") — auto-filled
+    # from country on first save (see routers/accounts.py, same pattern as
+    # tax_rate/revenue_authority_id), editable afterwards. Drives money
+    # formatting on receipts/statements across all 54 African markets this
+    # app serves rather than a hardcoded currency.
+    currency = Column(String(10), default="TZS")
     invoice_prefix = Column(String(20), default="INV")
     payment_terms_days = Column(Integer, default=7)
     # Bank details for invoice footers — optional; left blank until the owner fills them in.
@@ -56,6 +85,10 @@ class Account(Base):
     is_active = Column(Boolean, default=True)
     is_suspended = Column(Boolean, default=False)
     onboarding_completed = Column(Boolean, default=False)
+    # Defaults to accrual so every existing tenant's historical P&L and
+    # Inventory balances are unaffected — this is opt-in per account.
+    # See CogsMethod docstring for what each value means.
+    cogs_method = Column(Enum(CogsMethod), default=CogsMethod.accrual)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # ---- Superadmin/platform-management fields (not tenant-editable) ----

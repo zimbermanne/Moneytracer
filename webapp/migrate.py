@@ -42,6 +42,13 @@ _MIGRATIONS = {
         # Superadmin-only fields — subscription tier + internal support notes.
         ("plan", "VARCHAR(40)", "'free'"),
         ("admin_notes", "TEXT", "''"),
+        # Cash vs accrual treatment of purchases — see models.CogsMethod.
+        # Defaults to 'accrual' so existing tenants' books don't shift.
+        ("cogs_method", "VARCHAR(20)", "'accrual'"),
+        # Per-account currency (ISO 4217 code) — see models.Account.currency.
+        # Existing tenants default to TZS (the app's original single-country
+        # currency) and can update it via country selection or directly.
+        ("currency", "VARCHAR(10)", "'TZS'"),
     ],
     "journal_entries": [
         # This table predates reversal/void support (only is_locked existed
