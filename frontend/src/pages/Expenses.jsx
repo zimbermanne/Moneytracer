@@ -5,7 +5,7 @@ import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 
-const empty = { category: 'General', description: '', amount: 0 }
+const empty = { category: 'General', description: '', amount: 0, payment_method_id: null }
 
 export default function Expenses() {
   const api = useApi()
@@ -15,11 +15,18 @@ export default function Expenses() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(empty)
   const [listLoading, setListLoading] = useState(true)
+  const [paymentMethods, setPaymentMethods] = useState([]) // dynamic, from Settings > Payment Methods — where the expense was actually paid from
 
   const load = () => {
     setListLoading(true)
     api.get('/expenses/').then(setExpenses).catch((e) => setError(e.message)).finally(() => setListLoading(false))
     api.get('/expenses/stats/summary').then(setStats).catch(() => {})
+    // Credit-sale methods (e.g. "Debtors") aren't a valid source of cash for
+    // an expense — the backend rejects them too, but filter here so the
+    // dropdown never offers a choice it will refuse.
+    api.get('/ledgers/payment-methods').then((methods) => {
+      setPaymentMethods(methods.filter((m) => !m.is_credit))
+    }).catch(() => {})
   }
 
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -49,6 +56,7 @@ export default function Expenses() {
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'category', header: 'Category' },
     { key: 'description', header: 'Description' },
+    { key: 'payment_method_name', header: 'Paid From', render: (r) => r.payment_method_name || '— (Cash, unspecified)' },
     { key: 'amount', header: 'Amount', render: (r) => `TZS ${r.amount.toLocaleString()}` },
     { key: 'actions', header: '', render: (r) => <button className="btn btn-danger" onClick={() => remove(r.id)}>Delete</button> },
   ]
@@ -88,6 +96,18 @@ export default function Expenses() {
         >
           <div className="form-row"><label>Category</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
           <div className="form-row"><label>Description</label><input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div className="form-row">
+            <label>Paid From</label>
+            <select
+              value={form.payment_method_id ?? ''}
+              onChange={(e) => setForm({ ...form, payment_method_id: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">Cash (unspecified)</option>
+              {paymentMethods.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="form-row"><label>Amount</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
         </Modal>
       )}

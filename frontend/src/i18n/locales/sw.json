@@ -60,7 +60,11 @@
     "bankLoans": "Mikopo ya Benki",
     "deadlines": "Muda wa Uzingatiaji Sheria",
     "suppliers": "Wasambazaji",
-    "arDashboard": "Dashibodi ya Madeni ya Wateja"
+    "arDashboard": "Dashibodi ya Madeni ya Wateja",
+    "debtorsGroup": "Wadaiwa",
+    "creditorsGroup": "Wadai",
+    "accountingReportsGroup": "Uhasibu na Ripoti",
+    "expensesGroup": "Daftari la Matumizi"
   },
   "auth": {
     "login": "Ingia",

@@ -71,7 +71,11 @@
     "payroll": "Payroll",
     "budgets": "Budgets",
     "suppliers": "Suppliers",
-    "arDashboard": "AR Dashboard"
+    "arDashboard": "AR Dashboard",
+    "debtorsGroup": "Debtors",
+    "creditorsGroup": "Creditors",
+    "accountingReportsGroup": "Accounting & Reports",
+    "expensesGroup": "Expenses Ledger"
   },
   "auth": {
     "login": "Login",

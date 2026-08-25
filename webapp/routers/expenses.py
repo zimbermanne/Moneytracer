@@ -1,13 +1,16 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, User, RoleEnum
+from models import Expense, User, RoleEnum, PaymentMethod
 from schemas import ExpenseCreate, ExpenseOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
-from ledger import post_expense_entry, find_journal_entry_by_reference, reverse_journal_entry, FiscalPeriodLockedError
+from ledger import (
+    post_expense_entry, find_journal_entry_by_reference, reverse_journal_entry,
+    FiscalPeriodLockedError, ensure_default_payment_methods,
+)
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
 
@@ -21,13 +24,40 @@ def get_account_filter(current_user: User):
     return current_user.account_id
 
 
+def _resolve_payment_method(db: Session, account_id: int, payment_method_id: Optional[int]):
+    """Look up + validate a Payment Method for this tenant, same pattern as
+    routers/sales.py:_resolve_payment_method(). An expense can't be "paid"
+    out of a credit-sale method (that account represents money owed TO the
+    business, not a source of cash to spend) — that scenario is a Creditor
+    (money the business owes a supplier), tracked separately."""
+    if payment_method_id is None:
+        return None
+    ensure_default_payment_methods(db, account_id)
+    method = (
+        db.query(PaymentMethod)
+        .filter(PaymentMethod.id == payment_method_id, PaymentMethod.account_id == account_id)
+        .first()
+    )
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+    if method.is_credit:
+        raise HTTPException(
+            status_code=400,
+            detail="Can't pay an expense from a credit-sale payment method. "
+                   "If this is money owed to a supplier, record it under Creditors instead.",
+        )
+    return method
+
+
 @router.post("/", response_model=ExpenseOut)
 def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
                     current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot record expenses")
-    
+
+    payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
+
     expense = Expense(**payload.model_dump(), account_id=account_id)
     db.add(expense)
     db.commit()

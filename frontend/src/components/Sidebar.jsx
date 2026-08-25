@@ -69,16 +69,16 @@ export function NavIcon({ slug }) {
 function buildNav(t) {
   return [
     { type: 'item', label: t('nav.home'), icon: 'home', path: '/app' },
-    { type: 'item', label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos', accountTypes: ['business'] },
     {
       type: 'group', label: t('nav.salesGroup'), key: 'sales', accountTypes: ['business'],
       children: [
+        { label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos' },
         { label: t('nav.salesHistory'), icon: 'sales-history', path: '/app/sales' },
         { label: t('nav.customers'), icon: 'customers', path: '/app/customers' },
+        { label: t('nav.invoices'), icon: 'invoice', path: '/app/invoices' },
+        { label: t('nav.quotations'), icon: 'quotation', path: '/app/quotations' },
       ],
     },
-    { type: 'item', label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors', accountTypes: ['business', 'personal'] },
-    { type: 'item', label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard', accountTypes: ['business'] },
     {
       type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business'],
       children: [
@@ -87,50 +87,61 @@ function buildNav(t) {
         { label: t('nav.suppliers'), icon: 'customers', path: '/app/suppliers' },
       ],
     },
-    { type: 'item', label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors', accountTypes: ['business', 'personal'] },
     {
-      type: 'group', label: t('nav.proformaGroup'), key: 'proforma', accountTypes: ['business'],
+      type: 'group', label: t('nav.debtorsGroup'), key: 'debtors', accountTypes: ['business', 'personal'],
       children: [
-        { label: t('nav.invoices'), icon: 'invoice', path: '/app/invoices' },
-        { label: t('nav.quotations'), icon: 'quotation', path: '/app/quotations' },
+        { label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
+        { label: t('nav.debtorsReport'), icon: 'debts', path: '/app/reports/debtors' },
+        // Not part of your list — kept here for now so it isn't lost. You
+        // said this should live on Home instead; that's a Dashboard page
+        // change, separate from this sidebar reorg. Say the word and I'll
+        // wire it into the Home dashboard and remove it from here.
+        { label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard' },
+      ],
+    },
+    {
+      type: 'group', label: t('nav.creditorsGroup'), key: 'creditors', accountTypes: ['business', 'personal'],
+      children: [
+        { label: t('nav.creditorsReport'), icon: 'creditors', path: '/app/reports/creditors' },
+        { label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
       ],
     },
     {
       type: 'group', label: t('nav.inventoryGroup'), key: 'inventory', accountTypes: ['business'],
       children: [
         { label: t('nav.inventoryLedger'), icon: 'inventory-ledger', path: '/app/inventory' },
+        { label: t('nav.inventoryValuation'), icon: 'inventory', path: '/app/reports/inventory-valuation' },
       ],
     },
     {
-      type: 'group', label: t('nav.accountingGroup'), key: 'accounting', accountTypes: ['business'],
+      type: 'group', label: t('nav.accountingReportsGroup'), key: 'accounting', accountTypes: ['business'],
       children: [
         { label: t('nav.chartOfAccounts'), icon: 'chart-of-accounts', path: '/app/accounting/chart-of-accounts' },
         { label: t('nav.generalLedger'), icon: 'trialbalance', path: '/app/accounting/general-ledger' },
         { label: t('nav.trialBalance'), icon: 'trial-balance', path: '/app/reports/trial-balance' },
         { label: t('nav.balanceSheet'), icon: 'balance-sheet', path: '/app/reports/balance-sheet' },
         { label: t('nav.vatReturn'), icon: 'vat', path: '/app/reports/vat-return' },
-      ],
-    },
-    {
-      type: 'group', label: t('nav.reportsGroup'), key: 'reports', accountTypes: ['business'],
-      children: [
         { label: t('nav.profitLoss'), icon: 'profit-asn-loss', path: '/app/reports/profit-loss' },
         { label: t('nav.financialSummary'), icon: 'financial-samary', path: '/app/reports/financial-summary' },
         { label: t('nav.cashFlow'), icon: 'moneyflow', path: '/app/reports/cashflow' },
-        { label: t('nav.debtorsReport'), icon: 'debts', path: '/app/reports/debtors' },
-        { label: t('nav.creditorsReport'), icon: 'creditors', path: '/app/reports/creditors' },
-        { label: t('nav.inventoryValuation'), icon: 'inventory', path: '/app/reports/inventory-valuation' },
       ],
     },
-    { type: 'item', label: t('nav.groupLedger'), icon: 'personal-accounting', path: '/app/community/ledger', accountTypes: ['community'] },
-    { type: 'item', label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses', accountTypes: ['business', 'personal'] },
+    {
+      type: 'group', label: t('nav.expensesGroup'), key: 'expenses', accountTypes: ['business', 'personal'],
+      children: [
+        { label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses' },
+      ],
+    },
     { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets', accountTypes: ['business', 'personal'] },
+    // Not on your list either — same story as AR Dashboard above, kept so
+    // payroll doesn't just disappear. Let me know where you'd like it.
     { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business'] },
     { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.deadlines'), icon: 'deadline', path: '/app/deadlines' },
     { type: 'item', label: t('nav.activityLogsItem'), icon: 'activity-logs', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
+    { type: 'item', label: t('nav.groupLedger'), icon: 'personal-accounting', path: '/app/community/ledger', accountTypes: ['community'] },
     { type: 'item', label: t('nav.settingsItem'), icon: 'settings', path: '/app/settings' },
   ]
 }

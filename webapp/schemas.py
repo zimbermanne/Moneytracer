@@ -404,6 +404,7 @@ class ExpenseCreate(BaseModel):
     category: Optional[str] = "General"
     description: Optional[str] = ""
     amount: float
+    payment_method_id: Optional[int] = None
 
 
 class ExpenseOut(BaseModel):
@@ -412,6 +413,8 @@ class ExpenseOut(BaseModel):
     category: str
     description: str
     amount: float
+    payment_method_id: Optional[int] = None
+    payment_method_name: Optional[str] = None
     created_at: datetime
 
 
