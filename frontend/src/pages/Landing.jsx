@@ -118,14 +118,14 @@ export default function Landing() {
         /* ── Glass surface utility ── */
         .lg-glass {
           background: rgba(255,255,255,0.08);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          backdrop-filter: var(--glass-blur) var(--glass-saturate);
+          -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
           border: 1px solid rgba(255,255,255,0.18);
         }
         .lg-glass-card {
           background: rgba(255,255,255,0.07);
-          backdrop-filter: blur(20px) saturate(160%);
-          -webkit-backdrop-filter: blur(20px) saturate(160%);
+          backdrop-filter: var(--glass-blur) var(--glass-saturate);
+          -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
           border: 1px solid rgba(255,255,255,0.15);
           border-radius: 20px;
           box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
@@ -145,8 +145,8 @@ export default function Landing() {
         }
         .lg-header.scrolled {
           background: rgba(10,10,26,0.72);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+          -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
           border-bottom: 1px solid rgba(255,255,255,0.1);
           box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
@@ -221,7 +221,7 @@ export default function Landing() {
           padding: 6px 16px;
           font-size: 13px; font-weight: 600; color: #c4aaff;
           margin-bottom: 28px;
-          backdrop-filter: blur(8px);
+          backdrop-filter: var(--glass-blur-sm);
         }
         .lg-hero-badge-dot {
           width: 7px; height: 7px; border-radius: 50%;
@@ -258,7 +258,7 @@ export default function Landing() {
           border-radius: 999px;
           padding: 5px;
           margin-bottom: 36px;
-          backdrop-filter: blur(12px);
+          backdrop-filter: var(--glass-blur-sm);
         }
         .lg-track-switch button {
           border: none;
@@ -306,7 +306,7 @@ export default function Landing() {
           font-weight: 600; font-size: 15px;
           padding: 14px 28px;
           border-radius: 14px;
-          backdrop-filter: blur(10px);
+          backdrop-filter: var(--glass-blur-sm);
           transition: background 0.15s, color 0.15s;
         }
         .lg-btn-secondary:hover {
@@ -324,7 +324,7 @@ export default function Landing() {
           font-size: 14px; font-weight: 600;
           padding: 11px 22px;
           border-radius: 999px;
-          backdrop-filter: blur(10px);
+          backdrop-filter: var(--glass-blur-sm);
           transition: background 0.15s;
         }
         .lg-app-download:hover { background: rgba(255,255,255,0.14); color: #fff; }
@@ -340,7 +340,7 @@ export default function Landing() {
           border: 1px solid rgba(255,255,255,0.14);
           border-radius: 16px;
           padding: 16px 28px;
-          backdrop-filter: blur(14px);
+          backdrop-filter: var(--glass-blur-sm);
           min-width: 120px;
         }
         .lg-stat-value {

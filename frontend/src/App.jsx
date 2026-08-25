@@ -10,6 +10,7 @@ import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
+import LiquidGlassFilter from './components/LiquidGlassFilter.jsx'
 // Landing and Login are the two screens almost everyone hits first (an
 // anonymous visitor lands on one or the other), so they stay in the main
 // bundle -- no loading flicker on the very first paint. Everything past
@@ -216,6 +217,13 @@ function PrivateRoutes() {
 export default function App() {
   return (
     <AuthProvider>
+      {/* Mounts the SVG <filter> defs every liquid-glass surface points at
+          via the --glass-blur token (design-tokens.css). Mounted at the
+          true app root — public routes (Landing, Login, Register) render
+          outside the authenticated Layout/app-shell, so this has to live
+          above the router, not inside it. One mount for the whole app;
+          renders nothing visible itself. */}
+      <LiquidGlassFilter />
       <NavigationGuardProvider>
         <Suspense fallback={<PageLoader />}>
         <Routes>

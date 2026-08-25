@@ -10,15 +10,27 @@
   /* ---- Layout ---- */
   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
 
-  /* ---- Glassmorphism ----
-     Shared tokens for the frosted-glass surfaces (.sidebar, .card,
-     .login-card, .modal, form inputs). Kept here rather than hardcoded
+  /* ---- Glassmorphism / Liquid Glass ----
+     Shared tokens for the glass surfaces (.sidebar, .card, .login-card,
+     .modal, form inputs, badges). Kept here rather than hardcoded
      per-selector so the whole app's glass look-and-feel stays in sync from
-     one place. */
+     one place.
+
+     --glass-blur / --glass-blur-sm start as plain blur() — a universal
+     fallback that needs no feature support. The @supports block right
+     below upgrades both to the liquid-glass SVG filter (refraction +
+     chromatic aberration + specular highlight, defined in
+     LiquidGlassFilter.jsx and mounted once at the app root) on browsers
+     that actually support url()-filter backdrop-filter. Every existing
+     selector that already references var(--glass-blur)/var(--glass-saturate)
+     upgrades automatically — nothing else needs to change per-component.
+     -sm is for small/frequent elements (badges, table headers, chips)
+     where the full chromatic-aberration filter is unnecessary GPU cost. */
   --glass-bg:         rgba(255, 255, 255, 0.22);
   --glass-bg-hover:   rgba(255, 255, 255, 0.30);
   --glass-border:     rgba(255, 255, 255, 0.35);
   --glass-blur:       blur(40px);
+  --glass-blur-sm:    blur(16px);
   --glass-saturate:   saturate(200%);
   --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
   /* Sidebar sits at a different depth than cards, so it needs a slightly
@@ -155,6 +167,26 @@
   --duration: 200ms;
   --duration-slow: 320ms;
 }
+
+/* ==========================================================================
+   Liquid Glass upgrade — feature-detected, not browser-sniffed.
+   Filters live in LiquidGlassFilter.jsx, mounted once at the app root
+   (App.jsx). Composing url(#id) with blur()/saturate() in one
+   backdrop-filter list is valid per spec; if the browser doesn't
+   understand url()-filter backdrop-filter at all, the @supports guard
+   means it never sees this block and just keeps the plain-blur fallback
+   set above — no broken/half-applied filter list.
+   ========================================================================== */
+@supports (backdrop-filter: url(#liquid-glass-filter)) {
+  :root {
+    --glass-blur:    url(#liquid-glass-filter) blur(2px);
+    --glass-blur-sm: url(#liquid-glass-filter-sm) blur(1px);
+  }
+}
+
+/* prefers-reduced-motion doesn't disable anything here — the filter is
+   static (no animation loop), just a one-time refraction on the pixels
+   already behind the surface — so there's nothing to reduce. */
 
 /* ==========================================================================
    Dark Mode — override every light token.
