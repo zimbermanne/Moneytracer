@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTheme, ACCENT_PRESETS } from '../hooks/useTheme.jsx'
+import { useTheme } from '../hooks/useTheme.jsx'
 
 const MODES = [
   { key: 'light', label: '☀️ Light' },
@@ -35,29 +35,14 @@ function fileToCompressedDataUrl(file, maxDim = 1600, quality = 0.72) {
   })
 }
 
-function Swatch({ active, onClick, title, style }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      style={{
-        width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
-        border: active ? '3px solid var(--text-dark)' : '2px solid var(--border)',
-        boxShadow: active ? '0 0 0 2px var(--surface)' : 'none',
-        padding: 0, ...style,
-      }}
-    />
-  )
-}
-
 export default function AppearanceSettings() {
   const { prefs, update, reset } = useTheme()
-  const [customAccentHex, setCustomAccentHex] = useState(prefs.customAccent || '#C15F3C')
   const [bgError, setBgError] = useState('')
   const [bgBusy, setBgBusy] = useState(false)
+  // Image the user has picked but not yet applied as the background.
+  const [pendingBgImage, setPendingBgImage] = useState(null)
 
-  const handleBgUpload = async (e) => {
+  const handleBgPick = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = '' // allow re-selecting the same file later
     if (!file) return
@@ -69,7 +54,7 @@ export default function AppearanceSettings() {
     setBgBusy(true)
     try {
       const dataUrl = await fileToCompressedDataUrl(file)
-      update({ customBgImage: dataUrl })
+      setPendingBgImage(dataUrl)
     } catch (err) {
       setBgError(err.message || 'Could not process that image.')
     } finally {
@@ -77,11 +62,19 @@ export default function AppearanceSettings() {
     }
   }
 
+  const handleSetBg = () => {
+    if (!pendingBgImage) return
+    update({ customBgImage: pendingBgImage })
+    setPendingBgImage(null)
+  }
+
+  const previewImage = pendingBgImage || prefs.customBgImage
+
   return (
     <div className="card" style={{ marginTop: 20 }}>
       <h3 style={{ marginTop: 0 }}>🎨 Appearance</h3>
       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
-        Customize the theme and accent color used across the app. Saved on this device.
+        Customize the theme used across the app. Saved on this device.
       </div>
 
       {/* Theme mode */}
@@ -101,35 +94,6 @@ export default function AppearanceSettings() {
         </div>
       </div>
 
-      {/* Accent color */}
-      <div className="form-row" style={{ marginBottom: 20 }}>
-        <label>Accent Color</label>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          {Object.entries(ACCENT_PRESETS).map(([key, p]) => (
-            <Swatch
-              key={key}
-              title={p.label}
-              active={prefs.accentKey === key}
-              onClick={() => update({ accentKey: key })}
-              style={{ background: p.accent }}
-            />
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
-            <input
-              type="color"
-              value={customAccentHex}
-              onChange={(e) => {
-                setCustomAccentHex(e.target.value)
-                update({ accentKey: 'custom', customAccent: e.target.value })
-              }}
-              style={{ width: 32, height: 32, border: prefs.accentKey === 'custom' ? '3px solid var(--text-dark)' : '2px solid var(--border)', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'none' }}
-              title="Custom accent color"
-            />
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Custom</span>
-          </div>
-        </div>
-      </div>
-
       {/* Background image */}
       <div className="form-row" style={{ marginBottom: 20 }}>
         <label>Background Image</label>
@@ -138,22 +102,41 @@ export default function AppearanceSettings() {
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
-            {bgBusy ? 'Processing…' : '📁 Upload Image'}
-            <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgBusy} style={{ display: 'none' }} />
+            {bgBusy ? 'Processing…' : '📁 Choose Image'}
+            <input type="file" accept="image/*" onChange={handleBgPick} disabled={bgBusy} style={{ display: 'none' }} />
           </label>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSetBg}
+            disabled={!pendingBgImage || bgBusy}
+          >
+            ✅ Set as Background
+          </button>
           {prefs.customBgImage && (
-            <button type="button" className="btn btn-outline" onClick={() => update({ customBgImage: null })}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => { update({ customBgImage: null }); setPendingBgImage(null) }}
+            >
               Remove (use default)
             </button>
           )}
         </div>
         {bgError && <div className="error-text" style={{ marginTop: 6 }}>{bgError}</div>}
-        {prefs.customBgImage && (
-          <img
-            src={prefs.customBgImage}
-            alt="Custom background preview"
-            style={{ marginTop: 10, width: '100%', maxWidth: 320, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
-          />
+        {previewImage && (
+          <>
+            <img
+              src={previewImage}
+              alt={pendingBgImage ? 'Selected background preview (not yet applied)' : 'Custom background preview'}
+              style={{ marginTop: 10, width: '100%', maxWidth: 320, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
+            />
+            {pendingBgImage && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                Not applied yet — click "Set as Background" to use this image.
+              </div>
+            )}
+          </>
         )}
       </div>
 

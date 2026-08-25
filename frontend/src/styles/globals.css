@@ -120,6 +120,16 @@ button {
   background: transparent;
 }
 
+/* Custom background image applies regardless of light/dark theme.
+   The dark-theme rules below layer their own gradient + fallback hero
+   image on top of this when no custom image is set. */
+.app-shell {
+  background: var(--app-bg-image, transparent);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .app-shell::before {
   display: none;
 }

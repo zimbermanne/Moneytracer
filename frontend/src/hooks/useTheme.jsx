@@ -2,19 +2,11 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 
 const STORAGE_KEY = 'mt-theme-prefs'
 
-export const ACCENT_PRESETS = {
-  terracotta: { label: 'Terracotta', accent: '#C15F3C', hover: '#A94F30', soft: '#F3E1D6', softDark: '#2d1e17' },
-  ocean:      { label: 'Ocean',      accent: '#2E6B8A', hover: '#25566F', soft: '#DCEAF1', softDark: '#12232c' },
-  forest:     { label: 'Forest',     accent: '#4C7A4A', hover: '#3D6339', soft: '#E1EDDD', softDark: '#182619' },
-  plum:       { label: 'Plum',       accent: '#7B4B8A', hover: '#623A6F', soft: '#EBDFF0', softDark: '#231a29' },
-  slate:      { label: 'Slate',      accent: '#4A5568', hover: '#3A4353', soft: '#E2E5EA', softDark: '#1c1f27' },
-  gold:       { label: 'Gold',       accent: '#B9862E', hover: '#9C7026', soft: '#F5E9D3', softDark: '#2a2010' },
-}
+// Fixed accent — "Carrot" orange. No longer user-configurable.
+const ACCENT = { accent: '#ED9121', hover: '#D67F16', soft: '#FBE3C7', softDark: '#2e1f0d' }
 
 const DEFAULTS = {
   mode: 'system',           // 'light' | 'dark' | 'system'
-  accentKey: 'terracotta',  // key into ACCENT_PRESETS, or 'custom'
-  customAccent: null,       // hex string when accentKey === 'custom'
   customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 
@@ -45,17 +37,13 @@ function applyPrefs(prefs) {
     root.setAttribute('data-theme', prefs.mode)
   }
 
-  // ---- Accent ----
-  const accent = prefs.accentKey === 'custom' && prefs.customAccent
-    ? { accent: prefs.customAccent, hover: prefs.customAccent, soft: 'color-mix(in srgb, ' + prefs.customAccent + ' 22%, white)', softDark: 'color-mix(in srgb, ' + prefs.customAccent + ' 30%, black)' }
-    : (ACCENT_PRESETS[prefs.accentKey] || ACCENT_PRESETS.terracotta)
-
+  // ---- Accent (fixed) ----
   const isDark = resolveMode(prefs.mode) === 'dark'
-  root.style.setProperty('--accent', accent.accent)
-  root.style.setProperty('--accent-hover', accent.hover)
-  root.style.setProperty('--accent-soft', isDark ? accent.softDark : accent.soft)
-  root.style.setProperty('--sidebar-active-text', accent.accent)
-  root.style.setProperty('--sidebar-active-bg', isDark ? accent.softDark : accent.soft)
+  root.style.setProperty('--accent', ACCENT.accent)
+  root.style.setProperty('--accent-hover', ACCENT.hover)
+  root.style.setProperty('--accent-soft', isDark ? ACCENT.softDark : ACCENT.soft)
+  root.style.setProperty('--sidebar-active-text', ACCENT.accent)
+  root.style.setProperty('--sidebar-active-bg', isDark ? ACCENT.softDark : ACCENT.soft)
 
   // ---- Background image ----
   if (prefs.customBgImage) {
