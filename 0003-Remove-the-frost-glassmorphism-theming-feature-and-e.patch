@@ -1,7 +1,7 @@
 From 1d0f49b5b029bf27d71ed3b2664a49337fcb8817 Mon Sep 17 00:00:00 2001
 From: Reggie <reggie@moneytracer.dev>
 Date: Tue, 25 Aug 2026 07:08:29 +0000
-Subject: [PATCH 3/4] Remove the frost/glassmorphism theming feature and effect
+Subject: [PATCH 3/5] Remove the frost/glassmorphism theming feature and effect
  entirely
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

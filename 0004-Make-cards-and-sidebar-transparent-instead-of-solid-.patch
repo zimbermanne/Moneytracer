@@ -1,7 +1,7 @@
 From b36337ae9a72da7545b5567fb652458209a85a4e Mon Sep 17 00:00:00 2001
 From: Reggie <reggie@moneytracer.dev>
 Date: Tue, 25 Aug 2026 07:16:34 +0000
-Subject: [PATCH 4/4] Make cards and sidebar transparent instead of solid white
+Subject: [PATCH 4/5] Make cards and sidebar transparent instead of solid white
  (light mode)
 
 - .card, .card:hover, .home-kpi-card, .home-kpi-card:hover: background

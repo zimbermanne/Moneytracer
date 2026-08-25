@@ -98,7 +98,7 @@ function ProfitLoss({ data }) {
       </Accordion>
 
       <Accordion title="2. Expenses by Category" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.expense_by_category).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -109,7 +109,7 @@ function ProfitLoss({ data }) {
       </Accordion>
 
       <Accordion title="3. Revenue by Item" defaultOpen={false}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.revenue_by_item).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -122,7 +122,7 @@ function ProfitLoss({ data }) {
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 15 }}>
             Sorted by gross profit — which items are actually making you money.
           </div>
-          <div style={{ overflowX: 'auto', background: 'var(--surface)', borderRadius: '12px' }}>
+          <div style={{ overflowX: 'auto', background: 'transparent', borderRadius: '12px' }}>
             <table className="pl-table">
               <thead>
                 <tr>
@@ -217,7 +217,7 @@ function LedgerReport({ data, listKey, title }) {
 
       {list.length > 0 && (
         <Accordion title={title} defaultOpen={true}>
-          <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+          <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
             {list.map((r, idx) => (
               <Row key={idx} left={`${r.name} (${r.status})`} right={money(r.outstanding)} />
             ))}
@@ -239,7 +239,7 @@ function InventoryValuation({ data }) {
       </div>
 
       <Accordion title="Value by Category" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.by_category).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -247,7 +247,7 @@ function InventoryValuation({ data }) {
       </Accordion>
 
       <Accordion title="Top Items by Value" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {(data.top_items || []).map((i) => (
             <Row
               key={i.item_name}
@@ -320,7 +320,7 @@ function BalanceSheet({ data }) {
       </div>
 
       <Accordion title="Assets" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.assets || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -329,7 +329,7 @@ function BalanceSheet({ data }) {
       </Accordion>
 
       <Accordion title="Liabilities" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.liabilities || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
@@ -338,7 +338,7 @@ function BalanceSheet({ data }) {
       </Accordion>
 
       <Accordion title="Equity" defaultOpen={true}>
-        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+        <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
           {Object.entries(data.equity || {}).map(([name, val]) => (
             <Row key={name} left={name} right={money(val)} />
           ))}
