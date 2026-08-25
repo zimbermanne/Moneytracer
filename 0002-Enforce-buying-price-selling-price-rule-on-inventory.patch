@@ -1,7 +1,7 @@
 From d37123b63f491df6ba1f29adabfbcc066e430504 Mon Sep 17 00:00:00 2001
 From: Reggie <reggie@moneytracer.dev>
 Date: Tue, 25 Aug 2026 05:55:50 +0000
-Subject: [PATCH 2/3] Enforce buying-price < selling-price rule on inventory
+Subject: [PATCH 2/4] Enforce buying-price < selling-price rule on inventory
  items
 
 - Both cost_price and selling_price are now required (>0) and cost_price

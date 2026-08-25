@@ -163,41 +163,41 @@ button {
 }
 
 .card {
-  background: var(--surface) !important;
+  background: transparent !important;
   border: 1px solid var(--border) !important;
   border-radius: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
   padding: 18px;
   transition: all 0.3s var(--ease);
 }
 
 .card:hover {
-  background: var(--surface-sunken) !important;
+  background: transparent !important;
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
 }
 
 .home-kpi-card {
-  background: var(--surface) !important;
+  background: transparent !important;
   border-radius: 16px;
   padding: 1.25rem;
   border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
   transition: all 0.3s var(--ease);
 }
 
 .home-kpi-card:hover {
-  background: var(--surface-sunken) !important;
+  background: transparent !important;
 }
 
 :root[data-theme="dark"] .home-kpi-card {
-  background: rgba(26, 29, 39, 0.45) !important;
+  background: transparent !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
 }
 
 :root[data-theme="dark"] .home-kpi-card:hover {
-  background: rgba(26, 29, 39, 0.6) !important;
+  background: transparent !important;
 }
 
 .glass-panel {
@@ -871,11 +871,10 @@ label {
   top: 16px;
   height: calc(100vh - 32px);
   align-self: flex-start;
-  background: var(--surface) !important;
+  background: transparent !important;
   border: 1px solid var(--border-strong) !important;
   border-radius: 20px;
-  box-shadow:
-    inset -1px 0 0 0 var(--border-strong) !important;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
