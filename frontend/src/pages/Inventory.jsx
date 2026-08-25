@@ -50,6 +50,20 @@ export default function Inventory() {
   }
 
   const save = async () => {
+    // Same two rules the backend enforces — checked here first so the
+    // person gets instant feedback instead of waiting on a round trip.
+    if (!form.cost_price || form.cost_price <= 0) {
+      setError('Buying price is required and must be greater than 0.')
+      return
+    }
+    if (!form.selling_price || form.selling_price <= 0) {
+      setError('Selling price is required and must be greater than 0.')
+      return
+    }
+    if (Number(form.cost_price) >= Number(form.selling_price)) {
+      setError('Buying price must be lower than the selling price.')
+      return
+    }
     try {
       if (editing && editing.id) {
         await api.put(`/inventory/${editing.id}`, form)

@@ -42,6 +42,18 @@ def list_items(category: Optional[str] = None, q: Optional[str] = None, db: Sess
     return query.order_by(InventoryItem.name).all()
 
 
+def _validate_prices(cost_price: float, selling_price: float):
+    """Both prices are required (can't be left at 0/blank), and the buying
+    price must sit below the selling price — an item that costs more to
+    stock than it sells for is a data-entry mistake, not a valid item."""
+    if cost_price is None or cost_price <= 0:
+        raise HTTPException(status_code=400, detail="Buying price is required and must be greater than 0.")
+    if selling_price is None or selling_price <= 0:
+        raise HTTPException(status_code=400, detail="Selling price is required and must be greater than 0.")
+    if cost_price >= selling_price:
+        raise HTTPException(status_code=400, detail="Buying price must be lower than the selling price.")
+
+
 @router.post("/", response_model=InventoryOut)
 def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
                  current_user: User = Depends(require_manager_up)):
@@ -50,6 +62,7 @@ def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
         raise HTTPException(status_code=403, detail="Superadmin cannot create inventory items")
 
     data = payload.model_dump()
+    _validate_prices(data.get("cost_price"), data.get("selling_price"))
     # An empty/blank SKU is "no SKU", not a real value — treat it as NULL so
     # multiple items without one don't collide on the unique constraint
     # (a blank string '' colliding with another blank string '' was the
@@ -381,6 +394,11 @@ def update_item(item_id: int, payload: InventoryUpdate, db: Session = Depends(ge
     data = payload.model_dump(exclude_unset=True)
     if "sku" in data and data["sku"] is not None and not data["sku"].strip():
         data["sku"] = None
+    # Validate the resulting state, not just whatever fields were sent —
+    # editing only selling_price still has to leave cost_price < selling_price.
+    effective_cost = data.get("cost_price", item.cost_price)
+    effective_selling = data.get("selling_price", item.selling_price)
+    _validate_prices(effective_cost, effective_selling)
     for field, value in data.items():
         setattr(item, field, value)
     try:
