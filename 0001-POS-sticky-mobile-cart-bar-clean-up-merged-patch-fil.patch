@@ -1,0 +1,1531 @@
+From 3c54d806418048a552757a9e82bd29be69fd984c Mon Sep 17 00:00:00 2001
+From: zimbermanne <zimbermanne@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 06:04:18 +0000
+Subject: [PATCH 1/2] POS: sticky mobile cart bar; clean up merged patch files
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Merge moneytracer-pos-fix.patch: sticky mobile cart summary bar
+  that jumps to the cart panel, plus bottom-nav overflow padding fix
+- Remove mobile-only, mobile-updates, and pos-fix patch files —
+  already applied to the working tree
+---
+ frontend/src/pages/POS.jsx       |  16 +-
+ frontend/src/styles/globals.css  |  32 +-
+ moneytracer-mobile-only.patch    | 335 -----------
+ moneytracer-mobile-updates.patch | 916 -------------------------------
+ moneytracer-pos-fix.patch        | 133 -----
+ 5 files changed, 44 insertions(+), 1388 deletions(-)
+ delete mode 100644 moneytracer-mobile-only.patch
+ delete mode 100644 moneytracer-mobile-updates.patch
+ delete mode 100644 moneytracer-pos-fix.patch
+
+diff --git a/frontend/src/pages/POS.jsx b/frontend/src/pages/POS.jsx
+index 43d626b..3e47bae 100644
+--- a/frontend/src/pages/POS.jsx
++++ b/frontend/src/pages/POS.jsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from 'react'
++import { useEffect, useRef, useState } from 'react'
+ import { useApi } from '../hooks/useApi.js'
+ import { useAuth } from '../hooks/useAuth.jsx'
+ import { apiUrl } from '../api-config.js'
+@@ -26,6 +26,7 @@ export default function POS() {
+   const [drafts, setDrafts] = useState([])
+   const [showDrafts, setShowDrafts] = useState(false)
+   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
++  const cartRef = useRef(null)
+ 
+   const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0)
+ 
+@@ -227,7 +228,7 @@ export default function POS() {
+           </div>
+         </div>
+ 
+-        <div style={{ flex: 1, minWidth: 280 }}>
++        <div style={{ flex: 1, minWidth: 280 }} ref={cartRef}>
+           <div className="card">
+             <h2 style={{ marginTop: 0, fontSize: 16 }}>Cart</h2>
+             {cart.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No items added.</div>}
+@@ -370,6 +371,17 @@ export default function POS() {
+           </div>
+         </Modal>
+       )}
++
++      {/* Phone-only: the cart lives below a whole grid of products, so
++          without this a cashier has to scroll all the way down just to see
++          the running total or reach checkout. This sticky bar surfaces
++          both at all times and jumps down to the real cart on tap. */}
++      {cart.length > 0 && (
++        <button type="button" className="pos-mobile-cart-bar" onClick={() => cartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
++          <span>🛒 {cart.length} item{cart.length !== 1 ? 's' : ''}</span>
++          <span>TZS {total.toLocaleString()} · View Cart ▲</span>
++        </button>
++      )}
+     </div>
+   )
+ }
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index e10238c..aa30ce4 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -1369,9 +1369,11 @@ label {
+ 
+   /* Desktop-density spacing is the single biggest reason a responsive page
+      still "reads" as a shrunk desktop site instead of a native mobile
+-     screen. Phones get tighter, edge-to-edge padding instead. */
++     screen. Phones get tighter, edge-to-edge padding instead. The extra
++     bottom padding clears the fixed .bottom-nav bar, which otherwise
++     covers the last bit of content on every page. */
+   .page {
+-    padding: 14px;
++    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
+   }
+ 
+   .page-header h1 {
+@@ -1466,6 +1468,26 @@ label {
+   .responsive-table td[data-label=""] {
+     display: none;
+   }
++
++  .pos-mobile-cart-bar {
++    display: flex;
++    justify-content: space-between;
++    align-items: center;
++    gap: 10px;
++    position: fixed;
++    left: 12px;
++    right: 12px;
++    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
++    z-index: 57;
++    background: var(--accent);
++    color: #fff;
++    border: none;
++    border-radius: var(--radius-full);
++    padding: 12px 18px;
++    font-size: 13px;
++    font-weight: 600;
++    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
++  }
+ }
+ 
+ /* ---- MOBILE: tablet / narrow-desktop breakpoint (769px-1100px) --------
+@@ -2525,6 +2547,12 @@ label {
+   box-shadow: var(--neu-accent-raised);
+ }
+ 
++/* POS: sticky mobile cart summary. Hidden on desktop, where the cart panel
++   already sits next to the product grid with nothing to jump to. */
++.pos-mobile-cart-bar {
++  display: none;
++}
++
+ .landing-hero-actions {
+   display: flex;
+   align-items: center;
+diff --git a/moneytracer-mobile-only.patch b/moneytracer-mobile-only.patch
+deleted file mode 100644
+index ab4a1ac..0000000
+--- a/moneytracer-mobile-only.patch
++++ /dev/null
+@@ -1,335 +0,0 @@
+-From f2de3717c57630ce566fcef476cab3c9ff7a85cb Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Thu, 30 Jul 2026 09:30:53 +0000
+-Subject: [PATCH] Mobile: make the app feel native, not a shrunk desktop site
+-
+-Finishes and adds the concrete things that made mobile feel like a
+-scaled-down desktop layout instead of a real mobile app:
+-
+-- Add bottom tab bar (BottomNav.jsx) for one-tap access to the most
+-  used destinations (Home, POS, Sales, Debtors), matching the native
+-  app tab-bar pattern instead of everything living two taps deep in
+-  the hamburger drawer.
+-- Finish the responsive-table feature: Table.jsx already carried
+-  data-label attributes and a responsive-table class, but the CSS to
+-  actually turn a table into stacked label/value cards on phones was
+-  never written, so it silently did nothing. Added the mobile
+-  breakpoint rules that make each row render as a card instead of a
+-  cramped, horizontally-scrolling grid.
+-- Tighten .page/.card padding on mobile (24px/18px desktop density
+-  was carrying straight through to phones).
+-- Switch modals from a small centered desktop dialog to a full-width
+-  bottom sheet that slides up, with safe-area padding for notched
+-  phones -- the single most obvious 'this is just a shrunk desktop
+-  popup' tell.
+-- Shrink the page-header h1 size to fit phone widths without wrapping
+-  awkwardly.
+----
+- frontend/src/App.jsx                  |   2 +
+- frontend/src/components/BottomNav.jsx |  48 +++++++
+- frontend/src/components/Table.jsx     |  13 +-
+- frontend/src/styles/globals.css       | 175 ++++++++++++++++++++++++++
+- 4 files changed, 236 insertions(+), 2 deletions(-)
+- create mode 100644 frontend/src/components/BottomNav.jsx
+-
+-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+-index c9ad962..d62f289 100644
+---- a/frontend/src/App.jsx
+-+++ b/frontend/src/App.jsx
+-@@ -6,6 +6,7 @@ import { NavigationGuardProvider } from './hooks/useNavigationGuard.jsx'
+- import { useApi } from './hooks/useApi.js'
+- import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
+- import MobileTopBar from './components/MobileTopBar.jsx'
+-+import BottomNav from './components/BottomNav.jsx'
+- import PageLoader from './components/PageLoader.jsx'
+- import PlatformBanner from './components/PlatformBanner.jsx'
+- import Clock from './Clock.jsx'
+-@@ -95,6 +96,7 @@ function Layout({ children }) {
+-         </div>
+-         {children}
+-       </div>
+-+      <BottomNav onMore={() => setMobileOpen(true)} />
+-     </div>
+-   )
+- }
+-diff --git a/frontend/src/components/BottomNav.jsx b/frontend/src/components/BottomNav.jsx
+-new file mode 100644
+-index 0000000..1cf31eb
+---- /dev/null
+-+++ b/frontend/src/components/BottomNav.jsx
+-@@ -0,0 +1,48 @@
+-+import { useLocation } from 'react-router-dom'
+-+import { useTranslation } from 'react-i18next'
+-+import { useAuth } from '../hooks/useAuth.jsx'
+-+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+-+
+-+// Primary destinations only — this sits alongside the hamburger drawer
+-+// (which still holds the full nav), giving phone users the one-tap-away
+-+// muscle memory of a real app's tab bar instead of two taps through a
+-+// slide-out menu for the things they reach for constantly.
+-+function buildTabs(t) {
+-+  return [
+-+    { label: t('nav.home'), icon: '🏠', path: '/app', match: (p) => p === '/app' },
+-+    { label: t('nav.pos'), icon: '🧾', path: '/app/pos', accountTypes: ['business', 'community'], match: (p) => p === '/app/pos' },
+-+    { label: t('nav.salesHistory'), icon: '📜', path: '/app/sales', accountTypes: ['business', 'community'], match: (p) => p.startsWith('/app/sales') },
+-+    { label: t('nav.clientsDebtors'), icon: '📒', path: '/app/debtors', match: (p) => p.startsWith('/app/debtors') },
+-+  ]
+-+}
+-+
+-+export default function BottomNav({ onMore }) {
+-+  const location = useLocation()
+-+  const { guardedNavigate } = useNavigationGuard()
+-+  const { account } = useAuth()
+-+  const { t } = useTranslation()
+-+
+-+  const tabs = buildTabs(t).filter(
+-+    (tab) => !tab.accountTypes || tab.accountTypes.includes(account?.account_type)
+-+  )
+-+
+-+  return (
+-+    <nav className="bottom-nav" aria-label="Primary">
+-+      {tabs.map((tab) => (
+-+        <button
+-+          key={tab.path}
+-+          type="button"
+-+          className={`bottom-nav-item ${tab.match(location.pathname) ? 'active' : ''}`}
+-+          onClick={() => guardedNavigate(tab.path)}
+-+        >
+-+          <span className="bottom-nav-icon">{tab.icon}</span>
+-+          <span className="bottom-nav-label">{tab.label}</span>
+-+        </button>
+-+      ))}
+-+      <button type="button" className="bottom-nav-item" onClick={onMore}>
+-+        <span className="bottom-nav-icon">☰</span>
+-+        <span className="bottom-nav-label">{t('nav.more', 'More')}</span>
+-+      </button>
+-+    </nav>
+-+  )
+-+}
+-diff --git a/frontend/src/components/Table.jsx b/frontend/src/components/Table.jsx
+-index 7f64ab4..ecc1962 100644
+---- a/frontend/src/components/Table.jsx
+-+++ b/frontend/src/components/Table.jsx
+-@@ -8,7 +8,7 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
+-     return <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{emptyText}</div>
+-   }
+-   return (
+--    <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+-+    <div className="card responsive-table" style={{ overflowX: 'auto', padding: 0 }}>
+-       <table>
+-         <thead>
+-           <tr>
+-@@ -23,7 +23,16 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
+-               style={onRowClick ? { cursor: 'pointer' } : undefined}
+-             >
+-               {columns.map((col) => (
+--                <td key={col.key} onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}>
+-+                <td
+-+                  key={col.key}
+-+                  // data-label powers the mobile card layout (see
+-+                  // .responsive-table in globals.css): below the 640px
+-+                  // breakpoint each <td> becomes its own row with this as
+-+                  // a left-hand label, turning a cramped scrolling table
+-+                  // into a stack of readable label/value pairs per record.
+-+                  data-label={col.header}
+-+                  onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}
+-+                >
+-                   {col.render ? col.render(row) : row[col.key]}
+-                 </td>
+-               ))}
+-diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+-index 6f0fbc8..28a5beb 100644
+---- a/frontend/src/styles/globals.css
+-+++ b/frontend/src/styles/globals.css
+-@@ -567,6 +567,14 @@ label {
+-   padding: 6px 10px 10px;
+- }
+- 
+-+/* Bottom tab bar — hidden by default (desktop), shown under the 768px
+-+   breakpoint below. Fixed to the viewport bottom with safe-area padding so
+-+   it clears the home-indicator on notched iPhones instead of sitting under
+-+   it. */
+-+.bottom-nav {
+-+  display: none;
+-+}
+-+
+- @media (max-width: 768px) {
+-   .sidebar {
+-     position: fixed;
+-@@ -610,6 +618,173 @@ label {
+-   }
+- 
+-   .app-shell { flex-direction: column; padding: 0; gap: 0; }
+-+
+-+  /* Leave room at the bottom of the scrollable content so the fixed tab
+-+     bar never overlaps the last row of a form or table. */
+-+  .main-content {
+-+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+-+  }
+-+
+-+  .bottom-nav {
+-+    display: flex;
+-+    position: fixed;
+-+    left: 0;
+-+    right: 0;
+-+    bottom: 0;
+-+    z-index: 58;
+-+    background: var(--surface);
+-+    border-top: 1px solid var(--border);
+-+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+-+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+-+  }
+-+
+-+  .bottom-nav-item {
+-+    flex: 1;
+-+    display: flex;
+-+    flex-direction: column;
+-+    align-items: center;
+-+    justify-content: center;
+-+    gap: 2px;
+-+    min-height: 48px;
+-+    background: none;
+-+    border: none;
+-+    color: var(--text-muted);
+-+    font-size: 10px;
+-+    line-height: 1.2;
+-+    padding: 4px 2px;
+-+    border-radius: 10px;
+-+  }
+-+
+-+  .bottom-nav-item.active {
+-+    color: var(--accent);
+-+  }
+-+
+-+  .bottom-nav-icon {
+-+    font-size: 19px;
+-+  }
+-+
+-+  .bottom-nav-label {
+-+    max-width: 64px;
+-+    overflow: hidden;
+-+    text-overflow: ellipsis;
+-+    white-space: nowrap;
+-+  }
+-+
+-+  /* Touch targets: anything tappable should meet the ~44px minimum touch
+-+     target size on phones, not just shrink to fit desktop density. */
+-+  .menu-item, .group-header {
+-+    min-height: 44px;
+-+    display: flex;
+-+    align-items: center;
+-+  }
+-+
+-+  button, .btn, input[type="checkbox"], input[type="radio"] {
+-+    min-height: 40px;
+-+  }
+-+
+-+  input, select, textarea {
+-+    font-size: 16px; /* prevents iOS Safari auto-zoom on focus */
+-+  }
+-+
+-+  /* Desktop-density spacing is the single biggest reason a responsive page
+-+     still "reads" as a shrunk desktop site instead of a native mobile
+-+     screen. Phones get tighter, edge-to-edge padding instead. */
+-+  .page {
+-+    padding: 14px;
+-+  }
+-+
+-+  .page-header h1 {
+-+    font-size: 19px;
+-+  }
+-+
+-+  .card {
+-+    padding: 14px;
+-+    border-radius: 14px;
+-+  }
+-+
+-+  .card-grid {
+-+    gap: 10px;
+-+  }
+-+
+-+  /* Dialogs: on desktop a small centered box makes sense next to a large
+-+     canvas of content around it. On a phone that same box just looks like
+-+     a shrunk desktop popup. Native mobile apps use full-width sheets that
+-+     slide up from the bottom instead — so modals switch to that pattern
+-+     here rather than just scaling their max-width down. */
+-+  .modal-overlay {
+-+    align-items: flex-end;
+-+  }
+-+
+-+  .modal {
+-+    width: 100%;
+-+    max-width: 100%;
+-+    max-height: 85vh;
+-+    border-radius: 20px 20px 0 0;
+-+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+-+    animation: sheet-up 0.22s var(--ease, ease-out);
+-+  }
+-+
+-+  @keyframes sheet-up {
+-+    from { transform: translateY(100%); }
+-+    to { transform: translateY(0); }
+-+  }
+-+
+-+  /* Data tables: a scrolling, shrunk-down grid of tiny cells is the classic
+-+     "desktop site on a phone" tell. Below this breakpoint every table
+-+     wearing .responsive-table drops its grid structure and each row
+-+     becomes its own card — every <td> stacks as a label/value line using
+-+     the data-label each column already carries (see components/Table.jsx).
+-+     Row taps and per-cell click-stopping keep working exactly as before
+-+     since nothing about the DOM structure changes, only how it's drawn. */
+-+  .responsive-table table,
+-+  .responsive-table thead,
+-+  .responsive-table tbody,
+-+  .responsive-table th,
+-+  .responsive-table td,
+-+  .responsive-table tr {
+-+    display: block;
+-+  }
+-+
+-+  .responsive-table thead {
+-+    display: none;
+-+  }
+-+
+-+  .responsive-table tr {
+-+    padding: 12px 14px;
+-+    border-bottom: 8px solid var(--cream);
+-+  }
+-+
+-+  .responsive-table tr:last-child {
+-+    border-bottom: none;
+-+  }
+-+
+-+  .responsive-table td {
+-+    display: flex;
+-+    justify-content: space-between;
+-+    align-items: center;
+-+    gap: 12px;
+-+    padding: 6px 0;
+-+    border-bottom: none;
+-+    text-align: right;
+-+  }
+-+
+-+  .responsive-table td::before {
+-+    content: attr(data-label);
+-+    color: var(--text-muted);
+-+    font-size: 12px;
+-+    font-weight: 600;
+-+    text-transform: uppercase;
+-+    letter-spacing: 0.03em;
+-+    text-align: left;
+-+    flex-shrink: 0;
+-+  }
+-+
+-+  /* A column with no header text (e.g. a trailing actions/kebab cell)
+-+     shouldn't render an empty label row — let it sit full-width instead. */
+-+  .responsive-table td:empty,
+-+  .responsive-table td[data-label=""] {
+-+    display: none;
+-+  }
+- }
+- 
+- @media (min-width: 769px) and (max-width: 1100px) {
+--- 
+-2.43.0
+-
+diff --git a/moneytracer-mobile-updates.patch b/moneytracer-mobile-updates.patch
+deleted file mode 100644
+index ce7962a..0000000
+--- a/moneytracer-mobile-updates.patch
++++ /dev/null
+@@ -1,916 +0,0 @@
+-From 04bbc91dbf09816d21b7e75f423a217ff6531c99 Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Wed, 29 Jul 2026 11:52:34 +0000
+-Subject: [PATCH 1/4] Auto-seed pan-African reference data on startup
+-
+-Country/RevenueAuthority/Language tables were only ever populated by
+-manually running seed_pan_african_data.py. Since it was never (or only
+-partially) run against the live DB, countries present in
+-african_currencies.py -- like Burkina Faso -- weren't in the DB's
+-Country table, causing 'Unknown country' errors when saving an account
+-during registration.
+-
+-seed_all_pan_african_data() is idempotent (each seed function skips
+-rows that already exist), so it's now called on every app startup
+-right after run_migrations(), the same self-healing pattern already
+-used for schema changes.
+----
+- webapp/main.py | 11 +++++++++++
+- 1 file changed, 11 insertions(+)
+-
+-diff --git a/webapp/main.py b/webapp/main.py
+-index 88107ea..8ebe622 100644
+---- a/webapp/main.py
+-+++ b/webapp/main.py
+-@@ -10,14 +10,25 @@ from slowapi.middleware import SlowAPIMiddleware
+- from database import Base, engine, ensure_schemas
+- import models  # noqa: F401 ensures models are registered before create_all
+- from migrate import run_migrations
+-+from seed_pan_african_data import seed_all_pan_african_data
+- from rate_limit import limiter
+- from routers import auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets
+- from scheduler import start_scheduler
+-+from database import SessionLocal
+- 
+- ensure_schemas(engine)
+- Base.metadata.create_all(bind=engine)
+- run_migrations(engine)
+- 
+-+# Self-healing reference data: seed_countries()/seed_revenue_authorities()/
+-+# seed_languages() each skip rows that already exist, so this is safe to run
+-+# on every startup/deploy. Without this, any country added to
+-+# african_currencies.py never reaches the live DB until someone remembers to
+-+# run the seed script by hand -- which is exactly how "Unknown country:
+-+# Burkina Faso" errors happened during registration.
+-+with SessionLocal() as _seed_db:
+-+    seed_all_pan_african_data(_seed_db)
+-+
+- app = FastAPI(title="Moneytracer API", version="2.5.0")
+- 
+- 
+--- 
+-2.43.0
+-
+-
+-From 35b7c625ba4979952e599c82a8bf08ce3fdcbfae Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Wed, 29 Jul 2026 12:46:32 +0000
+-Subject: [PATCH 2/4] Add dev-only mobile device-frame preview
+-
+-New DevicePreview component: a floating toggle button (bottom-right)
+-that opens the running app inside a phone-shaped frame at real device
+-viewport dimensions, so mobile styling is visible while developing
+-without resizing the browser window.
+-
+-- Presets: iPhone SE, iPhone 14, iPhone 14 Pro Max, Pixel 7, Galaxy S24
+-- Landscape toggle and manual reload
+-- Iframe loads window.location.href on same origin, so it shares
+-  cookies/session with the main tab and reflects the current route
+-- Gated behind import.meta.env.DEV in App.jsx and verified stripped
+-  from the production build (zero references in the minified bundle)
+----
+- frontend/src/App.jsx                      |   5 +
+- frontend/src/components/DevicePreview.jsx | 213 ++++++++++++++++++++++
+- 2 files changed, 218 insertions(+)
+- create mode 100644 frontend/src/components/DevicePreview.jsx
+-
+-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+-index c9ad962..4d797d7 100644
+---- a/frontend/src/App.jsx
+-+++ b/frontend/src/App.jsx
+-@@ -34,6 +34,7 @@ import BankLoans from './pages/BankLoans.jsx'
+- import Deadlines from './pages/Deadlines.jsx'
+- import Assets from './pages/Assets.jsx'
+- import Personal from './pages/Personal.jsx'
+-+import DevicePreview from './components/DevicePreview.jsx'
+- 
+- function pageTitle(pathname, t) {
+-   const key = PAGE_TITLE_KEYS[pathname]
+-@@ -158,6 +159,10 @@ export default function App() {
+-           <Route path="/verify/receipt/:id" element={<VerifyDocument kind="receipt" />} />
+-           <Route path="/app/*" element={<PrivateRoutes />} />
+-         </Routes>
+-+        {/* Dev-only floating "mobile preview" toggle — stripped from
+-+            production builds since Vite drops import.meta.env.DEV branches
+-+            during minification. */}
+-+        {import.meta.env.DEV && <DevicePreview />}
+-       </NavigationGuardProvider>
+-     </AuthProvider>
+-   )
+-diff --git a/frontend/src/components/DevicePreview.jsx b/frontend/src/components/DevicePreview.jsx
+-new file mode 100644
+-index 0000000..2f0e478
+---- /dev/null
+-+++ b/frontend/src/components/DevicePreview.jsx
+-@@ -0,0 +1,213 @@
+-+import { useState } from 'react'
+-+
+-+// Dev-only tool: shows the app running inside a phone-shaped frame so you can
+-+// see mobile styling live while you work, without resizing the browser
+-+// window. The iframe reloads the current app at the chosen device's viewport
+-+// size and re-fetches on every route change in the main window (same origin,
+-+// same cookies/session, so it stays logged in alongside the main tab).
+-+//
+-+// Rendered only when running under `vite dev` (import.meta.env.DEV) — it
+-+// never ships in a production build, see the mount guard in App.jsx.
+-+
+-+const DEVICES = {
+-+  'iphone-se':   { label: 'iPhone SE',      width: 375, height: 667 },
+-+  'iphone-14':   { label: 'iPhone 14',      width: 390, height: 844 },
+-+  'iphone-14pm': { label: 'iPhone 14 Pro Max', width: 430, height: 932 },
+-+  'pixel-7':     { label: 'Pixel 7',        width: 412, height: 915 },
+-+  'galaxy-s24':  { label: 'Galaxy S24',     width: 384, height: 824 },
+-+}
+-+
+-+export default function DevicePreview() {
+-+  const [open, setOpen] = useState(false)
+-+  const [deviceKey, setDeviceKey] = useState('iphone-14')
+-+  const [landscape, setLandscape] = useState(false)
+-+  const [reloadTick, setReloadTick] = useState(0)
+-+
+-+  const device = DEVICES[deviceKey]
+-+  const frameWidth = landscape ? device.height : device.width
+-+  const frameHeight = landscape ? device.width : device.height
+-+
+-+  return (
+-+    <>
+-+      <button
+-+        type="button"
+-+        onClick={() => setOpen(o => !o)}
+-+        title="Mobile device preview"
+-+        style={{
+-+          position: 'fixed',
+-+          bottom: 20,
+-+          right: 20,
+-+          zIndex: 9998,
+-+          width: 48,
+-+          height: 48,
+-+          borderRadius: '50%',
+-+          border: 'none',
+-+          background: open ? 'var(--accent-hover)' : 'var(--accent)',
+-+          color: '#fff',
+-+          fontSize: 22,
+-+          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+-+          display: 'flex',
+-+          alignItems: 'center',
+-+          justifyContent: 'center',
+-+        }}
+-+      >
+-+        📱
+-+      </button>
+-+
+-+      {open && (
+-+        <div
+-+          style={{
+-+            position: 'fixed',
+-+            inset: 0,
+-+            zIndex: 9997,
+-+            background: 'rgba(43, 38, 34, 0.55)',
+-+            display: 'flex',
+-+            alignItems: 'center',
+-+            justifyContent: 'center',
+-+            gap: 24,
+-+            padding: 24,
+-+          }}
+-+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+-+        >
+-+          {/* Controls panel */}
+-+          <div
+-+            style={{
+-+              background: 'var(--surface)',
+-+              border: '1px solid var(--border)',
+-+              borderRadius: 12,
+-+              padding: 16,
+-+              display: 'flex',
+-+              flexDirection: 'column',
+-+              gap: 12,
+-+              width: 220,
+-+              maxHeight: '90vh',
+-+              overflowY: 'auto',
+-+            }}
+-+          >
+-+            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
+-+              Mobile Preview
+-+            </div>
+-+
+-+            <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+-+              Device
+-+              <select
+-+                value={deviceKey}
+-+                onChange={(e) => setDeviceKey(e.target.value)}
+-+                style={{
+-+                  display: 'block',
+-+                  width: '100%',
+-+                  marginTop: 4,
+-+                  padding: '6px 8px',
+-+                  borderRadius: 6,
+-+                  border: '1px solid var(--border-strong)',
+-+                  background: 'var(--surface)',
+-+                  color: 'var(--text-dark)',
+-+                }}
+-+              >
+-+                {Object.entries(DEVICES).map(([key, d]) => (
+-+                  <option key={key} value={key}>
+-+                    {d.label} ({d.width}×{d.height})
+-+                  </option>
+-+                ))}
+-+              </select>
+-+            </label>
+-+
+-+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)' }}>
+-+              <input
+-+                type="checkbox"
+-+                checked={landscape}
+-+                onChange={(e) => setLandscape(e.target.checked)}
+-+              />
+-+              Landscape
+-+            </label>
+-+
+-+            <button
+-+              type="button"
+-+              onClick={() => setReloadTick(t => t + 1)}
+-+              style={{
+-+                padding: '6px 10px',
+-+                borderRadius: 6,
+-+                border: '1px solid var(--border-strong)',
+-+                background: 'var(--surface-sunken)',
+-+                color: 'var(--text-dark)',
+-+                fontSize: 13,
+-+              }}
+-+            >
+-+              ↻ Reload preview
+-+            </button>
+-+
+-+            <button
+-+              type="button"
+-+              onClick={() => setOpen(false)}
+-+              style={{
+-+                padding: '6px 10px',
+-+                borderRadius: 6,
+-+                border: 'none',
+-+                background: 'var(--accent)',
+-+                color: '#fff',
+-+                fontSize: 13,
+-+              }}
+-+            >
+-+              Close
+-+            </button>
+-+          </div>
+-+
+-+          {/* Phone frame */}
+-+          <div
+-+            style={{
+-+              background: '#1c1c1e',
+-+              borderRadius: 40,
+-+              padding: 14,
+-+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+-+              flexShrink: 0,
+-+            }}
+-+            onClick={(e) => e.stopPropagation()}
+-+          >
+-+            <div
+-+              style={{
+-+                width: frameWidth,
+-+                height: frameHeight,
+-+                borderRadius: 26,
+-+                overflow: 'hidden',
+-+                background: '#fff',
+-+                position: 'relative',
+-+              }}
+-+            >
+-+              {/* Notch, purely cosmetic */}
+-+              {!landscape && (
+-+                <div
+-+                  style={{
+-+                    position: 'absolute',
+-+                    top: 0,
+-+                    left: '50%',
+-+                    transform: 'translateX(-50%)',
+-+                    width: '40%',
+-+                    height: 18,
+-+                    background: '#1c1c1e',
+-+                    borderBottomLeftRadius: 12,
+-+                    borderBottomRightRadius: 12,
+-+                    zIndex: 1,
+-+                  }}
+-+                />
+-+              )}
+-+              <iframe
+-+                key={`${deviceKey}-${landscape}-${reloadTick}`}
+-+                src={window.location.href}
+-+                title="Mobile preview"
+-+                style={{
+-+                  width: frameWidth,
+-+                  height: frameHeight,
+-+                  border: 'none',
+-+                  display: 'block',
+-+                }}
+-+              />
+-+            </div>
+-+            <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 11, marginTop: 8 }}>
+-+              {device.label} · {frameWidth}×{frameHeight}
+-+            </div>
+-+          </div>
+-+        </div>
+-+      )}
+-+    </>
+-+  )
+-+}
+--- 
+-2.43.0
+-
+-
+-From e8ee04745c368e84f78aafb38f5fa9a9392741c2 Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Wed, 29 Jul 2026 13:27:47 +0000
+-Subject: [PATCH 3/4] Revert "Add dev-only mobile device-frame preview"
+-
+-This reverts commit 35b7c625ba4979952e599c82a8bf08ce3fdcbfae.
+----
+- frontend/src/App.jsx                      |   5 -
+- frontend/src/components/DevicePreview.jsx | 213 ----------------------
+- 2 files changed, 218 deletions(-)
+- delete mode 100644 frontend/src/components/DevicePreview.jsx
+-
+-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+-index 4d797d7..c9ad962 100644
+---- a/frontend/src/App.jsx
+-+++ b/frontend/src/App.jsx
+-@@ -34,7 +34,6 @@ import BankLoans from './pages/BankLoans.jsx'
+- import Deadlines from './pages/Deadlines.jsx'
+- import Assets from './pages/Assets.jsx'
+- import Personal from './pages/Personal.jsx'
+--import DevicePreview from './components/DevicePreview.jsx'
+- 
+- function pageTitle(pathname, t) {
+-   const key = PAGE_TITLE_KEYS[pathname]
+-@@ -159,10 +158,6 @@ export default function App() {
+-           <Route path="/verify/receipt/:id" element={<VerifyDocument kind="receipt" />} />
+-           <Route path="/app/*" element={<PrivateRoutes />} />
+-         </Routes>
+--        {/* Dev-only floating "mobile preview" toggle — stripped from
+--            production builds since Vite drops import.meta.env.DEV branches
+--            during minification. */}
+--        {import.meta.env.DEV && <DevicePreview />}
+-       </NavigationGuardProvider>
+-     </AuthProvider>
+-   )
+-diff --git a/frontend/src/components/DevicePreview.jsx b/frontend/src/components/DevicePreview.jsx
+-deleted file mode 100644
+-index 2f0e478..0000000
+---- a/frontend/src/components/DevicePreview.jsx
+-+++ /dev/null
+-@@ -1,213 +0,0 @@
+--import { useState } from 'react'
+--
+--// Dev-only tool: shows the app running inside a phone-shaped frame so you can
+--// see mobile styling live while you work, without resizing the browser
+--// window. The iframe reloads the current app at the chosen device's viewport
+--// size and re-fetches on every route change in the main window (same origin,
+--// same cookies/session, so it stays logged in alongside the main tab).
+--//
+--// Rendered only when running under `vite dev` (import.meta.env.DEV) — it
+--// never ships in a production build, see the mount guard in App.jsx.
+--
+--const DEVICES = {
+--  'iphone-se':   { label: 'iPhone SE',      width: 375, height: 667 },
+--  'iphone-14':   { label: 'iPhone 14',      width: 390, height: 844 },
+--  'iphone-14pm': { label: 'iPhone 14 Pro Max', width: 430, height: 932 },
+--  'pixel-7':     { label: 'Pixel 7',        width: 412, height: 915 },
+--  'galaxy-s24':  { label: 'Galaxy S24',     width: 384, height: 824 },
+--}
+--
+--export default function DevicePreview() {
+--  const [open, setOpen] = useState(false)
+--  const [deviceKey, setDeviceKey] = useState('iphone-14')
+--  const [landscape, setLandscape] = useState(false)
+--  const [reloadTick, setReloadTick] = useState(0)
+--
+--  const device = DEVICES[deviceKey]
+--  const frameWidth = landscape ? device.height : device.width
+--  const frameHeight = landscape ? device.width : device.height
+--
+--  return (
+--    <>
+--      <button
+--        type="button"
+--        onClick={() => setOpen(o => !o)}
+--        title="Mobile device preview"
+--        style={{
+--          position: 'fixed',
+--          bottom: 20,
+--          right: 20,
+--          zIndex: 9998,
+--          width: 48,
+--          height: 48,
+--          borderRadius: '50%',
+--          border: 'none',
+--          background: open ? 'var(--accent-hover)' : 'var(--accent)',
+--          color: '#fff',
+--          fontSize: 22,
+--          boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+--          display: 'flex',
+--          alignItems: 'center',
+--          justifyContent: 'center',
+--        }}
+--      >
+--        📱
+--      </button>
+--
+--      {open && (
+--        <div
+--          style={{
+--            position: 'fixed',
+--            inset: 0,
+--            zIndex: 9997,
+--            background: 'rgba(43, 38, 34, 0.55)',
+--            display: 'flex',
+--            alignItems: 'center',
+--            justifyContent: 'center',
+--            gap: 24,
+--            padding: 24,
+--          }}
+--          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+--        >
+--          {/* Controls panel */}
+--          <div
+--            style={{
+--              background: 'var(--surface)',
+--              border: '1px solid var(--border)',
+--              borderRadius: 12,
+--              padding: 16,
+--              display: 'flex',
+--              flexDirection: 'column',
+--              gap: 12,
+--              width: 220,
+--              maxHeight: '90vh',
+--              overflowY: 'auto',
+--            }}
+--          >
+--            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>
+--              Mobile Preview
+--            </div>
+--
+--            <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+--              Device
+--              <select
+--                value={deviceKey}
+--                onChange={(e) => setDeviceKey(e.target.value)}
+--                style={{
+--                  display: 'block',
+--                  width: '100%',
+--                  marginTop: 4,
+--                  padding: '6px 8px',
+--                  borderRadius: 6,
+--                  border: '1px solid var(--border-strong)',
+--                  background: 'var(--surface)',
+--                  color: 'var(--text-dark)',
+--                }}
+--              >
+--                {Object.entries(DEVICES).map(([key, d]) => (
+--                  <option key={key} value={key}>
+--                    {d.label} ({d.width}×{d.height})
+--                  </option>
+--                ))}
+--              </select>
+--            </label>
+--
+--            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)' }}>
+--              <input
+--                type="checkbox"
+--                checked={landscape}
+--                onChange={(e) => setLandscape(e.target.checked)}
+--              />
+--              Landscape
+--            </label>
+--
+--            <button
+--              type="button"
+--              onClick={() => setReloadTick(t => t + 1)}
+--              style={{
+--                padding: '6px 10px',
+--                borderRadius: 6,
+--                border: '1px solid var(--border-strong)',
+--                background: 'var(--surface-sunken)',
+--                color: 'var(--text-dark)',
+--                fontSize: 13,
+--              }}
+--            >
+--              ↻ Reload preview
+--            </button>
+--
+--            <button
+--              type="button"
+--              onClick={() => setOpen(false)}
+--              style={{
+--                padding: '6px 10px',
+--                borderRadius: 6,
+--                border: 'none',
+--                background: 'var(--accent)',
+--                color: '#fff',
+--                fontSize: 13,
+--              }}
+--            >
+--              Close
+--            </button>
+--          </div>
+--
+--          {/* Phone frame */}
+--          <div
+--            style={{
+--              background: '#1c1c1e',
+--              borderRadius: 40,
+--              padding: 14,
+--              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+--              flexShrink: 0,
+--            }}
+--            onClick={(e) => e.stopPropagation()}
+--          >
+--            <div
+--              style={{
+--                width: frameWidth,
+--                height: frameHeight,
+--                borderRadius: 26,
+--                overflow: 'hidden',
+--                background: '#fff',
+--                position: 'relative',
+--              }}
+--            >
+--              {/* Notch, purely cosmetic */}
+--              {!landscape && (
+--                <div
+--                  style={{
+--                    position: 'absolute',
+--                    top: 0,
+--                    left: '50%',
+--                    transform: 'translateX(-50%)',
+--                    width: '40%',
+--                    height: 18,
+--                    background: '#1c1c1e',
+--                    borderBottomLeftRadius: 12,
+--                    borderBottomRightRadius: 12,
+--                    zIndex: 1,
+--                  }}
+--                />
+--              )}
+--              <iframe
+--                key={`${deviceKey}-${landscape}-${reloadTick}`}
+--                src={window.location.href}
+--                title="Mobile preview"
+--                style={{
+--                  width: frameWidth,
+--                  height: frameHeight,
+--                  border: 'none',
+--                  display: 'block',
+--                }}
+--              />
+--            </div>
+--            <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 11, marginTop: 8 }}>
+--              {device.label} · {frameWidth}×{frameHeight}
+--            </div>
+--          </div>
+--        </div>
+--      )}
+--    </>
+--  )
+--}
+--- 
+-2.43.0
+-
+-
+-From f2de3717c57630ce566fcef476cab3c9ff7a85cb Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Thu, 30 Jul 2026 09:30:53 +0000
+-Subject: [PATCH 4/4] Mobile: make the app feel native, not a shrunk desktop
+- site
+-
+-Finishes and adds the concrete things that made mobile feel like a
+-scaled-down desktop layout instead of a real mobile app:
+-
+-- Add bottom tab bar (BottomNav.jsx) for one-tap access to the most
+-  used destinations (Home, POS, Sales, Debtors), matching the native
+-  app tab-bar pattern instead of everything living two taps deep in
+-  the hamburger drawer.
+-- Finish the responsive-table feature: Table.jsx already carried
+-  data-label attributes and a responsive-table class, but the CSS to
+-  actually turn a table into stacked label/value cards on phones was
+-  never written, so it silently did nothing. Added the mobile
+-  breakpoint rules that make each row render as a card instead of a
+-  cramped, horizontally-scrolling grid.
+-- Tighten .page/.card padding on mobile (24px/18px desktop density
+-  was carrying straight through to phones).
+-- Switch modals from a small centered desktop dialog to a full-width
+-  bottom sheet that slides up, with safe-area padding for notched
+-  phones -- the single most obvious 'this is just a shrunk desktop
+-  popup' tell.
+-- Shrink the page-header h1 size to fit phone widths without wrapping
+-  awkwardly.
+----
+- frontend/src/App.jsx                  |   2 +
+- frontend/src/components/BottomNav.jsx |  48 +++++++
+- frontend/src/components/Table.jsx     |  13 +-
+- frontend/src/styles/globals.css       | 175 ++++++++++++++++++++++++++
+- 4 files changed, 236 insertions(+), 2 deletions(-)
+- create mode 100644 frontend/src/components/BottomNav.jsx
+-
+-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+-index c9ad962..d62f289 100644
+---- a/frontend/src/App.jsx
+-+++ b/frontend/src/App.jsx
+-@@ -6,6 +6,7 @@ import { NavigationGuardProvider } from './hooks/useNavigationGuard.jsx'
+- import { useApi } from './hooks/useApi.js'
+- import Sidebar, { PAGE_TITLE_KEYS } from './components/Sidebar.jsx'
+- import MobileTopBar from './components/MobileTopBar.jsx'
+-+import BottomNav from './components/BottomNav.jsx'
+- import PageLoader from './components/PageLoader.jsx'
+- import PlatformBanner from './components/PlatformBanner.jsx'
+- import Clock from './Clock.jsx'
+-@@ -95,6 +96,7 @@ function Layout({ children }) {
+-         </div>
+-         {children}
+-       </div>
+-+      <BottomNav onMore={() => setMobileOpen(true)} />
+-     </div>
+-   )
+- }
+-diff --git a/frontend/src/components/BottomNav.jsx b/frontend/src/components/BottomNav.jsx
+-new file mode 100644
+-index 0000000..1cf31eb
+---- /dev/null
+-+++ b/frontend/src/components/BottomNav.jsx
+-@@ -0,0 +1,48 @@
+-+import { useLocation } from 'react-router-dom'
+-+import { useTranslation } from 'react-i18next'
+-+import { useAuth } from '../hooks/useAuth.jsx'
+-+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+-+
+-+// Primary destinations only — this sits alongside the hamburger drawer
+-+// (which still holds the full nav), giving phone users the one-tap-away
+-+// muscle memory of a real app's tab bar instead of two taps through a
+-+// slide-out menu for the things they reach for constantly.
+-+function buildTabs(t) {
+-+  return [
+-+    { label: t('nav.home'), icon: '🏠', path: '/app', match: (p) => p === '/app' },
+-+    { label: t('nav.pos'), icon: '🧾', path: '/app/pos', accountTypes: ['business', 'community'], match: (p) => p === '/app/pos' },
+-+    { label: t('nav.salesHistory'), icon: '📜', path: '/app/sales', accountTypes: ['business', 'community'], match: (p) => p.startsWith('/app/sales') },
+-+    { label: t('nav.clientsDebtors'), icon: '📒', path: '/app/debtors', match: (p) => p.startsWith('/app/debtors') },
+-+  ]
+-+}
+-+
+-+export default function BottomNav({ onMore }) {
+-+  const location = useLocation()
+-+  const { guardedNavigate } = useNavigationGuard()
+-+  const { account } = useAuth()
+-+  const { t } = useTranslation()
+-+
+-+  const tabs = buildTabs(t).filter(
+-+    (tab) => !tab.accountTypes || tab.accountTypes.includes(account?.account_type)
+-+  )
+-+
+-+  return (
+-+    <nav className="bottom-nav" aria-label="Primary">
+-+      {tabs.map((tab) => (
+-+        <button
+-+          key={tab.path}
+-+          type="button"
+-+          className={`bottom-nav-item ${tab.match(location.pathname) ? 'active' : ''}`}
+-+          onClick={() => guardedNavigate(tab.path)}
+-+        >
+-+          <span className="bottom-nav-icon">{tab.icon}</span>
+-+          <span className="bottom-nav-label">{tab.label}</span>
+-+        </button>
+-+      ))}
+-+      <button type="button" className="bottom-nav-item" onClick={onMore}>
+-+        <span className="bottom-nav-icon">☰</span>
+-+        <span className="bottom-nav-label">{t('nav.more', 'More')}</span>
+-+      </button>
+-+    </nav>
+-+  )
+-+}
+-diff --git a/frontend/src/components/Table.jsx b/frontend/src/components/Table.jsx
+-index 7f64ab4..ecc1962 100644
+---- a/frontend/src/components/Table.jsx
+-+++ b/frontend/src/components/Table.jsx
+-@@ -8,7 +8,7 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
+-     return <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{emptyText}</div>
+-   }
+-   return (
+--    <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+-+    <div className="card responsive-table" style={{ overflowX: 'auto', padding: 0 }}>
+-       <table>
+-         <thead>
+-           <tr>
+-@@ -23,7 +23,16 @@ export default function Table({ columns, rows, emptyText = 'No records yet.', lo
+-               style={onRowClick ? { cursor: 'pointer' } : undefined}
+-             >
+-               {columns.map((col) => (
+--                <td key={col.key} onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}>
+-+                <td
+-+                  key={col.key}
+-+                  // data-label powers the mobile card layout (see
+-+                  // .responsive-table in globals.css): below the 640px
+-+                  // breakpoint each <td> becomes its own row with this as
+-+                  // a left-hand label, turning a cramped scrolling table
+-+                  // into a stack of readable label/value pairs per record.
+-+                  data-label={col.header}
+-+                  onClick={col.stopRowClick ? (e) => e.stopPropagation() : undefined}
+-+                >
+-                   {col.render ? col.render(row) : row[col.key]}
+-                 </td>
+-               ))}
+-diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+-index 6f0fbc8..28a5beb 100644
+---- a/frontend/src/styles/globals.css
+-+++ b/frontend/src/styles/globals.css
+-@@ -567,6 +567,14 @@ label {
+-   padding: 6px 10px 10px;
+- }
+- 
+-+/* Bottom tab bar — hidden by default (desktop), shown under the 768px
+-+   breakpoint below. Fixed to the viewport bottom with safe-area padding so
+-+   it clears the home-indicator on notched iPhones instead of sitting under
+-+   it. */
+-+.bottom-nav {
+-+  display: none;
+-+}
+-+
+- @media (max-width: 768px) {
+-   .sidebar {
+-     position: fixed;
+-@@ -610,6 +618,173 @@ label {
+-   }
+- 
+-   .app-shell { flex-direction: column; padding: 0; gap: 0; }
+-+
+-+  /* Leave room at the bottom of the scrollable content so the fixed tab
+-+     bar never overlaps the last row of a form or table. */
+-+  .main-content {
+-+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+-+  }
+-+
+-+  .bottom-nav {
+-+    display: flex;
+-+    position: fixed;
+-+    left: 0;
+-+    right: 0;
+-+    bottom: 0;
+-+    z-index: 58;
+-+    background: var(--surface);
+-+    border-top: 1px solid var(--border);
+-+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+-+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+-+  }
+-+
+-+  .bottom-nav-item {
+-+    flex: 1;
+-+    display: flex;
+-+    flex-direction: column;
+-+    align-items: center;
+-+    justify-content: center;
+-+    gap: 2px;
+-+    min-height: 48px;
+-+    background: none;
+-+    border: none;
+-+    color: var(--text-muted);
+-+    font-size: 10px;
+-+    line-height: 1.2;
+-+    padding: 4px 2px;
+-+    border-radius: 10px;
+-+  }
+-+
+-+  .bottom-nav-item.active {
+-+    color: var(--accent);
+-+  }
+-+
+-+  .bottom-nav-icon {
+-+    font-size: 19px;
+-+  }
+-+
+-+  .bottom-nav-label {
+-+    max-width: 64px;
+-+    overflow: hidden;
+-+    text-overflow: ellipsis;
+-+    white-space: nowrap;
+-+  }
+-+
+-+  /* Touch targets: anything tappable should meet the ~44px minimum touch
+-+     target size on phones, not just shrink to fit desktop density. */
+-+  .menu-item, .group-header {
+-+    min-height: 44px;
+-+    display: flex;
+-+    align-items: center;
+-+  }
+-+
+-+  button, .btn, input[type="checkbox"], input[type="radio"] {
+-+    min-height: 40px;
+-+  }
+-+
+-+  input, select, textarea {
+-+    font-size: 16px; /* prevents iOS Safari auto-zoom on focus */
+-+  }
+-+
+-+  /* Desktop-density spacing is the single biggest reason a responsive page
+-+     still "reads" as a shrunk desktop site instead of a native mobile
+-+     screen. Phones get tighter, edge-to-edge padding instead. */
+-+  .page {
+-+    padding: 14px;
+-+  }
+-+
+-+  .page-header h1 {
+-+    font-size: 19px;
+-+  }
+-+
+-+  .card {
+-+    padding: 14px;
+-+    border-radius: 14px;
+-+  }
+-+
+-+  .card-grid {
+-+    gap: 10px;
+-+  }
+-+
+-+  /* Dialogs: on desktop a small centered box makes sense next to a large
+-+     canvas of content around it. On a phone that same box just looks like
+-+     a shrunk desktop popup. Native mobile apps use full-width sheets that
+-+     slide up from the bottom instead — so modals switch to that pattern
+-+     here rather than just scaling their max-width down. */
+-+  .modal-overlay {
+-+    align-items: flex-end;
+-+  }
+-+
+-+  .modal {
+-+    width: 100%;
+-+    max-width: 100%;
+-+    max-height: 85vh;
+-+    border-radius: 20px 20px 0 0;
+-+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+-+    animation: sheet-up 0.22s var(--ease, ease-out);
+-+  }
+-+
+-+  @keyframes sheet-up {
+-+    from { transform: translateY(100%); }
+-+    to { transform: translateY(0); }
+-+  }
+-+
+-+  /* Data tables: a scrolling, shrunk-down grid of tiny cells is the classic
+-+     "desktop site on a phone" tell. Below this breakpoint every table
+-+     wearing .responsive-table drops its grid structure and each row
+-+     becomes its own card — every <td> stacks as a label/value line using
+-+     the data-label each column already carries (see components/Table.jsx).
+-+     Row taps and per-cell click-stopping keep working exactly as before
+-+     since nothing about the DOM structure changes, only how it's drawn. */
+-+  .responsive-table table,
+-+  .responsive-table thead,
+-+  .responsive-table tbody,
+-+  .responsive-table th,
+-+  .responsive-table td,
+-+  .responsive-table tr {
+-+    display: block;
+-+  }
+-+
+-+  .responsive-table thead {
+-+    display: none;
+-+  }
+-+
+-+  .responsive-table tr {
+-+    padding: 12px 14px;
+-+    border-bottom: 8px solid var(--cream);
+-+  }
+-+
+-+  .responsive-table tr:last-child {
+-+    border-bottom: none;
+-+  }
+-+
+-+  .responsive-table td {
+-+    display: flex;
+-+    justify-content: space-between;
+-+    align-items: center;
+-+    gap: 12px;
+-+    padding: 6px 0;
+-+    border-bottom: none;
+-+    text-align: right;
+-+  }
+-+
+-+  .responsive-table td::before {
+-+    content: attr(data-label);
+-+    color: var(--text-muted);
+-+    font-size: 12px;
+-+    font-weight: 600;
+-+    text-transform: uppercase;
+-+    letter-spacing: 0.03em;
+-+    text-align: left;
+-+    flex-shrink: 0;
+-+  }
+-+
+-+  /* A column with no header text (e.g. a trailing actions/kebab cell)
+-+     shouldn't render an empty label row — let it sit full-width instead. */
+-+  .responsive-table td:empty,
+-+  .responsive-table td[data-label=""] {
+-+    display: none;
+-+  }
+- }
+- 
+- @media (min-width: 769px) and (max-width: 1100px) {
+--- 
+-2.43.0
+-
+diff --git a/moneytracer-pos-fix.patch b/moneytracer-pos-fix.patch
+deleted file mode 100644
+index 1c9863b..0000000
+--- a/moneytracer-pos-fix.patch
++++ /dev/null
+@@ -1,133 +0,0 @@
+-From 130507e5f482a68977d1623466f3da9d9c803bef Mon Sep 17 00:00:00 2001
+-From: zimbermanne <zimbermanne@users.noreply.github.com>
+-Date: Thu, 30 Jul 2026 10:57:08 +0000
+-Subject: [PATCH] Mobile audit: POS sticky cart bar + fix bottom-nav overlap on
+- every page
+-
+-Audited Dashboard, InvoiceEditor, and POS for leftover desktop-only
+-layout. Dashboard and InvoiceEditor were already handled well
+-(card-grid reflows to one column; InvoiceEditor already swaps its
+-live document preview for a condensed mobile summary). POS had a
+-real gap and a page-wide bug came up along the way:
+-
+-- POS: on a phone the cart sits below the entire product grid, so a
+-  cashier had no way to see the running total or reach checkout
+-  without scrolling past every product first. Added a sticky mobile
+-  cart bar (item count + total + 'View Cart') that jumps down to the
+-  real cart on tap, shown only while cart.length > 0.
+-- Page-wide bug: .page never accounted for the fixed .bottom-nav bar's
+-  height, so on every mobile page the last bit of content (e.g. a
+-  save button) could sit underneath the tab bar. Added bottom padding
+-  to .page sized to clear it, with safe-area-inset support for
+-  notched phones.
+----
+- frontend/src/pages/POS.jsx      | 16 ++++++++++++++--
+- frontend/src/styles/globals.css | 32 ++++++++++++++++++++++++++++++--
+- 2 files changed, 44 insertions(+), 4 deletions(-)
+-
+-diff --git a/frontend/src/pages/POS.jsx b/frontend/src/pages/POS.jsx
+-index 9542da3..cc2c6e0 100644
+---- a/frontend/src/pages/POS.jsx
+-+++ b/frontend/src/pages/POS.jsx
+-@@ -1,4 +1,4 @@
+--import { useEffect, useState } from 'react'
+-+import { useEffect, useRef, useState } from 'react'
+- import { useApi } from '../hooks/useApi.js'
+- import { apiUrl } from '../api-config.js'
+- import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+-@@ -15,6 +15,7 @@ export default function POS() {
+-   const [receipt, setReceipt] = useState(null)
+-   const [busy, setBusy] = useState(false)
+-   const { setDirty, setDirtyMessage } = useNavigationGuard()
+-+  const cartRef = useRef(null)
+- 
+-   useEffect(() => {
+-     api.get('/inventory/').then(setItems).catch((e) => setError(e.message))
+-@@ -149,7 +150,7 @@ export default function POS() {
+-           </div>
+-         </div>
+- 
+--        <div style={{ flex: 1, minWidth: 280 }}>
+-+        <div style={{ flex: 1, minWidth: 280 }} ref={cartRef}>
+-           <div className="card">
+-             <h2 style={{ marginTop: 0, fontSize: 16 }}>Cart</h2>
+-             {cart.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No items added.</div>}
+-@@ -237,6 +238,17 @@ export default function POS() {
+-           )}
+-         </div>
+-       </div>
+-+
+-+      {/* Phone-only: the cart lives below a whole grid of products, so
+-+          without this a cashier has to scroll all the way down just to see
+-+          the running total or reach checkout. This sticky bar surfaces
+-+          both at all times and jumps down to the real cart on tap. */}
+-+      {cart.length > 0 && (
+-+        <button type="button" className="pos-mobile-cart-bar" onClick={() => cartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+-+          <span>🛒 {cart.length} item{cart.length !== 1 ? 's' : ''}</span>
+-+          <span>TZS {total.toLocaleString()} · View Cart ▲</span>
+-+        </button>
+-+      )}
+-     </div>
+-   )
+- }
+-diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+-index 28a5beb..73222cc 100644
+---- a/frontend/src/styles/globals.css
+-+++ b/frontend/src/styles/globals.css
+-@@ -688,9 +688,11 @@ label {
+- 
+-   /* Desktop-density spacing is the single biggest reason a responsive page
+-      still "reads" as a shrunk desktop site instead of a native mobile
+--     screen. Phones get tighter, edge-to-edge padding instead. */
+-+     screen. Phones get tighter, edge-to-edge padding instead. The extra
+-+     bottom padding clears the fixed .bottom-nav bar, which otherwise
+-+     covers the last bit of content on every page. */
+-   .page {
+--    padding: 14px;
+-+    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
+-   }
+- 
+-   .page-header h1 {
+-@@ -785,6 +787,26 @@ label {
+-   .responsive-table td[data-label=""] {
+-     display: none;
+-   }
+-+
+-+  .pos-mobile-cart-bar {
+-+    display: flex;
+-+    justify-content: space-between;
+-+    align-items: center;
+-+    gap: 10px;
+-+    position: fixed;
+-+    left: 12px;
+-+    right: 12px;
+-+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+-+    z-index: 57;
+-+    background: var(--accent);
+-+    color: #fff;
+-+    border: none;
+-+    border-radius: var(--radius-full);
+-+    padding: 12px 18px;
+-+    font-size: 13px;
+-+    font-weight: 600;
+-+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+-+  }
+- }
+- 
+- @media (min-width: 769px) and (max-width: 1100px) {
+-@@ -1838,6 +1860,12 @@ label {
+-   box-shadow: var(--neu-accent-raised);
+- }
+- 
+-+/* POS: sticky mobile cart summary. Hidden on desktop, where the cart panel
+-+   already sits next to the product grid with nothing to jump to. */
+-+.pos-mobile-cart-bar {
+-+  display: none;
+-+}
+-+
+- .landing-hero-actions {
+-   display: flex;
+-   align-items: center;
+--- 
+-2.43.0
+-
+-- 
+2.43.0
+

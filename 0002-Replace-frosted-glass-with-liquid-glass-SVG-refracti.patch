@@ -1,0 +1,637 @@
+From ab898edd991fb6d46496b05524ba96e2496166cb Mon Sep 17 00:00:00 2001
+From: zimbermanne <zimbermanne@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 06:36:16 +0000
+Subject: [PATCH 2/2] Replace frosted glass with liquid glass (SVG refraction +
+ chromatic aberration)
+
+- Add LiquidGlassFilter.jsx: SVG feDisplacementMap-based filter with
+  3-channel chromatic aberration split + feSpecularLighting highlight,
+  mounted once at the true app root (needs to sit above the router
+  since public routes render outside the authenticated Layout/app-shell)
+- design-tokens.css: --glass-blur/--glass-blur-sm now start as plain
+  blur() (universal fallback), upgraded to the liquid filter via
+  @supports (backdrop-filter: url(...)) feature detection -- no browser
+  sniffing, degrades cleanly on Firefox/older Safari
+- Convert every remaining hardcoded backdrop-filter: blur(...) in
+  globals.css (light mode + both dark-mode override blocks) and
+  Landing.jsx's inline styles onto the token system, so the whole app
+  upgrades consistently instead of a partial frost/liquid mix
+  - full filter: .card, .modal, .sidebar, .glass-panel, .lg-glass(-card)
+  - -sm (lighter, no chromatic split) for high-frequency small elements:
+    inputs, badges, table headers, buttons, dropdown menu, landing pills
+- Add contain: layout paint style (+ will-change on sticky elements) to
+  .card, .sidebar, .mobile-topbar to isolate paint cost -- matters most
+  for sidebar/topbar since they repaint on every scroll frame
+---
+ frontend/src/App.jsx                          |   8 ++
+ frontend/src/components/LiquidGlassFilter.jsx |  96 ++++++++++++++
+ frontend/src/pages/Landing.jsx                |  22 ++--
+ frontend/src/styles/design-tokens.css         |  40 +++++-
+ frontend/src/styles/globals.css               | 121 ++++++++++--------
+ 5 files changed, 221 insertions(+), 66 deletions(-)
+ create mode 100644 frontend/src/components/LiquidGlassFilter.jsx
+
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 5e86fce..0ec027e 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -10,6 +10,7 @@ import BottomNav from './components/BottomNav.jsx'
+ import PageLoader from './components/PageLoader.jsx'
+ import PlatformBanner from './components/PlatformBanner.jsx'
+ import Clock from './Clock.jsx'
++import LiquidGlassFilter from './components/LiquidGlassFilter.jsx'
+ // Landing and Login are the two screens almost everyone hits first (an
+ // anonymous visitor lands on one or the other), so they stay in the main
+ // bundle -- no loading flicker on the very first paint. Everything past
+@@ -216,6 +217,13 @@ function PrivateRoutes() {
+ export default function App() {
+   return (
+     <AuthProvider>
++      {/* Mounts the SVG <filter> defs every liquid-glass surface points at
++          via the --glass-blur token (design-tokens.css). Mounted at the
++          true app root — public routes (Landing, Login, Register) render
++          outside the authenticated Layout/app-shell, so this has to live
++          above the router, not inside it. One mount for the whole app;
++          renders nothing visible itself. */}
++      <LiquidGlassFilter />
+       <NavigationGuardProvider>
+         <Suspense fallback={<PageLoader />}>
+         <Routes>
+diff --git a/frontend/src/components/LiquidGlassFilter.jsx b/frontend/src/components/LiquidGlassFilter.jsx
+new file mode 100644
+index 0000000..19a0189
+--- /dev/null
++++ b/frontend/src/components/LiquidGlassFilter.jsx
+@@ -0,0 +1,96 @@
++/**
++ * Mounts the SVG <filter> definitions that power the app's liquid-glass
++ * surfaces (replaces the old flat frosted-glass look).
++ *
++ * Render this ONCE near the root of the app (see App.jsx) — every
++ * .card / .sidebar / .modal / input etc. references it by id via the
++ * --glass-blur token in design-tokens.css, so one mount serves the
++ * whole app. It renders nothing visible itself (0x0, aria-hidden).
++ *
++ * Full Apple-style treatment: feTurbulence-driven procedural distortion
++ * (no embedded raster asset, keeps bundle size down) + a 3-channel
++ * chromatic-aberration split + a specular highlight pass for the "wet
++ * glass" light catch along curved edges.
++ *
++ * Perf notes:
++ * - Procedural feTurbulence instead of a baked-in base64 noise image —
++ *   same visual family, no ~10kb inline asset per filter.
++ * - Consumers apply `contain: strict` + `will-change: transform` on the
++ *   filtered element (already done for .card/.sidebar/.modal in
++ *   globals.css) to isolate paint and keep this off the main thread's
++ *   critical path.
++ * - Respects prefers-reduced-motion by disabling the (optional) subtle
++ *   turbulence animation — see the CSS in globals.css.
++ */
++export default function LiquidGlassFilter() {
++  return (
++    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
++      <defs>
++        {/* ---- Base distortion field --------------------------------
++            Procedural fractal noise standing in for a baked displacement
++            map. baseFrequency/numOctaves tuned for a gentle, glassy
++            ripple rather than a busy/noisy texture. */}
++        <filter id="liquid-glass-filter" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
++          <feTurbulence
++            type="fractalNoise"
++            baseFrequency="0.008 0.012"
++            numOctaves="2"
++            seed="7"
++            result="noise"
++          />
++          <feGaussianBlur in="noise" stdDeviation="2" result="softNoise" />
++
++          {/* ---- Chromatic aberration: displace R/G/B channels by
++              slightly different amounts, then screen-blend back
++              together — this is what sells "refraction" rather than
++              a flat blur. ---- */}
++          <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="14" xChannelSelector="R" yChannelSelector="G" result="dispRed" />
++          <feColorMatrix in="dispRed" type="matrix"
++            values="1 0 0 0 0
++                    0 0 0 0 0
++                    0 0 0 0 0
++                    0 0 0 1 0" result="red" />
++
++          <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="17" xChannelSelector="R" yChannelSelector="G" result="dispGreen" />
++          <feColorMatrix in="dispGreen" type="matrix"
++            values="0 0 0 0 0
++                    0 1 0 0 0
++                    0 0 0 0 0
++                    0 0 0 1 0" result="green" />
++
++          <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="20" xChannelSelector="R" yChannelSelector="G" result="dispBlue" />
++          <feColorMatrix in="dispBlue" type="matrix"
++            values="0 0 0 0 0
++                    0 0 0 0 0
++                    0 0 1 0 0
++                    0 0 0 1 0" result="blue" />
++
++          <feBlend in="red" in2="green" mode="screen" result="rg" />
++          <feBlend in="rg" in2="blue" mode="screen" result="chroma" />
++
++          {/* ---- Specular highlight: a soft directional light catch
++              along the distortion field, giving the "wet glass" sheen
++              on curved corners. Kept subtle (low surfaceScale) so it
++              reads as a highlight, not a glare. ---- */}
++          <feSpecularLighting in="softNoise" surfaceScale="3" specularConstant="0.55" specularExponent="12" lightingColor="#ffffff" result="specular">
++            <feDistantLight azimuth="235" elevation="60" />
++          </feSpecularLighting>
++          <feComposite in="specular" in2="chroma" operator="in" result="specularClipped" />
++          <feComposite in="chroma" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="withSpecular" />
++
++          <feGaussianBlur in="withSpecular" stdDeviation="0.6" />
++        </filter>
++
++        {/* ---- Lighter variant for small/frequent elements (badges,
++            inputs, buttons) where the full chromatic pass is overkill
++            and the extra filter cost adds up across many instances on
++            one page. Single displacement, no channel split. ---- */}
++        <filter id="liquid-glass-filter-sm" color-interpolation-filters="sRGB" x="-15%" y="-15%" width="130%" height="130%">
++          <feTurbulence type="fractalNoise" baseFrequency="0.01 0.015" numOctaves="2" seed="7" result="noiseSm" />
++          <feGaussianBlur in="noiseSm" stdDeviation="1.5" result="softNoiseSm" />
++          <feDisplacementMap in="SourceGraphic" in2="softNoiseSm" scale="8" xChannelSelector="R" yChannelSelector="G" />
++        </filter>
++      </defs>
++    </svg>
++  )
++}
+diff --git a/frontend/src/pages/Landing.jsx b/frontend/src/pages/Landing.jsx
+index 965b362..ac39ace 100644
+--- a/frontend/src/pages/Landing.jsx
++++ b/frontend/src/pages/Landing.jsx
+@@ -118,14 +118,14 @@ export default function Landing() {
+         /* ── Glass surface utility ── */
+         .lg-glass {
+           background: rgba(255,255,255,0.08);
+-          backdrop-filter: blur(24px) saturate(180%);
+-          -webkit-backdrop-filter: blur(24px) saturate(180%);
++          backdrop-filter: var(--glass-blur) var(--glass-saturate);
++          -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+           border: 1px solid rgba(255,255,255,0.18);
+         }
+         .lg-glass-card {
+           background: rgba(255,255,255,0.07);
+-          backdrop-filter: blur(20px) saturate(160%);
+-          -webkit-backdrop-filter: blur(20px) saturate(160%);
++          backdrop-filter: var(--glass-blur) var(--glass-saturate);
++          -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+           border: 1px solid rgba(255,255,255,0.15);
+           border-radius: 20px;
+           box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+@@ -145,8 +145,8 @@ export default function Landing() {
+         }
+         .lg-header.scrolled {
+           background: rgba(10,10,26,0.72);
+-          backdrop-filter: blur(24px) saturate(180%);
+-          -webkit-backdrop-filter: blur(24px) saturate(180%);
++          backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++          -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+           border-bottom: 1px solid rgba(255,255,255,0.1);
+           box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+         }
+@@ -221,7 +221,7 @@ export default function Landing() {
+           padding: 6px 16px;
+           font-size: 13px; font-weight: 600; color: #c4aaff;
+           margin-bottom: 28px;
+-          backdrop-filter: blur(8px);
++          backdrop-filter: var(--glass-blur-sm);
+         }
+         .lg-hero-badge-dot {
+           width: 7px; height: 7px; border-radius: 50%;
+@@ -258,7 +258,7 @@ export default function Landing() {
+           border-radius: 999px;
+           padding: 5px;
+           margin-bottom: 36px;
+-          backdrop-filter: blur(12px);
++          backdrop-filter: var(--glass-blur-sm);
+         }
+         .lg-track-switch button {
+           border: none;
+@@ -306,7 +306,7 @@ export default function Landing() {
+           font-weight: 600; font-size: 15px;
+           padding: 14px 28px;
+           border-radius: 14px;
+-          backdrop-filter: blur(10px);
++          backdrop-filter: var(--glass-blur-sm);
+           transition: background 0.15s, color 0.15s;
+         }
+         .lg-btn-secondary:hover {
+@@ -324,7 +324,7 @@ export default function Landing() {
+           font-size: 14px; font-weight: 600;
+           padding: 11px 22px;
+           border-radius: 999px;
+-          backdrop-filter: blur(10px);
++          backdrop-filter: var(--glass-blur-sm);
+           transition: background 0.15s;
+         }
+         .lg-app-download:hover { background: rgba(255,255,255,0.14); color: #fff; }
+@@ -340,7 +340,7 @@ export default function Landing() {
+           border: 1px solid rgba(255,255,255,0.14);
+           border-radius: 16px;
+           padding: 16px 28px;
+-          backdrop-filter: blur(14px);
++          backdrop-filter: var(--glass-blur-sm);
+           min-width: 120px;
+         }
+         .lg-stat-value {
+diff --git a/frontend/src/styles/design-tokens.css b/frontend/src/styles/design-tokens.css
+index fab6a75..3625888 100644
+--- a/frontend/src/styles/design-tokens.css
++++ b/frontend/src/styles/design-tokens.css
+@@ -10,15 +10,27 @@
+   /* ---- Layout ---- */
+   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
+ 
+-  /* ---- Glassmorphism ----
+-     Shared tokens for the frosted-glass surfaces (.sidebar, .card,
+-     .login-card, .modal, form inputs). Kept here rather than hardcoded
++  /* ---- Glassmorphism / Liquid Glass ----
++     Shared tokens for the glass surfaces (.sidebar, .card, .login-card,
++     .modal, form inputs, badges). Kept here rather than hardcoded
+      per-selector so the whole app's glass look-and-feel stays in sync from
+-     one place. */
++     one place.
++
++     --glass-blur / --glass-blur-sm start as plain blur() — a universal
++     fallback that needs no feature support. The @supports block right
++     below upgrades both to the liquid-glass SVG filter (refraction +
++     chromatic aberration + specular highlight, defined in
++     LiquidGlassFilter.jsx and mounted once at the app root) on browsers
++     that actually support url()-filter backdrop-filter. Every existing
++     selector that already references var(--glass-blur)/var(--glass-saturate)
++     upgrades automatically — nothing else needs to change per-component.
++     -sm is for small/frequent elements (badges, table headers, chips)
++     where the full chromatic-aberration filter is unnecessary GPU cost. */
+   --glass-bg:         rgba(255, 255, 255, 0.22);
+   --glass-bg-hover:   rgba(255, 255, 255, 0.30);
+   --glass-border:     rgba(255, 255, 255, 0.35);
+   --glass-blur:       blur(40px);
++  --glass-blur-sm:    blur(16px);
+   --glass-saturate:   saturate(200%);
+   --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
+   /* Sidebar sits at a different depth than cards, so it needs a slightly
+@@ -156,6 +168,26 @@
+   --duration-slow: 320ms;
+ }
+ 
++/* ==========================================================================
++   Liquid Glass upgrade — feature-detected, not browser-sniffed.
++   Filters live in LiquidGlassFilter.jsx, mounted once at the app root
++   (App.jsx). Composing url(#id) with blur()/saturate() in one
++   backdrop-filter list is valid per spec; if the browser doesn't
++   understand url()-filter backdrop-filter at all, the @supports guard
++   means it never sees this block and just keeps the plain-blur fallback
++   set above — no broken/half-applied filter list.
++   ========================================================================== */
++@supports (backdrop-filter: url(#liquid-glass-filter)) {
++  :root {
++    --glass-blur:    url(#liquid-glass-filter) blur(2px);
++    --glass-blur-sm: url(#liquid-glass-filter-sm) blur(1px);
++  }
++}
++
++/* prefers-reduced-motion doesn't disable anything here — the filter is
++   static (no animation loop), just a one-time refraction on the pixels
++   already behind the surface — so there's nothing to reduce. */
++
+ /* ==========================================================================
+    Dark Mode — override every light token.
+    Uses the same variable names so every component that uses var(--surface),
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index aa30ce4..9da141a 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -171,6 +171,12 @@ button {
+   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+   padding: 18px;
+   transition: all 0.3s var(--ease);
++  /* Dashboard/list pages can render a dozen+ .card instances at once,
++     each now running the liquid-glass filter — isolate each one's paint
++     bounds so rasterization cost stays local instead of compounding
++     across the whole grid. (layout/paint/style, not the stricter
++     `contain: strict`, since cards have variable/auto content height.) */
++  contain: layout paint style;
+ }
+ 
+ .card:hover {
+@@ -206,8 +212,8 @@ button {
+ 
+ .glass-panel {
+   background: rgba(255, 255, 255, 0.12) !important;
+-  backdrop-filter: blur(30px) saturate(190%);
+-  -webkit-backdrop-filter: blur(30px) saturate(190%);
++  backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+   border: 1px solid rgba(255, 255, 255, 0.25) !important;
+   border-radius: 20px;
+   box-shadow:
+@@ -285,7 +291,7 @@ button {
+ .metric-badge {
+   align-self: flex-start;
+   background: rgba(255,255,255,0.18);
+-  backdrop-filter: blur(6px);
++  backdrop-filter: var(--glass-blur-sm);
+   font-size: 11px;
+   font-weight: 600;
+   padding: 4px 10px;
+@@ -422,8 +428,8 @@ th {
+   text-transform: uppercase;
+   letter-spacing: 0.03em;
+   background: rgba(255, 255, 255, 0.10);
+-  backdrop-filter: blur(16px);
+-  -webkit-backdrop-filter: blur(16px);
++  backdrop-filter: var(--glass-blur-sm);
++  -webkit-backdrop-filter: var(--glass-blur-sm);
+ }
+ 
+ tr:hover td { background: rgba(255, 255, 255, 0.10); }
+@@ -558,7 +564,7 @@ td, .stat-value, input[type="number"] {
+ .btn-primary:active { box-shadow: var(--neu-accent-pressed); }
+ .btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
+ .btn-gold:active { box-shadow: var(--neu-pressed); }
+-.btn-outline { background: rgba(255,255,255,0.18); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
++.btn-outline { background: rgba(255,255,255,0.18); backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
+ .btn-outline:hover { background: rgba(255,255,255,0.28); }
+ .btn-outline:active { box-shadow: var(--neu-pressed); }
+ .btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
+@@ -572,8 +578,8 @@ input, select, textarea {
+   font-size: 14px;
+   width: 100%;
+   background: var(--glass-bg-hover);
+-  backdrop-filter: blur(20px) saturate(180%);
+-  -webkit-backdrop-filter: blur(20px) saturate(180%);
++  backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+   font-family: inherit;
+   box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.04);
+   transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), background var(--duration) var(--ease);
+@@ -722,8 +728,8 @@ label {
+ 
+ .modal {
+   background: rgba(255, 255, 255, 0.25);
+-  backdrop-filter: blur(35px) saturate(200%);
+-  -webkit-backdrop-filter: blur(35px) saturate(200%);
++  backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+   border: 1px solid rgba(255, 255, 255, 0.4);
+   border-radius: 24px;
+   padding: 24px;
+@@ -890,8 +896,8 @@ label {
+   height: calc(100vh - 32px);
+   align-self: flex-start;
+   background: var(--glass-bg-sidebar) !important;
+-  backdrop-filter: blur(30px) saturate(200%);
+-  -webkit-backdrop-filter: blur(30px) saturate(200%);
++  backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+   border: 1px solid var(--glass-border-sidebar) !important;
+   border-radius: 20px;
+   box-shadow:
+@@ -901,6 +907,12 @@ label {
+   overflow: hidden;
+   transition: width 0.25s ease, max-width 0.25s ease;
+   z-index: 40;
++  /* Sticky + a live backdrop filter repaints on every scroll frame.
++     Isolate paint bounds so that cost doesn't spread to the rest of the
++     page — matters more here than on .card/.modal since the sidebar is
++     on-screen continuously, not just while a modal is open. */
++  contain: layout paint style;
++  will-change: transform;
+ }
+ 
+ .sidebar-brand {
+@@ -1103,8 +1115,13 @@ label {
+   align-items: center;
+   gap: 12px;
+   background: rgba(15, 25, 45, 0.55);
+-  backdrop-filter: blur(24px) saturate(220%);
+-  -webkit-backdrop-filter: blur(24px) saturate(220%);
++  /* -sm here (not the full filter): this bar is sticky and on-screen for
++     the whole session on every phone, so it repaints on every scroll
++     frame — same reasoning as .sidebar's contain/will-change below, but
++     for a bar this thin the full chromatic-aberration pass isn't worth
++     the extra GPU cost on lower-end Android devices. */
++  backdrop-filter: var(--glass-blur-sm) saturate(220%);
++  -webkit-backdrop-filter: var(--glass-blur-sm) saturate(220%);
+   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+   color: #fff;
+   padding: 0 14px;
+@@ -1112,6 +1129,8 @@ label {
+   position: sticky;
+   top: 0;
+   z-index: 50;
++  contain: layout paint style;
++  will-change: transform;
+ }
+ 
+ .mobile-topbar .hamburger,
+@@ -1268,8 +1287,8 @@ label {
+     border: 1px solid rgba(255,255,255,0.09);
+     border-radius: 999px;
+     padding: 8px;
+-    backdrop-filter: blur(14px) saturate(160%);
+-    -webkit-backdrop-filter: blur(14px) saturate(160%);
++    backdrop-filter: var(--glass-blur-sm) saturate(160%);
++    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
+   }
+   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
+ 
+@@ -1533,8 +1552,8 @@ label {
+ .login-orb-glass {
+   background:
+     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0.35) 70%);
+-  backdrop-filter: blur(2px);
+-  -webkit-backdrop-filter: blur(2px);
++  backdrop-filter: var(--glass-blur-sm);
++  -webkit-backdrop-filter: var(--glass-blur-sm);
+   border: 1px solid rgba(255, 255, 255, 0.6);
+   box-shadow: 0 8px 32px rgba(80, 60, 120, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+ }
+@@ -2603,7 +2622,7 @@ label {
+   font-size: var(--text-sm);
+   padding: 10px 18px;
+   border-radius: var(--radius);
+-  backdrop-filter: blur(4px);
++  backdrop-filter: var(--glass-blur-sm);
+ }
+ 
+ .landing-app-download:hover {
+@@ -3378,8 +3397,8 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: blur(40px) saturate(200%);
+-    -webkit-backdrop-filter: blur(40px) saturate(200%);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+@@ -3399,8 +3418,8 @@ label {
+ :root:not([data-theme]) .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+ :root:not([data-theme]) .modal {
+     background: rgba(22, 25, 38, 0.38);
+-    backdrop-filter: blur(56px) saturate(200%);
+-    -webkit-backdrop-filter: blur(56px) saturate(200%);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.08);
+     box-shadow:
+       0 24px 64px rgba(0, 0, 0, 0.5),
+@@ -3418,8 +3437,8 @@ label {
+ /* ── Sidebar ── */
+ :root:not([data-theme]) .sidebar {
+     background: rgba(255, 255, 255, 0.03);
+-    backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+-    -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
+     border: 1px solid rgba(255, 255, 255, 0.07);
+     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+   }
+@@ -3427,15 +3446,15 @@ label {
+ /* ── Topbar / mobile topbar ── */
+ :root:not([data-theme]) .mobile-topbar {
+     background: rgba(18, 20, 32, 0.55);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-bottom-color: rgba(255, 255, 255, 0.07);
+   }
+ /* ── Tables ── */
+ :root:not([data-theme]) th {
+     background: rgba(255, 255, 255, 0.06);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-bottom-color: rgba(255, 255, 255, 0.08);
+     color: var(--text-muted);
+   }
+@@ -3444,8 +3463,8 @@ label {
+ /* ── Inputs & selects ── */
+ :root:not([data-theme]) input, :root:not([data-theme]) textarea, :root:not([data-theme]) select {
+     background: rgba(255, 255, 255, 0.05);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     color: var(--text-dark);
+     border-color: rgba(255, 255, 255, 0.12);
+     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
+@@ -3459,8 +3478,8 @@ label {
+ /* ── Buttons ── */
+ :root:not([data-theme]) .btn-outline {
+     background: rgba(255, 255, 255, 0.10);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-color: rgba(255, 255, 255, 0.18);
+     color: var(--text-dark);
+   }
+@@ -3520,8 +3539,8 @@ label {
+ /* ── DropdownMenu / RowActionsMenu ── */
+ :root:not([data-theme]) .dropdown-menu {
+     background: rgba(22, 25, 38, 0.72);
+-    backdrop-filter: blur(24px) saturate(160%);
+-    -webkit-backdrop-filter: blur(24px) saturate(160%);
++    backdrop-filter: var(--glass-blur-sm) saturate(160%);
++    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
+     border-color: rgba(255, 255, 255, 0.09);
+     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+   }
+@@ -3551,8 +3570,8 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: blur(40px) saturate(200%);
+-    -webkit-backdrop-filter: blur(40px) saturate(200%);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+@@ -3572,8 +3591,8 @@ label {
+ :root[data-theme="dark"] .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+ :root[data-theme="dark"] .modal {
+     background: rgba(22, 25, 38, 0.38);
+-    backdrop-filter: blur(56px) saturate(200%);
+-    -webkit-backdrop-filter: blur(56px) saturate(200%);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.08);
+     box-shadow:
+       0 24px 64px rgba(0, 0, 0, 0.5),
+@@ -3591,8 +3610,8 @@ label {
+ /* ── Sidebar ── */
+ :root[data-theme="dark"] .sidebar {
+     background: rgba(255, 255, 255, 0.03);
+-    backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+-    -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
++    backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
++    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
+     border: 1px solid rgba(255, 255, 255, 0.07);
+     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+   }
+@@ -3600,15 +3619,15 @@ label {
+ /* ── Topbar / mobile topbar ── */
+ :root[data-theme="dark"] .mobile-topbar {
+     background: rgba(18, 20, 32, 0.55);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-bottom-color: rgba(255, 255, 255, 0.07);
+   }
+ /* ── Tables ── */
+ :root[data-theme="dark"] th {
+     background: rgba(255, 255, 255, 0.06);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-bottom-color: rgba(255, 255, 255, 0.08);
+     color: var(--text-muted);
+   }
+@@ -3617,8 +3636,8 @@ label {
+ /* ── Inputs & selects ── */
+ :root[data-theme="dark"] input, :root[data-theme="dark"] textarea, :root[data-theme="dark"] select {
+     background: rgba(255, 255, 255, 0.05);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     color: var(--text-dark);
+     border-color: rgba(255, 255, 255, 0.12);
+     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
+@@ -3632,8 +3651,8 @@ label {
+ /* ── Buttons ── */
+ :root[data-theme="dark"] .btn-outline {
+     background: rgba(255, 255, 255, 0.10);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
++    backdrop-filter: var(--glass-blur-sm);
++    -webkit-backdrop-filter: var(--glass-blur-sm);
+     border-color: rgba(255, 255, 255, 0.18);
+     color: var(--text-dark);
+   }
+@@ -3693,8 +3712,8 @@ label {
+ /* ── DropdownMenu / RowActionsMenu ── */
+ :root[data-theme="dark"] .dropdown-menu {
+     background: rgba(22, 25, 38, 0.72);
+-    backdrop-filter: blur(24px) saturate(160%);
+-    -webkit-backdrop-filter: blur(24px) saturate(160%);
++    backdrop-filter: var(--glass-blur-sm) saturate(160%);
++    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
+     border-color: rgba(255, 255, 255, 0.09);
+     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+   }
+-- 
+2.43.0
+
