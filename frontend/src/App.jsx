@@ -10,6 +10,7 @@ import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import PlatformBanner from './components/PlatformBanner.jsx'
 import Clock from './Clock.jsx'
+import LiquidGlassFilter from './components/LiquidGlassFilter.jsx'
 // Landing and Login are the two screens almost everyone hits first (an
 // anonymous visitor lands on one or the other), so they stay in the main
 // bundle -- no loading flicker on the very first paint. Everything past
@@ -216,6 +217,7 @@ function PrivateRoutes() {
 export default function App() {
   return (
     <AuthProvider>
+      <LiquidGlassFilter />
       <NavigationGuardProvider>
         <Suspense fallback={<PageLoader />}>
         <Routes>

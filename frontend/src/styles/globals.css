@@ -163,18 +163,35 @@ button {
 }
 
 .card {
-  background: transparent !important;
-  border: 1px solid var(--border) !important;
+  background: var(--glass-tint) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-border) !important;
   border-radius: 20px;
-  box-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 12px 1px rgba(255, 255, 255, 0.08) !important;
   padding: 18px;
   transition: all 0.3s var(--ease);
+  contain: layout paint style;
+  will-change: transform;
 }
 
 .card:hover {
-  background: transparent !important;
+  background: var(--glass-tint-hover) !important;
   transform: translateY(-2px);
-  box-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 14px 1px rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Browsers without backdrop-filter support (or where it's disabled) still
+   need the card to read as a distinct surface, so fall back to a slightly
+   stronger flat tint instead of the near-invisible glass value. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card {
+    background: var(--surface) !important;
+  }
 }
 
 .home-kpi-card {
@@ -870,15 +887,27 @@ label {
   top: 16px;
   height: calc(100vh - 32px);
   align-self: flex-start;
-  background: transparent !important;
-  border: 1px solid var(--border-strong) !important;
+  background: var(--glass-tint) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-border) !important;
   border-radius: 20px;
-  box-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 16px 1px rgba(255, 255, 255, 0.08) !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width 0.25s ease, max-width 0.25s ease;
   z-index: 40;
+  contain: layout paint style;
+  will-change: transform;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar {
+    background: var(--surface) !important;
+  }
 }
 
 .sidebar-brand {

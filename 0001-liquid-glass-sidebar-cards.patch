@@ -1,0 +1,170 @@
+From cdc7eeb1074b22ff0cf5df60dcedd5ad3421b19b Mon Sep 17 00:00:00 2001
+From: Zimbermanne <zimbermanne@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 08:07:51 +0000
+Subject: [PATCH] Apply liquid-glass distortion filter to sidebar and cards
+
+- Mount the existing LiquidGlassFilter SVG (procedural feTurbulence +
+  chromatic-aberration displacement, same recipe as the uploaded
+  reference) once at the App root - it was defined but never mounted.
+- Add glass tint/border/highlight/filter tokens (light + dark
+  variants) in design-tokens.css.
+- Re-point .card and .sidebar at the glass treatment: translucent
+  tint + backdrop-filter with saturate, inset highlight for the
+  wet-glass edge catch, replacing the flat transparent/no-shadow
+  rules from the earlier frost-removal pass.
+- @supports fallback to a flat surface background where
+  backdrop-filter isn't available.
+---
+ frontend/src/App.jsx                  |  2 ++
+ frontend/src/styles/design-tokens.css | 24 ++++++++++++++
+ frontend/src/styles/globals.css       | 45 ++++++++++++++++++++++-----
+ 3 files changed, 63 insertions(+), 8 deletions(-)
+
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 5e86fce..5cf6d2a 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -10,6 +10,7 @@ import BottomNav from './components/BottomNav.jsx'
+ import PageLoader from './components/PageLoader.jsx'
+ import PlatformBanner from './components/PlatformBanner.jsx'
+ import Clock from './Clock.jsx'
++import LiquidGlassFilter from './components/LiquidGlassFilter.jsx'
+ // Landing and Login are the two screens almost everyone hits first (an
+ // anonymous visitor lands on one or the other), so they stay in the main
+ // bundle -- no loading flicker on the very first paint. Everything past
+@@ -216,6 +217,7 @@ function PrivateRoutes() {
+ export default function App() {
+   return (
+     <AuthProvider>
++      <LiquidGlassFilter />
+       <NavigationGuardProvider>
+         <Suspense fallback={<PageLoader />}>
+         <Routes>
+diff --git a/frontend/src/styles/design-tokens.css b/frontend/src/styles/design-tokens.css
+index 1d82ed9..76a573e 100644
+--- a/frontend/src/styles/design-tokens.css
++++ b/frontend/src/styles/design-tokens.css
+@@ -128,6 +128,19 @@
+ 
+   --neu-accent-light: color-mix(in srgb, var(--accent) 100%, white 30%);
+   --neu-accent-dark:  color-mix(in srgb, var(--accent) 100%, black 25%);
++
++  /* ---- Liquid glass (sidebar / cards) ----
++     Tint sits on top of whatever the panel is floating over; the
++     refraction/chromatic-aberration is done by the SVG filter
++     (--glass-filter), backdrop-filter just adds the blur+saturation
++     and this tint gives it a touch of "body" so it doesn't disappear
++     over a plain background. */
++  --glass-tint:      rgba(255, 255, 255, 0.10);
++  --glass-tint-hover: rgba(255, 255, 255, 0.14);
++  --glass-border:    rgba(255, 255, 255, 0.30);
++  --glass-highlight: rgba(255, 255, 255, 0.45);
++  --glass-filter:    url(#liquid-glass-filter) saturate(1.15);
++  --glass-filter-sm: url(#liquid-glass-filter-sm) saturate(1.15);
+   --neu-accent-raised:  3px 3px 8px var(--neu-accent-dark), -3px -3px 8px var(--neu-accent-light);
+   --neu-accent-pressed: inset 3px 3px 6px var(--neu-accent-dark), inset -2px -2px 5px var(--neu-accent-light);
+ 
+@@ -201,6 +214,12 @@
+   --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+   --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+   --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
++
++  /* ---- Liquid glass — dark inversion: darker tint, dimmer highlight ---- */
++  --glass-tint:      rgba(255, 255, 255, 0.05);
++  --glass-tint-hover: rgba(255, 255, 255, 0.08);
++  --glass-border:    rgba(255, 255, 255, 0.10);
++  --glass-highlight: rgba(255, 255, 255, 0.14);
+ }
+ 
+ /* System default (user hasn't explicitly chosen light or dark) — same
+@@ -247,6 +266,11 @@
+     --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+     --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+     --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
++
++    --glass-tint:      rgba(255, 255, 255, 0.05);
++    --glass-tint-hover: rgba(255, 255, 255, 0.08);
++    --glass-border:    rgba(255, 255, 255, 0.10);
++    --glass-highlight: rgba(255, 255, 255, 0.14);
+   }
+ }
+ 
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index ea3d6e0..31cc7d0 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -163,18 +163,35 @@ button {
+ }
+ 
+ .card {
+-  background: transparent !important;
+-  border: 1px solid var(--border) !important;
++  background: var(--glass-tint) !important;
++  -webkit-backdrop-filter: var(--glass-filter);
++  backdrop-filter: var(--glass-filter);
++  border: 1px solid var(--glass-border) !important;
+   border-radius: 20px;
+-  box-shadow: none !important;
++  box-shadow:
++    inset 0 1px 0 0 var(--glass-highlight),
++    inset 0 0 12px 1px rgba(255, 255, 255, 0.08) !important;
+   padding: 18px;
+   transition: all 0.3s var(--ease);
++  contain: layout paint style;
++  will-change: transform;
+ }
+ 
+ .card:hover {
+-  background: transparent !important;
++  background: var(--glass-tint-hover) !important;
+   transform: translateY(-2px);
+-  box-shadow: none !important;
++  box-shadow:
++    inset 0 1px 0 0 var(--glass-highlight),
++    inset 0 0 14px 1px rgba(255, 255, 255, 0.10) !important;
++}
++
++/* Browsers without backdrop-filter support (or where it's disabled) still
++   need the card to read as a distinct surface, so fall back to a slightly
++   stronger flat tint instead of the near-invisible glass value. */
++@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
++  .card {
++    background: var(--surface) !important;
++  }
+ }
+ 
+ .home-kpi-card {
+@@ -870,15 +887,27 @@ label {
+   top: 16px;
+   height: calc(100vh - 32px);
+   align-self: flex-start;
+-  background: transparent !important;
+-  border: 1px solid var(--border-strong) !important;
++  background: var(--glass-tint) !important;
++  -webkit-backdrop-filter: var(--glass-filter);
++  backdrop-filter: var(--glass-filter);
++  border: 1px solid var(--glass-border) !important;
+   border-radius: 20px;
+-  box-shadow: none !important;
++  box-shadow:
++    inset 0 1px 0 0 var(--glass-highlight),
++    inset 0 0 16px 1px rgba(255, 255, 255, 0.08) !important;
+   display: flex;
+   flex-direction: column;
+   overflow: hidden;
+   transition: width 0.25s ease, max-width 0.25s ease;
+   z-index: 40;
++  contain: layout paint style;
++  will-change: transform;
++}
++
++@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
++  .sidebar {
++    background: var(--surface) !important;
++  }
+ }
+ 
+ .sidebar-brand {
+-- 
+2.43.0
+
