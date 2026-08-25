@@ -545,6 +545,46 @@ td, .stat-value, input[type="number"] {
   .dots-loader-dot { animation: none; }
 }
 
+/* ---- Typing Animation for Search Bars ---- */
+.typing-container {
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.typing-text {
+  position: relative;
+  margin: 0;
+}
+
+.typing-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  background: var(--cream); /* Matches the background being refracted */
+  border-left: 2px solid var(--accent);
+  animation: typing 4s steps(30, end) forwards, blinking 1s steps(1, end) infinite;
+}
+
+@keyframes typing {
+  from { width: 100%; }
+  to { width: 0; }
+}
+
+@keyframes blinking {
+  0%, 100% { border-color: transparent; }
+  50% { border-color: var(--accent); }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
