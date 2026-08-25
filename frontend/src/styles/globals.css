@@ -1369,9 +1369,11 @@ label {
 
   /* Desktop-density spacing is the single biggest reason a responsive page
      still "reads" as a shrunk desktop site instead of a native mobile
-     screen. Phones get tighter, edge-to-edge padding instead. */
+     screen. Phones get tighter, edge-to-edge padding instead. The extra
+     bottom padding clears the fixed .bottom-nav bar, which otherwise
+     covers the last bit of content on every page. */
   .page {
-    padding: 14px;
+    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
   }
 
   .page-header h1 {
@@ -1465,6 +1467,26 @@ label {
   .responsive-table td:empty,
   .responsive-table td[data-label=""] {
     display: none;
+  }
+
+  .pos-mobile-cart-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 57;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   }
 }
 
@@ -2523,6 +2545,12 @@ label {
   background: var(--accent);
   color: #fff;
   box-shadow: var(--neu-accent-raised);
+}
+
+/* POS: sticky mobile cart summary. Hidden on desktop, where the cart panel
+   already sits next to the product grid with nothing to jump to. */
+.pos-mobile-cart-bar {
+  display: none;
 }
 
 .landing-hero-actions {
