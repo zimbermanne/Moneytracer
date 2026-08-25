@@ -10,11 +10,20 @@ from schemas import (
     UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate,
     ForgotPasswordRequest, ResetPasswordConfirmRequest,
 )
-from auth import (
-    hash_password, authenticate_user, create_access_token,
-    get_current_user, require_admin, require_superadmin, set_auth_cookie, clear_auth_cookie,
-    create_password_reset_token, verify_password_reset_token,
-)
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import importlib
+_auth = importlib.import_module('auth')
+hash_password = _auth.hash_password
+authenticate_user = _auth.authenticate_user
+create_access_token = _auth.create_access_token
+get_current_user = _auth.get_current_user
+require_admin = _auth.require_admin
+require_superadmin = _auth.require_superadmin
+set_auth_cookie = _auth.set_auth_cookie
+clear_auth_cookie = _auth.clear_auth_cookie
+create_password_reset_token = _auth.create_password_reset_token
+verify_password_reset_token = _auth.verify_password_reset_token
 from activity import log_activity_for_user, log_activity
 from rate_limit import limiter
 import email_utils
@@ -169,7 +178,7 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from auth import verify_password
+    verify_password = _auth.verify_password
     if current_user.is_demo:
         raise HTTPException(status_code=403, detail="The demo account's password cannot be changed")
     if not verify_password(payload.old_password, current_user.hashed_password):
