@@ -1,0 +1,268 @@
+From ee78bf5c5834715ebc14ef64a67a576c37241d6d Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Tue, 25 Aug 2026 12:31:02 +0000
+Subject: [PATCH 1/2] Fix custom background image not showing in light mode
+
+--app-bg-image was only consumed by the dark-theme .app-shell rules,
+so a custom uploaded background had no effect unless the theme
+resolved to dark. Add a base rule that applies it regardless of theme.
+---
+ frontend/src/styles/globals.css | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index 39a8011..6ab7bcf 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -120,6 +120,16 @@ button {
+   background: transparent;
+ }
+ 
++/* Custom background image applies regardless of light/dark theme.
++   The dark-theme rules below layer their own gradient + fallback hero
++   image on top of this when no custom image is set. */
++.app-shell {
++  background: var(--app-bg-image, transparent);
++  background-size: cover;
++  background-position: center;
++  background-repeat: no-repeat;
++}
++
+ .app-shell::before {
+   display: none;
+ }
+-- 
+2.43.0
+
+
+From 4b6264d1af04a482eacaea30fe8bc57547090909 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Tue, 25 Aug 2026 12:38:10 +0000
+Subject: [PATCH 2/2] Remove accent color picker, fix default to Carrot, add
+ explicit Set button for bg image
+
+- Drop ACCENT_PRESETS/accentKey/customAccent entirely; accent color is
+  now a fixed 'Carrot' orange (#ED9121) baked into useTheme, no longer
+  user-configurable.
+- Background image upload now goes through an explicit 2-step flow:
+  choose an image (shown as a pending preview), then click 'Set as
+  Background' to actually apply it, instead of applying on file pick.
+---
+ .../src/components/AppearanceSettings.jsx     | 101 ++++++++----------
+ frontend/src/hooks/useTheme.jsx               |  28 ++---
+ 2 files changed, 50 insertions(+), 79 deletions(-)
+
+diff --git a/frontend/src/components/AppearanceSettings.jsx b/frontend/src/components/AppearanceSettings.jsx
+index 5357cd2..71ac9a6 100644
+--- a/frontend/src/components/AppearanceSettings.jsx
++++ b/frontend/src/components/AppearanceSettings.jsx
+@@ -1,5 +1,5 @@
+ import { useState } from 'react'
+-import { useTheme, ACCENT_PRESETS } from '../hooks/useTheme.jsx'
++import { useTheme } from '../hooks/useTheme.jsx'
+ 
+ const MODES = [
+   { key: 'light', label: '☀️ Light' },
+@@ -35,29 +35,14 @@ function fileToCompressedDataUrl(file, maxDim = 1600, quality = 0.72) {
+   })
+ }
+ 
+-function Swatch({ active, onClick, title, style }) {
+-  return (
+-    <button
+-      type="button"
+-      onClick={onClick}
+-      title={title}
+-      style={{
+-        width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
+-        border: active ? '3px solid var(--text-dark)' : '2px solid var(--border)',
+-        boxShadow: active ? '0 0 0 2px var(--surface)' : 'none',
+-        padding: 0, ...style,
+-      }}
+-    />
+-  )
+-}
+-
+ export default function AppearanceSettings() {
+   const { prefs, update, reset } = useTheme()
+-  const [customAccentHex, setCustomAccentHex] = useState(prefs.customAccent || '#C15F3C')
+   const [bgError, setBgError] = useState('')
+   const [bgBusy, setBgBusy] = useState(false)
++  // Image the user has picked but not yet applied as the background.
++  const [pendingBgImage, setPendingBgImage] = useState(null)
+ 
+-  const handleBgUpload = async (e) => {
++  const handleBgPick = async (e) => {
+     const file = e.target.files?.[0]
+     e.target.value = '' // allow re-selecting the same file later
+     if (!file) return
+@@ -69,7 +54,7 @@ export default function AppearanceSettings() {
+     setBgBusy(true)
+     try {
+       const dataUrl = await fileToCompressedDataUrl(file)
+-      update({ customBgImage: dataUrl })
++      setPendingBgImage(dataUrl)
+     } catch (err) {
+       setBgError(err.message || 'Could not process that image.')
+     } finally {
+@@ -77,11 +62,19 @@ export default function AppearanceSettings() {
+     }
+   }
+ 
++  const handleSetBg = () => {
++    if (!pendingBgImage) return
++    update({ customBgImage: pendingBgImage })
++    setPendingBgImage(null)
++  }
++
++  const previewImage = pendingBgImage || prefs.customBgImage
++
+   return (
+     <div className="card" style={{ marginTop: 20 }}>
+       <h3 style={{ marginTop: 0 }}>🎨 Appearance</h3>
+       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
+-        Customize the theme and accent color used across the app. Saved on this device.
++        Customize the theme used across the app. Saved on this device.
+       </div>
+ 
+       {/* Theme mode */}
+@@ -101,35 +94,6 @@ export default function AppearanceSettings() {
+         </div>
+       </div>
+ 
+-      {/* Accent color */}
+-      <div className="form-row" style={{ marginBottom: 20 }}>
+-        <label>Accent Color</label>
+-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+-          {Object.entries(ACCENT_PRESETS).map(([key, p]) => (
+-            <Swatch
+-              key={key}
+-              title={p.label}
+-              active={prefs.accentKey === key}
+-              onClick={() => update({ accentKey: key })}
+-              style={{ background: p.accent }}
+-            />
+-          ))}
+-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+-            <input
+-              type="color"
+-              value={customAccentHex}
+-              onChange={(e) => {
+-                setCustomAccentHex(e.target.value)
+-                update({ accentKey: 'custom', customAccent: e.target.value })
+-              }}
+-              style={{ width: 32, height: 32, border: prefs.accentKey === 'custom' ? '3px solid var(--text-dark)' : '2px solid var(--border)', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'none' }}
+-              title="Custom accent color"
+-            />
+-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Custom</span>
+-          </div>
+-        </div>
+-      </div>
+-
+       {/* Background image */}
+       <div className="form-row" style={{ marginBottom: 20 }}>
+         <label>Background Image</label>
+@@ -138,22 +102,41 @@ export default function AppearanceSettings() {
+         </div>
+         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+           <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
+-            {bgBusy ? 'Processing…' : '📁 Upload Image'}
+-            <input type="file" accept="image/*" onChange={handleBgUpload} disabled={bgBusy} style={{ display: 'none' }} />
++            {bgBusy ? 'Processing…' : '📁 Choose Image'}
++            <input type="file" accept="image/*" onChange={handleBgPick} disabled={bgBusy} style={{ display: 'none' }} />
+           </label>
++          <button
++            type="button"
++            className="btn btn-primary"
++            onClick={handleSetBg}
++            disabled={!pendingBgImage || bgBusy}
++          >
++            ✅ Set as Background
++          </button>
+           {prefs.customBgImage && (
+-            <button type="button" className="btn btn-outline" onClick={() => update({ customBgImage: null })}>
++            <button
++              type="button"
++              className="btn btn-outline"
++              onClick={() => { update({ customBgImage: null }); setPendingBgImage(null) }}
++            >
+               Remove (use default)
+             </button>
+           )}
+         </div>
+         {bgError && <div className="error-text" style={{ marginTop: 6 }}>{bgError}</div>}
+-        {prefs.customBgImage && (
+-          <img
+-            src={prefs.customBgImage}
+-            alt="Custom background preview"
+-            style={{ marginTop: 10, width: '100%', maxWidth: 320, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
+-          />
++        {previewImage && (
++          <>
++            <img
++              src={previewImage}
++              alt={pendingBgImage ? 'Selected background preview (not yet applied)' : 'Custom background preview'}
++              style={{ marginTop: 10, width: '100%', maxWidth: 320, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
++            />
++            {pendingBgImage && (
++              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
++                Not applied yet — click "Set as Background" to use this image.
++              </div>
++            )}
++          </>
+         )}
+       </div>
+ 
+diff --git a/frontend/src/hooks/useTheme.jsx b/frontend/src/hooks/useTheme.jsx
+index 16970fd..2ae7510 100644
+--- a/frontend/src/hooks/useTheme.jsx
++++ b/frontend/src/hooks/useTheme.jsx
+@@ -2,19 +2,11 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
+ 
+ const STORAGE_KEY = 'mt-theme-prefs'
+ 
+-export const ACCENT_PRESETS = {
+-  terracotta: { label: 'Terracotta', accent: '#C15F3C', hover: '#A94F30', soft: '#F3E1D6', softDark: '#2d1e17' },
+-  ocean:      { label: 'Ocean',      accent: '#2E6B8A', hover: '#25566F', soft: '#DCEAF1', softDark: '#12232c' },
+-  forest:     { label: 'Forest',     accent: '#4C7A4A', hover: '#3D6339', soft: '#E1EDDD', softDark: '#182619' },
+-  plum:       { label: 'Plum',       accent: '#7B4B8A', hover: '#623A6F', soft: '#EBDFF0', softDark: '#231a29' },
+-  slate:      { label: 'Slate',      accent: '#4A5568', hover: '#3A4353', soft: '#E2E5EA', softDark: '#1c1f27' },
+-  gold:       { label: 'Gold',       accent: '#B9862E', hover: '#9C7026', soft: '#F5E9D3', softDark: '#2a2010' },
+-}
++// Fixed accent — "Carrot" orange. No longer user-configurable.
++const ACCENT = { accent: '#ED9121', hover: '#D67F16', soft: '#FBE3C7', softDark: '#2e1f0d' }
+ 
+ const DEFAULTS = {
+   mode: 'system',           // 'light' | 'dark' | 'system'
+-  accentKey: 'terracotta',  // key into ACCENT_PRESETS, or 'custom'
+-  customAccent: null,       // hex string when accentKey === 'custom'
+   customBgImage: null,      // data URL string, or null to use the theme's default hero image
+ }
+ 
+@@ -45,17 +37,13 @@ function applyPrefs(prefs) {
+     root.setAttribute('data-theme', prefs.mode)
+   }
+ 
+-  // ---- Accent ----
+-  const accent = prefs.accentKey === 'custom' && prefs.customAccent
+-    ? { accent: prefs.customAccent, hover: prefs.customAccent, soft: 'color-mix(in srgb, ' + prefs.customAccent + ' 22%, white)', softDark: 'color-mix(in srgb, ' + prefs.customAccent + ' 30%, black)' }
+-    : (ACCENT_PRESETS[prefs.accentKey] || ACCENT_PRESETS.terracotta)
+-
++  // ---- Accent (fixed) ----
+   const isDark = resolveMode(prefs.mode) === 'dark'
+-  root.style.setProperty('--accent', accent.accent)
+-  root.style.setProperty('--accent-hover', accent.hover)
+-  root.style.setProperty('--accent-soft', isDark ? accent.softDark : accent.soft)
+-  root.style.setProperty('--sidebar-active-text', accent.accent)
+-  root.style.setProperty('--sidebar-active-bg', isDark ? accent.softDark : accent.soft)
++  root.style.setProperty('--accent', ACCENT.accent)
++  root.style.setProperty('--accent-hover', ACCENT.hover)
++  root.style.setProperty('--accent-soft', isDark ? ACCENT.softDark : ACCENT.soft)
++  root.style.setProperty('--sidebar-active-text', ACCENT.accent)
++  root.style.setProperty('--sidebar-active-bg', isDark ? ACCENT.softDark : ACCENT.soft)
+ 
+   // ---- Background image ----
+   if (prefs.customBgImage) {
+-- 
+2.43.0
+
