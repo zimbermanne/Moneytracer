@@ -9,9 +9,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
       borderRadius: '12px',
       overflow: 'hidden',
       border: '1px solid var(--border)',
-      background: 'var(--glass-bg)',
-      backdropFilter: 'var(--glass-blur)',
-      WebkitBackdropFilter: 'var(--glass-blur)',
+      background: 'var(--surface)',
     }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -21,7 +19,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
-          background: 'var(--glass-bg-hover)',
+          background: 'var(--surface-sunken)',
           border: 'none',
           cursor: 'pointer',
           fontWeight: 600,

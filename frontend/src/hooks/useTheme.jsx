@@ -11,30 +11,11 @@ export const ACCENT_PRESETS = {
   gold:       { label: 'Gold',       accent: '#B9862E', hover: '#9C7026', soft: '#F5E9D3', softDark: '#2a2010' },
 }
 
-export const FROST_PRESETS = {
-  classic:  { label: 'Classic White', color: '255, 255, 255' },
-  ice:      { label: 'Ice Blue',      color: '210, 230, 245' },
-  mint:     { label: 'Mint',          color: '210, 240, 225' },
-  blush:    { label: 'Blush',         color: '245, 220, 220' },
-  lavender: { label: 'Lavender',      color: '225, 215, 245' },
-  charcoal: { label: 'Charcoal',      color: '40, 42, 50' },
-}
-
 const DEFAULTS = {
   mode: 'system',           // 'light' | 'dark' | 'system'
   accentKey: 'terracotta',  // key into ACCENT_PRESETS, or 'custom'
   customAccent: null,       // hex string when accentKey === 'custom'
-  frostKey: 'classic',      // key into FROST_PRESETS, or 'custom'
-  customFrostColor: null,   // "r, g, b" string when frostKey === 'custom'
-  frostIntensity: 0.22,     // base alpha for --glass-bg (0.04–0.40)
   customBgImage: null,      // data URL string, or null to use the theme's default hero image
-}
-
-function hexToRgbString(hex) {
-  const m = hex.replace('#', '').match(/.{1,2}/g)
-  if (!m || m.length < 3) return '255, 255, 255'
-  const [r, g, b] = m.map((h) => parseInt(h, 16))
-  return `${r}, ${g}, ${b}`
 }
 
 function loadPrefs() {
@@ -75,22 +56,6 @@ function applyPrefs(prefs) {
   root.style.setProperty('--accent-soft', isDark ? accent.softDark : accent.soft)
   root.style.setProperty('--sidebar-active-text', accent.accent)
   root.style.setProperty('--sidebar-active-bg', isDark ? accent.softDark : accent.soft)
-
-  // ---- Frost / glass ----
-  const rgb = prefs.frostKey === 'custom' && prefs.customFrostColor
-    ? prefs.customFrostColor
-    : (FROST_PRESETS[prefs.frostKey] || FROST_PRESETS.classic).color
-
-  const a = prefs.frostIntensity
-  root.style.setProperty('--glass-bg', `rgba(${rgb}, ${a})`)
-  root.style.setProperty('--glass-bg-hover', `rgba(${rgb}, ${Math.min(a + 0.08, 0.4)})`)
-  root.style.setProperty('--glass-border', `rgba(${rgb}, ${Math.min(a + 0.13, 0.5)})`)
-
-  // Sidebar sits at a different depth than cards and reads best a bit more
-  // opaque — same color, same 1.5x/1.4x ratio the original hand-tuned
-  // defaults used (0.18 vs 0.12 base, 0.35 vs 0.25 border).
-  root.style.setProperty('--glass-bg-sidebar', `rgba(${rgb}, ${Math.min(a * 1.5, 0.55)})`)
-  root.style.setProperty('--glass-border-sidebar', `rgba(${rgb}, ${Math.min(a * 1.4 + 0.13, 0.6)})`)
 
   // ---- Background image ----
   if (prefs.customBgImage) {
@@ -136,10 +101,4 @@ export function useTheme() {
   return ctx
 }
 
-export function rgbStringToHex(rgb) {
-  if (!rgb) return '#ffffff'
-  const [r, g, b] = rgb.split(',').map((n) => parseInt(n.trim(), 10))
-  return '#' + [r, g, b].map((n) => (n || 0).toString(16).padStart(2, '0')).join('')
-}
 
-export { hexToRgbString }

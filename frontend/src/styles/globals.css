@@ -163,41 +163,31 @@ button {
 }
 
 .card {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 20px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
   padding: 18px;
   transition: all 0.3s var(--ease);
-  /* Dashboard/list pages can render a dozen+ .card instances at once,
-     each now running the liquid-glass filter — isolate each one's paint
-     bounds so rasterization cost stays local instead of compounding
-     across the whole grid. (layout/paint/style, not the stricter
-     `contain: strict`, since cards have variable/auto content height.) */
-  contain: layout paint style;
 }
 
 .card:hover {
-  background: var(--glass-bg-hover) !important;
+  background: var(--surface-sunken) !important;
   transform: translateY(-2px);
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 .home-kpi-card {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+  background: var(--surface) !important;
   border-radius: 16px;
   padding: 1.25rem;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
   transition: all 0.3s var(--ease);
 }
 
 .home-kpi-card:hover {
-  background: var(--glass-bg-hover) !important;
+  background: var(--surface-sunken) !important;
 }
 
 :root[data-theme="dark"] .home-kpi-card {
@@ -212,8 +202,6 @@ button {
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.12) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   border-radius: 20px;
   box-shadow:
@@ -291,7 +279,6 @@ button {
 .metric-badge {
   align-self: flex-start;
   background: rgba(255,255,255,0.18);
-  backdrop-filter: var(--glass-blur-sm);
   font-size: 11px;
   font-weight: 600;
   padding: 4px 10px;
@@ -381,7 +368,6 @@ button {
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
-  backdrop-filter: none;
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.05em;
@@ -428,8 +414,6 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   background: rgba(255, 255, 255, 0.10);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
 }
 
 tr:hover td { background: rgba(255, 255, 255, 0.10); }
@@ -564,7 +548,7 @@ td, .stat-value, input[type="number"] {
 .btn-primary:active { box-shadow: var(--neu-accent-pressed); }
 .btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
 .btn-gold:active { box-shadow: var(--neu-pressed); }
-.btn-outline { background: rgba(255,255,255,0.18); backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
+.btn-outline { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
 .btn-outline:hover { background: rgba(255,255,255,0.28); }
 .btn-outline:active { box-shadow: var(--neu-pressed); }
 .btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
@@ -574,12 +558,10 @@ td, .stat-value, input[type="number"] {
 input, select, textarea {
   padding: 9px 12px;
   border-radius: var(--radius);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border);
   font-size: 14px;
   width: 100%;
-  background: var(--glass-bg-hover);
-  backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+  background: var(--surface-sunken);
   font-family: inherit;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.04);
   transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), background var(--duration) var(--ease);
@@ -588,7 +570,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: var(--glass-bg-hover);
+  background: var(--surface-sunken);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 3px var(--accent-soft);
 }
 
@@ -728,8 +710,6 @@ label {
 
 .modal {
   background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 24px;
   padding: 24px;
@@ -765,12 +745,10 @@ label {
 }
 
 .customers-list-pane {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
   padding: 14px;
   max-height: calc(100vh - 220px);
   overflow-y: auto;
@@ -829,10 +807,8 @@ label {
 }
 
 .customers-detail-placeholder {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px dashed var(--glass-border);
+  background: var(--surface);
+  border: 1px dashed var(--border);
   border-radius: var(--radius-lg);
   padding: 40px 20px;
   text-align: center;
@@ -895,24 +871,16 @@ label {
   top: 16px;
   height: calc(100vh - 32px);
   align-self: flex-start;
-  background: var(--glass-bg-sidebar) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border-sidebar) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border-strong) !important;
   border-radius: 20px;
   box-shadow:
-    inset -1px 0 0 0 var(--glass-border-sidebar) !important;
+    inset -1px 0 0 0 var(--border-strong) !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width 0.25s ease, max-width 0.25s ease;
   z-index: 40;
-  /* Sticky + a live backdrop filter repaints on every scroll frame.
-     Isolate paint bounds so that cost doesn't spread to the rest of the
-     page — matters more here than on .card/.modal since the sidebar is
-     on-screen continuously, not just while a modal is open. */
-  contain: layout paint style;
-  will-change: transform;
 }
 
 .sidebar-brand {
@@ -1115,13 +1083,6 @@ label {
   align-items: center;
   gap: 12px;
   background: rgba(15, 25, 45, 0.55);
-  /* -sm here (not the full filter): this bar is sticky and on-screen for
-     the whole session on every phone, so it repaints on every scroll
-     frame — same reasoning as .sidebar's contain/will-change below, but
-     for a bar this thin the full chromatic-aberration pass isn't worth
-     the extra GPU cost on lower-end Android devices. */
-  backdrop-filter: var(--glass-blur-sm) saturate(220%);
-  -webkit-backdrop-filter: var(--glass-blur-sm) saturate(220%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
   padding: 0 14px;
@@ -1129,8 +1090,6 @@ label {
   position: sticky;
   top: 0;
   z-index: 50;
-  contain: layout paint style;
-  will-change: transform;
 }
 
 .mobile-topbar .hamburger,
@@ -1282,13 +1241,10 @@ label {
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* Frosted glass pill container */
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.09);
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
     border-radius: 999px;
     padding: 8px;
-    backdrop-filter: var(--glass-blur-sm) saturate(160%);
-    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
   }
   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
 
@@ -1388,11 +1344,9 @@ label {
 
   /* Desktop-density spacing is the single biggest reason a responsive page
      still "reads" as a shrunk desktop site instead of a native mobile
-     screen. Phones get tighter, edge-to-edge padding instead. The extra
-     bottom padding clears the fixed .bottom-nav bar, which otherwise
-     covers the last bit of content on every page. */
+     screen. Phones get tighter, edge-to-edge padding instead. */
   .page {
-    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
+    padding: 14px;
   }
 
   .page-header h1 {
@@ -1487,26 +1441,6 @@ label {
   .responsive-table td[data-label=""] {
     display: none;
   }
-
-  .pos-mobile-cart-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    z-index: 57;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-full);
-    padding: 12px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-  }
 }
 
 /* ---- MOBILE: tablet / narrow-desktop breakpoint (769px-1100px) --------
@@ -1528,7 +1462,7 @@ label {
   position: relative;
   overflow: hidden;
   /* Sahel dusk illustration (baobabs + mudbrick mosque), with a light
-     wash so the frosted-glass card stays legible against it. */
+     wash so the card content stays legible against it. */
   background:
     linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
     url('../assets/hero-bg.jpg');
@@ -1552,8 +1486,6 @@ label {
 .login-orb-glass {
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0.35) 70%);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 8px 32px rgba(80, 60, 120, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
 }
@@ -1599,10 +1531,8 @@ label {
 }
 
 .login-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 24px;
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.25),
@@ -1884,15 +1814,13 @@ label {
 }
 
 .wizard-card {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: var(--radius-lg);
   padding: 32px;
   width: 640px;
   max-width: 100%;
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 .wizard-steps {
@@ -2566,12 +2494,6 @@ label {
   box-shadow: var(--neu-accent-raised);
 }
 
-/* POS: sticky mobile cart summary. Hidden on desktop, where the cart panel
-   already sits next to the product grid with nothing to jump to. */
-.pos-mobile-cart-bar {
-  display: none;
-}
-
 .landing-hero-actions {
   display: flex;
   align-items: center;
@@ -2622,7 +2544,6 @@ label {
   font-size: var(--text-sm);
   padding: 10px 18px;
   border-radius: var(--radius);
-  backdrop-filter: var(--glass-blur-sm);
 }
 
 .landing-app-download:hover {
@@ -3239,14 +3160,12 @@ label {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
-  border: 1px solid var(--glass-border) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 12px;
   padding: 14px 18px;
   margin-bottom: 18px;
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
 }
 .debtor-summary-item { text-align: left; }
 .debtor-summary-item .label {
@@ -3397,8 +3316,6 @@ label {
         rgba(255,255,255,0.06) 0%,
         rgba(255,255,255,0.02) 40%,
         rgba(255,255,255,0.01) 100%);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow:
       0 12px 32px rgba(0, 0, 0, 0.22),
@@ -3418,8 +3335,6 @@ label {
 :root:not([data-theme]) .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
 :root:not([data-theme]) .modal {
     background: rgba(22, 25, 38, 0.38);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
       0 24px 64px rgba(0, 0, 0, 0.5),
@@ -3437,8 +3352,6 @@ label {
 /* ── Sidebar ── */
 :root:not([data-theme]) .sidebar {
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
   }
@@ -3446,15 +3359,11 @@ label {
 /* ── Topbar / mobile topbar ── */
 :root:not([data-theme]) .mobile-topbar {
     background: rgba(18, 20, 32, 0.55);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-bottom-color: rgba(255, 255, 255, 0.07);
   }
 /* ── Tables ── */
 :root:not([data-theme]) th {
     background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-bottom-color: rgba(255, 255, 255, 0.08);
     color: var(--text-muted);
   }
@@ -3463,8 +3372,6 @@ label {
 /* ── Inputs & selects ── */
 :root:not([data-theme]) input, :root:not([data-theme]) textarea, :root:not([data-theme]) select {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     color: var(--text-dark);
     border-color: rgba(255, 255, 255, 0.12);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
@@ -3478,8 +3385,6 @@ label {
 /* ── Buttons ── */
 :root:not([data-theme]) .btn-outline {
     background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-color: rgba(255, 255, 255, 0.18);
     color: var(--text-dark);
   }
@@ -3539,8 +3444,6 @@ label {
 /* ── DropdownMenu / RowActionsMenu ── */
 :root:not([data-theme]) .dropdown-menu {
     background: rgba(22, 25, 38, 0.72);
-    backdrop-filter: var(--glass-blur-sm) saturate(160%);
-    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
     border-color: rgba(255, 255, 255, 0.09);
     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
   }
@@ -3570,8 +3473,6 @@ label {
         rgba(255,255,255,0.06) 0%,
         rgba(255,255,255,0.02) 40%,
         rgba(255,255,255,0.01) 100%);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
     border: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow:
       0 12px 32px rgba(0, 0, 0, 0.22),
@@ -3591,8 +3492,6 @@ label {
 :root[data-theme="dark"] .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
 :root[data-theme="dark"] .modal {
     background: rgba(22, 25, 38, 0.38);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
       0 24px 64px rgba(0, 0, 0, 0.5),
@@ -3610,8 +3509,6 @@ label {
 /* ── Sidebar ── */
 :root[data-theme="dark"] .sidebar {
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate) brightness(0.96);
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
   }
@@ -3619,15 +3516,11 @@ label {
 /* ── Topbar / mobile topbar ── */
 :root[data-theme="dark"] .mobile-topbar {
     background: rgba(18, 20, 32, 0.55);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-bottom-color: rgba(255, 255, 255, 0.07);
   }
 /* ── Tables ── */
 :root[data-theme="dark"] th {
     background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-bottom-color: rgba(255, 255, 255, 0.08);
     color: var(--text-muted);
   }
@@ -3636,8 +3529,6 @@ label {
 /* ── Inputs & selects ── */
 :root[data-theme="dark"] input, :root[data-theme="dark"] textarea, :root[data-theme="dark"] select {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     color: var(--text-dark);
     border-color: rgba(255, 255, 255, 0.12);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
@@ -3651,8 +3542,6 @@ label {
 /* ── Buttons ── */
 :root[data-theme="dark"] .btn-outline {
     background: rgba(255, 255, 255, 0.10);
-    backdrop-filter: var(--glass-blur-sm);
-    -webkit-backdrop-filter: var(--glass-blur-sm);
     border-color: rgba(255, 255, 255, 0.18);
     color: var(--text-dark);
   }
@@ -3712,8 +3601,6 @@ label {
 /* ── DropdownMenu / RowActionsMenu ── */
 :root[data-theme="dark"] .dropdown-menu {
     background: rgba(22, 25, 38, 0.72);
-    backdrop-filter: var(--glass-blur-sm) saturate(160%);
-    -webkit-backdrop-filter: var(--glass-blur-sm) saturate(160%);
     border-color: rgba(255, 255, 255, 0.09);
     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
   }

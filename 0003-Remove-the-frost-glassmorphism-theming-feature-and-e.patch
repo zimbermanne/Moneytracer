@@ -1,0 +1,835 @@
+From 1d0f49b5b029bf27d71ed3b2664a49337fcb8817 Mon Sep 17 00:00:00 2001
+From: Reggie <reggie@moneytracer.dev>
+Date: Tue, 25 Aug 2026 07:08:29 +0000
+Subject: [PATCH 3/3] Remove the frost/glassmorphism theming feature and effect
+ entirely
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- useTheme.jsx: drop FROST_PRESETS, frostKey, customFrostColor,
+  frostIntensity, and the --glass-* CSS variable computation, plus the
+  now-unused hexToRgbString/rgbStringToHex helpers that only served the
+  frost color pickers.
+- AppearanceSettings.jsx: remove the Frost Color and Frost Intensity
+  controls from the Settings > Appearance panel.
+- design-tokens.css / globals.css: delete the --glass-bg/-hover/-border/
+  -blur/-saturate/-shadow/-sidebar tokens and every backdrop-filter rule
+  that used them (sidebar, cards, modals, login card, pill nav, etc.),
+  replacing translucent glass backgrounds with solid --surface/
+  --surface-sunken and --border/--border-strong.
+- Accordion.jsx, Reports.jsx: swap remaining --glass-bg/-hover usages for
+  solid surface tokens.
+- Landing.jsx: strip its own inline backdrop-filter/blur declarations.
+- Cleaned up stale 'frosted glass' comments in globals.css/Settings.jsx.
+
+Left untouched: the decorative ambient background blobs (.app-blob,
+.login-orb-*) and the unrelated blur() on the unsaved-changes modal
+scrim — neither is the frosted-glass panel effect itself.
+---
+ frontend/src/components/Accordion.jsx         |   6 +-
+ .../src/components/AppearanceSettings.jsx     |  50 +------
+ frontend/src/hooks/useTheme.jsx               |  41 ------
+ frontend/src/pages/Landing.jsx                |  11 --
+ frontend/src/pages/Reports.jsx                |  20 +--
+ frontend/src/pages/Settings.jsx               |   2 +-
+ frontend/src/styles/design-tokens.css         |  18 ---
+ frontend/src/styles/globals.css               | 126 +++++-------------
+ 8 files changed, 46 insertions(+), 228 deletions(-)
+
+diff --git a/frontend/src/components/Accordion.jsx b/frontend/src/components/Accordion.jsx
+index 993415b..a8d155b 100644
+--- a/frontend/src/components/Accordion.jsx
++++ b/frontend/src/components/Accordion.jsx
+@@ -9,9 +9,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
+       borderRadius: '12px',
+       overflow: 'hidden',
+       border: '1px solid var(--border)',
+-      background: 'var(--glass-bg)',
+-      backdropFilter: 'var(--glass-blur)',
+-      WebkitBackdropFilter: 'var(--glass-blur)',
++      background: 'var(--surface)',
+     }}>
+       <button
+         onClick={() => setIsOpen(!isOpen)}
+@@ -21,7 +19,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
+           display: 'flex',
+           justify: 'space-between',
+           alignItems: 'center',
+-          background: 'var(--glass-bg-hover)',
++          background: 'var(--surface-sunken)',
+           border: 'none',
+           cursor: 'pointer',
+           fontWeight: 600,
+diff --git a/frontend/src/components/AppearanceSettings.jsx b/frontend/src/components/AppearanceSettings.jsx
+index 0adfb20..5357cd2 100644
+--- a/frontend/src/components/AppearanceSettings.jsx
++++ b/frontend/src/components/AppearanceSettings.jsx
+@@ -1,5 +1,5 @@
+ import { useState } from 'react'
+-import { useTheme, ACCENT_PRESETS, FROST_PRESETS, hexToRgbString, rgbStringToHex } from '../hooks/useTheme.jsx'
++import { useTheme, ACCENT_PRESETS } from '../hooks/useTheme.jsx'
+ 
+ const MODES = [
+   { key: 'light', label: '☀️ Light' },
+@@ -54,7 +54,6 @@ function Swatch({ active, onClick, title, style }) {
+ export default function AppearanceSettings() {
+   const { prefs, update, reset } = useTheme()
+   const [customAccentHex, setCustomAccentHex] = useState(prefs.customAccent || '#C15F3C')
+-  const [customFrostHex, setCustomFrostHex] = useState(rgbStringToHex(prefs.customFrostColor || '255, 255, 255'))
+   const [bgError, setBgError] = useState('')
+   const [bgBusy, setBgBusy] = useState(false)
+ 
+@@ -82,7 +81,7 @@ export default function AppearanceSettings() {
+     <div className="card" style={{ marginTop: 20 }}>
+       <h3 style={{ marginTop: 0 }}>🎨 Appearance</h3>
+       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
+-        Customize the theme, accent color, and frosted-glass effect used across the app. Saved on this device.
++        Customize the theme and accent color used across the app. Saved on this device.
+       </div>
+ 
+       {/* Theme mode */}
+@@ -131,54 +130,11 @@ export default function AppearanceSettings() {
+         </div>
+       </div>
+ 
+-      {/* Frost color */}
+-      <div className="form-row" style={{ marginBottom: 20 }}>
+-        <label>Frost Color</label>
+-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+-          {Object.entries(FROST_PRESETS).map(([key, p]) => (
+-            <Swatch
+-              key={key}
+-              title={p.label}
+-              active={prefs.frostKey === key}
+-              onClick={() => update({ frostKey: key })}
+-              style={{ background: `rgb(${p.color})`, border: (prefs.frostKey === key ? '3px solid var(--text-dark)' : '2px solid var(--border-strong)') }}
+-            />
+-          ))}
+-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+-            <input
+-              type="color"
+-              value={customFrostHex}
+-              onChange={(e) => {
+-                setCustomFrostHex(e.target.value)
+-                update({ frostKey: 'custom', customFrostColor: hexToRgbString(e.target.value) })
+-              }}
+-              style={{ width: 32, height: 32, border: prefs.frostKey === 'custom' ? '3px solid var(--text-dark)' : '2px solid var(--border)', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'none' }}
+-              title="Custom frost color"
+-            />
+-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Custom</span>
+-          </div>
+-        </div>
+-      </div>
+-
+-      {/* Frost intensity */}
+-      <div className="form-row" style={{ marginBottom: 20, maxWidth: 320 }}>
+-        <label>Frost Intensity ({Math.round(prefs.frostIntensity * 100)}%)</label>
+-        <input
+-          type="range"
+-          min="0.04"
+-          max="0.30"
+-          step="0.01"
+-          value={prefs.frostIntensity}
+-          onChange={(e) => update({ frostIntensity: parseFloat(e.target.value) })}
+-          style={{ width: '100%' }}
+-        />
+-      </div>
+-
+       {/* Background image */}
+       <div className="form-row" style={{ marginBottom: 20 }}>
+         <label>Background Image</label>
+         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+-          Replace the app's backdrop image with your own. It's what shows through behind the frosted cards.
++          Replace the app's backdrop image with your own.
+         </div>
+         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+           <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
+diff --git a/frontend/src/hooks/useTheme.jsx b/frontend/src/hooks/useTheme.jsx
+index f452b5e..16970fd 100644
+--- a/frontend/src/hooks/useTheme.jsx
++++ b/frontend/src/hooks/useTheme.jsx
+@@ -11,32 +11,13 @@ export const ACCENT_PRESETS = {
+   gold:       { label: 'Gold',       accent: '#B9862E', hover: '#9C7026', soft: '#F5E9D3', softDark: '#2a2010' },
+ }
+ 
+-export const FROST_PRESETS = {
+-  classic:  { label: 'Classic White', color: '255, 255, 255' },
+-  ice:      { label: 'Ice Blue',      color: '210, 230, 245' },
+-  mint:     { label: 'Mint',          color: '210, 240, 225' },
+-  blush:    { label: 'Blush',         color: '245, 220, 220' },
+-  lavender: { label: 'Lavender',      color: '225, 215, 245' },
+-  charcoal: { label: 'Charcoal',      color: '40, 42, 50' },
+-}
+-
+ const DEFAULTS = {
+   mode: 'system',           // 'light' | 'dark' | 'system'
+   accentKey: 'terracotta',  // key into ACCENT_PRESETS, or 'custom'
+   customAccent: null,       // hex string when accentKey === 'custom'
+-  frostKey: 'classic',      // key into FROST_PRESETS, or 'custom'
+-  customFrostColor: null,   // "r, g, b" string when frostKey === 'custom'
+-  frostIntensity: 0.22,     // base alpha for --glass-bg (0.04–0.40)
+   customBgImage: null,      // data URL string, or null to use the theme's default hero image
+ }
+ 
+-function hexToRgbString(hex) {
+-  const m = hex.replace('#', '').match(/.{1,2}/g)
+-  if (!m || m.length < 3) return '255, 255, 255'
+-  const [r, g, b] = m.map((h) => parseInt(h, 16))
+-  return `${r}, ${g}, ${b}`
+-}
+-
+ function loadPrefs() {
+   try {
+     const raw = localStorage.getItem(STORAGE_KEY)
+@@ -76,22 +57,6 @@ function applyPrefs(prefs) {
+   root.style.setProperty('--sidebar-active-text', accent.accent)
+   root.style.setProperty('--sidebar-active-bg', isDark ? accent.softDark : accent.soft)
+ 
+-  // ---- Frost / glass ----
+-  const rgb = prefs.frostKey === 'custom' && prefs.customFrostColor
+-    ? prefs.customFrostColor
+-    : (FROST_PRESETS[prefs.frostKey] || FROST_PRESETS.classic).color
+-
+-  const a = prefs.frostIntensity
+-  root.style.setProperty('--glass-bg', `rgba(${rgb}, ${a})`)
+-  root.style.setProperty('--glass-bg-hover', `rgba(${rgb}, ${Math.min(a + 0.08, 0.4)})`)
+-  root.style.setProperty('--glass-border', `rgba(${rgb}, ${Math.min(a + 0.13, 0.5)})`)
+-
+-  // Sidebar sits at a different depth than cards and reads best a bit more
+-  // opaque — same color, same 1.5x/1.4x ratio the original hand-tuned
+-  // defaults used (0.18 vs 0.12 base, 0.35 vs 0.25 border).
+-  root.style.setProperty('--glass-bg-sidebar', `rgba(${rgb}, ${Math.min(a * 1.5, 0.55)})`)
+-  root.style.setProperty('--glass-border-sidebar', `rgba(${rgb}, ${Math.min(a * 1.4 + 0.13, 0.6)})`)
+-
+   // ---- Background image ----
+   if (prefs.customBgImage) {
+     root.style.setProperty('--app-bg-image', `url("${prefs.customBgImage}")`)
+@@ -136,10 +101,4 @@ export function useTheme() {
+   return ctx
+ }
+ 
+-export function rgbStringToHex(rgb) {
+-  if (!rgb) return '#ffffff'
+-  const [r, g, b] = rgb.split(',').map((n) => parseInt(n.trim(), 10))
+-  return '#' + [r, g, b].map((n) => (n || 0).toString(16).padStart(2, '0')).join('')
+-}
+ 
+-export { hexToRgbString }
+diff --git a/frontend/src/pages/Landing.jsx b/frontend/src/pages/Landing.jsx
+index 965b362..4d34c5d 100644
+--- a/frontend/src/pages/Landing.jsx
++++ b/frontend/src/pages/Landing.jsx
+@@ -118,14 +118,10 @@ export default function Landing() {
+         /* ── Glass surface utility ── */
+         .lg-glass {
+           background: rgba(255,255,255,0.08);
+-          backdrop-filter: blur(24px) saturate(180%);
+-          -webkit-backdrop-filter: blur(24px) saturate(180%);
+           border: 1px solid rgba(255,255,255,0.18);
+         }
+         .lg-glass-card {
+           background: rgba(255,255,255,0.07);
+-          backdrop-filter: blur(20px) saturate(160%);
+-          -webkit-backdrop-filter: blur(20px) saturate(160%);
+           border: 1px solid rgba(255,255,255,0.15);
+           border-radius: 20px;
+           box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+@@ -145,8 +141,6 @@ export default function Landing() {
+         }
+         .lg-header.scrolled {
+           background: rgba(10,10,26,0.72);
+-          backdrop-filter: blur(24px) saturate(180%);
+-          -webkit-backdrop-filter: blur(24px) saturate(180%);
+           border-bottom: 1px solid rgba(255,255,255,0.1);
+           box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+         }
+@@ -221,7 +215,6 @@ export default function Landing() {
+           padding: 6px 16px;
+           font-size: 13px; font-weight: 600; color: #c4aaff;
+           margin-bottom: 28px;
+-          backdrop-filter: blur(8px);
+         }
+         .lg-hero-badge-dot {
+           width: 7px; height: 7px; border-radius: 50%;
+@@ -258,7 +251,6 @@ export default function Landing() {
+           border-radius: 999px;
+           padding: 5px;
+           margin-bottom: 36px;
+-          backdrop-filter: blur(12px);
+         }
+         .lg-track-switch button {
+           border: none;
+@@ -306,7 +298,6 @@ export default function Landing() {
+           font-weight: 600; font-size: 15px;
+           padding: 14px 28px;
+           border-radius: 14px;
+-          backdrop-filter: blur(10px);
+           transition: background 0.15s, color 0.15s;
+         }
+         .lg-btn-secondary:hover {
+@@ -324,7 +315,6 @@ export default function Landing() {
+           font-size: 14px; font-weight: 600;
+           padding: 11px 22px;
+           border-radius: 999px;
+-          backdrop-filter: blur(10px);
+           transition: background 0.15s;
+         }
+         .lg-app-download:hover { background: rgba(255,255,255,0.14); color: #fff; }
+@@ -340,7 +330,6 @@ export default function Landing() {
+           border: 1px solid rgba(255,255,255,0.14);
+           border-radius: 16px;
+           padding: 16px 28px;
+-          backdrop-filter: blur(14px);
+           min-width: 120px;
+         }
+         .lg-stat-value {
+diff --git a/frontend/src/pages/Reports.jsx b/frontend/src/pages/Reports.jsx
+index 9910f44..336439a 100644
+--- a/frontend/src/pages/Reports.jsx
++++ b/frontend/src/pages/Reports.jsx
+@@ -98,7 +98,7 @@ function ProfitLoss({ data }) {
+       </Accordion>
+ 
+       <Accordion title="2. Expenses by Category" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.expense_by_category).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+@@ -109,7 +109,7 @@ function ProfitLoss({ data }) {
+       </Accordion>
+ 
+       <Accordion title="3. Revenue by Item" defaultOpen={false}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.revenue_by_item).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+@@ -122,7 +122,7 @@ function ProfitLoss({ data }) {
+           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 15 }}>
+             Sorted by gross profit — which items are actually making you money.
+           </div>
+-          <div style={{ overflowX: 'auto', background: 'var(--glass-bg)', borderRadius: '12px' }}>
++          <div style={{ overflowX: 'auto', background: 'var(--surface)', borderRadius: '12px' }}>
+             <table className="pl-table">
+               <thead>
+                 <tr>
+@@ -217,7 +217,7 @@ function LedgerReport({ data, listKey, title }) {
+ 
+       {list.length > 0 && (
+         <Accordion title={title} defaultOpen={true}>
+-          <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++          <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+             {list.map((r, idx) => (
+               <Row key={idx} left={`${r.name} (${r.status})`} right={money(r.outstanding)} />
+             ))}
+@@ -239,7 +239,7 @@ function InventoryValuation({ data }) {
+       </div>
+ 
+       <Accordion title="Value by Category" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.by_category).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+@@ -247,7 +247,7 @@ function InventoryValuation({ data }) {
+       </Accordion>
+ 
+       <Accordion title="Top Items by Value" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {(data.top_items || []).map((i) => (
+             <Row
+               key={i.item_name}
+@@ -288,7 +288,7 @@ function TrialBalance({ data }) {
+                 <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(acc.balance)}</td>
+               </tr>
+             ))}
+-            <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'var(--glass-bg-hover)', fontWeight: 700 }}>
++            <tr style={{ borderTop: '2px solid var(--border-strong)', backgroundColor: 'var(--surface-sunken)', fontWeight: 700 }}>
+               <td colSpan={3}>Totals</td>
+               <td style={{ textAlign: 'right' }}>{money(data.total_debits)}</td>
+               <td style={{ textAlign: 'right' }}>{money(data.total_credits)}</td>
+@@ -320,7 +320,7 @@ function BalanceSheet({ data }) {
+       </div>
+ 
+       <Accordion title="Assets" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.assets || {}).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+@@ -329,7 +329,7 @@ function BalanceSheet({ data }) {
+       </Accordion>
+ 
+       <Accordion title="Liabilities" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.liabilities || {}).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+@@ -338,7 +338,7 @@ function BalanceSheet({ data }) {
+       </Accordion>
+ 
+       <Accordion title="Equity" defaultOpen={true}>
+-        <div style={{ background: 'var(--glass-bg)', padding: '4px 16px', borderRadius: '12px' }}>
++        <div style={{ background: 'var(--surface)', padding: '4px 16px', borderRadius: '12px' }}>
+           {Object.entries(data.equity || {}).map(([name, val]) => (
+             <Row key={name} left={name} right={money(val)} />
+           ))}
+diff --git a/frontend/src/pages/Settings.jsx b/frontend/src/pages/Settings.jsx
+index 3de9111..0d1677b 100644
+--- a/frontend/src/pages/Settings.jsx
++++ b/frontend/src/pages/Settings.jsx
+@@ -186,7 +186,7 @@ export default function Settings() {
+         </div>
+       </div>
+ 
+-      {/* Appearance: theme mode, accent color, frost color */}
++      {/* Appearance: theme mode, accent color */}
+       <AppearanceSettings />
+ 
+       {/* Legal & policies — opens the public /legal pages in a new tab */}
+diff --git a/frontend/src/styles/design-tokens.css b/frontend/src/styles/design-tokens.css
+index fab6a75..1d82ed9 100644
+--- a/frontend/src/styles/design-tokens.css
++++ b/frontend/src/styles/design-tokens.css
+@@ -10,24 +10,6 @@
+   /* ---- Layout ---- */
+   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
+ 
+-  /* ---- Glassmorphism ----
+-     Shared tokens for the frosted-glass surfaces (.sidebar, .card,
+-     .login-card, .modal, form inputs). Kept here rather than hardcoded
+-     per-selector so the whole app's glass look-and-feel stays in sync from
+-     one place. */
+-  --glass-bg:         rgba(255, 255, 255, 0.22);
+-  --glass-bg-hover:   rgba(255, 255, 255, 0.30);
+-  --glass-border:     rgba(255, 255, 255, 0.35);
+-  --glass-blur:       blur(40px);
+-  --glass-saturate:   saturate(200%);
+-  --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
+-  /* Sidebar sits at a different depth than cards, so it needs a slightly
+-     higher base opacity to read correctly — same recipe, different ratio.
+-     Kept as its own token pair (rather than reusing --glass-bg) so the
+-     theme customizer in Settings can scale both consistently. */
+-  --glass-bg-sidebar:     rgba(255, 255, 255, 0.18);
+-  --glass-border-sidebar: rgba(255, 255, 255, 0.35);
+-
+   /* ---- Core palette ---- */
+   --cream:            #F7F4EE;   /* page background */
+   --surface:          #FFFFFF;   /* cards, inputs, modals */
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index e10238c..f63ca6e 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -163,10 +163,8 @@ button {
+ }
+ 
+ .card {
+-  background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px solid var(--glass-border) !important;
++  background: var(--surface) !important;
++  border: 1px solid var(--border) !important;
+   border-radius: 20px;
+   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+   padding: 18px;
+@@ -174,24 +172,22 @@ button {
+ }
+ 
+ .card:hover {
+-  background: var(--glass-bg-hover) !important;
++  background: var(--surface-sunken) !important;
+   transform: translateY(-2px);
+   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+ }
+ 
+ .home-kpi-card {
+-  background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  background: var(--surface) !important;
+   border-radius: 16px;
+   padding: 1.25rem;
+-  border: 1px solid var(--glass-border) !important;
+-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
++  border: 1px solid var(--border) !important;
++  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+   transition: all 0.3s var(--ease);
+ }
+ 
+ .home-kpi-card:hover {
+-  background: var(--glass-bg-hover) !important;
++  background: var(--surface-sunken) !important;
+ }
+ 
+ :root[data-theme="dark"] .home-kpi-card {
+@@ -206,8 +202,6 @@ button {
+ 
+ .glass-panel {
+   background: rgba(255, 255, 255, 0.12) !important;
+-  backdrop-filter: blur(30px) saturate(190%);
+-  -webkit-backdrop-filter: blur(30px) saturate(190%);
+   border: 1px solid rgba(255, 255, 255, 0.25) !important;
+   border-radius: 20px;
+   box-shadow:
+@@ -285,7 +279,6 @@ button {
+ .metric-badge {
+   align-self: flex-start;
+   background: rgba(255,255,255,0.18);
+-  backdrop-filter: blur(6px);
+   font-size: 11px;
+   font-weight: 600;
+   padding: 4px 10px;
+@@ -375,7 +368,6 @@ button {
+   font-weight: 600;
+   color: var(--text-muted);
+   background: transparent;
+-  backdrop-filter: none;
+   text-transform: uppercase;
+   font-size: 11px;
+   letter-spacing: 0.05em;
+@@ -422,8 +414,6 @@ th {
+   text-transform: uppercase;
+   letter-spacing: 0.03em;
+   background: rgba(255, 255, 255, 0.10);
+-  backdrop-filter: blur(16px);
+-  -webkit-backdrop-filter: blur(16px);
+ }
+ 
+ tr:hover td { background: rgba(255, 255, 255, 0.10); }
+@@ -558,7 +548,7 @@ td, .stat-value, input[type="number"] {
+ .btn-primary:active { box-shadow: var(--neu-accent-pressed); }
+ .btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
+ .btn-gold:active { box-shadow: var(--neu-pressed); }
+-.btn-outline { background: rgba(255,255,255,0.18); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
++.btn-outline { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
+ .btn-outline:hover { background: rgba(255,255,255,0.28); }
+ .btn-outline:active { box-shadow: var(--neu-pressed); }
+ .btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
+@@ -568,12 +558,10 @@ td, .stat-value, input[type="number"] {
+ input, select, textarea {
+   padding: 9px 12px;
+   border-radius: var(--radius);
+-  border: 1px solid var(--glass-border);
++  border: 1px solid var(--border);
+   font-size: 14px;
+   width: 100%;
+-  background: var(--glass-bg-hover);
+-  backdrop-filter: blur(20px) saturate(180%);
+-  -webkit-backdrop-filter: blur(20px) saturate(180%);
++  background: var(--surface-sunken);
+   font-family: inherit;
+   box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.04);
+   transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), background var(--duration) var(--ease);
+@@ -582,7 +570,7 @@ input, select, textarea {
+ input:focus, select:focus, textarea:focus {
+   outline: none;
+   border-color: var(--accent);
+-  background: var(--glass-bg-hover);
++  background: var(--surface-sunken);
+   box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 3px var(--accent-soft);
+ }
+ 
+@@ -722,8 +710,6 @@ label {
+ 
+ .modal {
+   background: rgba(255, 255, 255, 0.25);
+-  backdrop-filter: blur(35px) saturate(200%);
+-  -webkit-backdrop-filter: blur(35px) saturate(200%);
+   border: 1px solid rgba(255, 255, 255, 0.4);
+   border-radius: 24px;
+   padding: 24px;
+@@ -759,12 +745,10 @@ label {
+ }
+ 
+ .customers-list-pane {
+-  background: var(--glass-bg);
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px solid var(--glass-border);
++  background: var(--surface);
++  border: 1px solid var(--border);
+   border-radius: var(--radius-lg);
+-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
++  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+   padding: 14px;
+   max-height: calc(100vh - 220px);
+   overflow-y: auto;
+@@ -823,10 +807,8 @@ label {
+ }
+ 
+ .customers-detail-placeholder {
+-  background: var(--glass-bg);
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px dashed var(--glass-border);
++  background: var(--surface);
++  border: 1px dashed var(--border);
+   border-radius: var(--radius-lg);
+   padding: 40px 20px;
+   text-align: center;
+@@ -889,13 +871,11 @@ label {
+   top: 16px;
+   height: calc(100vh - 32px);
+   align-self: flex-start;
+-  background: var(--glass-bg-sidebar) !important;
+-  backdrop-filter: blur(30px) saturate(200%);
+-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+-  border: 1px solid var(--glass-border-sidebar) !important;
++  background: var(--surface) !important;
++  border: 1px solid var(--border-strong) !important;
+   border-radius: 20px;
+   box-shadow:
+-    inset -1px 0 0 0 var(--glass-border-sidebar) !important;
++    inset -1px 0 0 0 var(--border-strong) !important;
+   display: flex;
+   flex-direction: column;
+   overflow: hidden;
+@@ -1103,8 +1083,6 @@ label {
+   align-items: center;
+   gap: 12px;
+   background: rgba(15, 25, 45, 0.55);
+-  backdrop-filter: blur(24px) saturate(220%);
+-  -webkit-backdrop-filter: blur(24px) saturate(220%);
+   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+   color: #fff;
+   padding: 0 14px;
+@@ -1263,13 +1241,10 @@ label {
+     scroll-snap-type: x proximity;
+     -webkit-overflow-scrolling: touch;
+     scrollbar-width: none;
+-    /* Frosted glass pill container */
+-    background: rgba(255,255,255,0.04);
+-    border: 1px solid rgba(255,255,255,0.09);
++    background: var(--surface-sunken);
++    border: 1px solid var(--border);
+     border-radius: 999px;
+     padding: 8px;
+-    backdrop-filter: blur(14px) saturate(160%);
+-    -webkit-backdrop-filter: blur(14px) saturate(160%);
+   }
+   .bottom-nav-scroll::-webkit-scrollbar { display: none; }
+ 
+@@ -1487,7 +1462,7 @@ label {
+   position: relative;
+   overflow: hidden;
+   /* Sahel dusk illustration (baobabs + mudbrick mosque), with a light
+-     wash so the frosted-glass card stays legible against it. */
++     wash so the card content stays legible against it. */
+   background:
+     linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)),
+     url('../assets/hero-bg.jpg');
+@@ -1511,8 +1486,6 @@ label {
+ .login-orb-glass {
+   background:
+     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0.35) 70%);
+-  backdrop-filter: blur(2px);
+-  -webkit-backdrop-filter: blur(2px);
+   border: 1px solid rgba(255, 255, 255, 0.6);
+   box-shadow: 0 8px 32px rgba(80, 60, 120, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+ }
+@@ -1558,10 +1531,8 @@ label {
+ }
+ 
+ .login-card {
+-  background: var(--glass-bg);
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px solid var(--glass-border);
++  background: var(--surface);
++  border: 1px solid var(--border);
+   border-radius: 24px;
+   box-shadow:
+     0 20px 50px rgba(0, 0, 0, 0.25),
+@@ -1843,15 +1814,13 @@ label {
+ }
+ 
+ .wizard-card {
+-  background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px solid var(--glass-border) !important;
++  background: var(--surface) !important;
++  border: 1px solid var(--border) !important;
+   border-radius: var(--radius-lg);
+   padding: 32px;
+   width: 640px;
+   max-width: 100%;
+-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
++  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+ }
+ 
+ .wizard-steps {
+@@ -2575,7 +2544,6 @@ label {
+   font-size: var(--text-sm);
+   padding: 10px 18px;
+   border-radius: var(--radius);
+-  backdrop-filter: blur(4px);
+ }
+ 
+ .landing-app-download:hover {
+@@ -3192,14 +3160,12 @@ label {
+   display: flex;
+   justify-content: space-between;
+   gap: 16px;
+-  background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  border: 1px solid var(--glass-border) !important;
++  background: var(--surface) !important;
++  border: 1px solid var(--border) !important;
+   border-radius: 12px;
+   padding: 14px 18px;
+   margin-bottom: 18px;
+-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
++  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+ }
+ .debtor-summary-item { text-align: left; }
+ .debtor-summary-item .label {
+@@ -3350,8 +3316,6 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: blur(40px) saturate(200%);
+-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+@@ -3371,8 +3335,6 @@ label {
+ :root:not([data-theme]) .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+ :root:not([data-theme]) .modal {
+     background: rgba(22, 25, 38, 0.38);
+-    backdrop-filter: blur(56px) saturate(200%);
+-    -webkit-backdrop-filter: blur(56px) saturate(200%);
+     border: 1px solid rgba(255, 255, 255, 0.08);
+     box-shadow:
+       0 24px 64px rgba(0, 0, 0, 0.5),
+@@ -3390,8 +3352,6 @@ label {
+ /* ── Sidebar ── */
+ :root:not([data-theme]) .sidebar {
+     background: rgba(255, 255, 255, 0.03);
+-    backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+-    -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+     border: 1px solid rgba(255, 255, 255, 0.07);
+     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+   }
+@@ -3399,15 +3359,11 @@ label {
+ /* ── Topbar / mobile topbar ── */
+ :root:not([data-theme]) .mobile-topbar {
+     background: rgba(18, 20, 32, 0.55);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
+     border-bottom-color: rgba(255, 255, 255, 0.07);
+   }
+ /* ── Tables ── */
+ :root:not([data-theme]) th {
+     background: rgba(255, 255, 255, 0.06);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
+     border-bottom-color: rgba(255, 255, 255, 0.08);
+     color: var(--text-muted);
+   }
+@@ -3416,8 +3372,6 @@ label {
+ /* ── Inputs & selects ── */
+ :root:not([data-theme]) input, :root:not([data-theme]) textarea, :root:not([data-theme]) select {
+     background: rgba(255, 255, 255, 0.05);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
+     color: var(--text-dark);
+     border-color: rgba(255, 255, 255, 0.12);
+     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
+@@ -3431,8 +3385,6 @@ label {
+ /* ── Buttons ── */
+ :root:not([data-theme]) .btn-outline {
+     background: rgba(255, 255, 255, 0.10);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
+     border-color: rgba(255, 255, 255, 0.18);
+     color: var(--text-dark);
+   }
+@@ -3492,8 +3444,6 @@ label {
+ /* ── DropdownMenu / RowActionsMenu ── */
+ :root:not([data-theme]) .dropdown-menu {
+     background: rgba(22, 25, 38, 0.72);
+-    backdrop-filter: blur(24px) saturate(160%);
+-    -webkit-backdrop-filter: blur(24px) saturate(160%);
+     border-color: rgba(255, 255, 255, 0.09);
+     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+   }
+@@ -3523,8 +3473,6 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: blur(40px) saturate(200%);
+-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+@@ -3544,8 +3492,6 @@ label {
+ :root[data-theme="dark"] .modal-backdrop { background: rgba(0, 0, 0, 0.45); }
+ :root[data-theme="dark"] .modal {
+     background: rgba(22, 25, 38, 0.38);
+-    backdrop-filter: blur(56px) saturate(200%);
+-    -webkit-backdrop-filter: blur(56px) saturate(200%);
+     border: 1px solid rgba(255, 255, 255, 0.08);
+     box-shadow:
+       0 24px 64px rgba(0, 0, 0, 0.5),
+@@ -3563,8 +3509,6 @@ label {
+ /* ── Sidebar ── */
+ :root[data-theme="dark"] .sidebar {
+     background: rgba(255, 255, 255, 0.03);
+-    backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+-    -webkit-backdrop-filter: blur(72px) saturate(200%) brightness(0.96);
+     border: 1px solid rgba(255, 255, 255, 0.07);
+     box-shadow: 0 2px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.07);
+   }
+@@ -3572,15 +3516,11 @@ label {
+ /* ── Topbar / mobile topbar ── */
+ :root[data-theme="dark"] .mobile-topbar {
+     background: rgba(18, 20, 32, 0.55);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
+     border-bottom-color: rgba(255, 255, 255, 0.07);
+   }
+ /* ── Tables ── */
+ :root[data-theme="dark"] th {
+     background: rgba(255, 255, 255, 0.06);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
+     border-bottom-color: rgba(255, 255, 255, 0.08);
+     color: var(--text-muted);
+   }
+@@ -3589,8 +3529,6 @@ label {
+ /* ── Inputs & selects ── */
+ :root[data-theme="dark"] input, :root[data-theme="dark"] textarea, :root[data-theme="dark"] select {
+     background: rgba(255, 255, 255, 0.05);
+-    backdrop-filter: blur(20px);
+-    -webkit-backdrop-filter: blur(20px);
+     color: var(--text-dark);
+     border-color: rgba(255, 255, 255, 0.12);
+     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.15);
+@@ -3604,8 +3542,6 @@ label {
+ /* ── Buttons ── */
+ :root[data-theme="dark"] .btn-outline {
+     background: rgba(255, 255, 255, 0.10);
+-    backdrop-filter: blur(8px);
+-    -webkit-backdrop-filter: blur(8px);
+     border-color: rgba(255, 255, 255, 0.18);
+     color: var(--text-dark);
+   }
+@@ -3665,8 +3601,6 @@ label {
+ /* ── DropdownMenu / RowActionsMenu ── */
+ :root[data-theme="dark"] .dropdown-menu {
+     background: rgba(22, 25, 38, 0.72);
+-    backdrop-filter: blur(24px) saturate(160%);
+-    -webkit-backdrop-filter: blur(24px) saturate(160%);
+     border-color: rgba(255, 255, 255, 0.09);
+     box-shadow: 0 12px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+   }
+-- 
+2.43.0
+

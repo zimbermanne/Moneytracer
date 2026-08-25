@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTheme, ACCENT_PRESETS, FROST_PRESETS, hexToRgbString, rgbStringToHex } from '../hooks/useTheme.jsx'
+import { useTheme, ACCENT_PRESETS } from '../hooks/useTheme.jsx'
 
 const MODES = [
   { key: 'light', label: '☀️ Light' },
@@ -54,7 +54,6 @@ function Swatch({ active, onClick, title, style }) {
 export default function AppearanceSettings() {
   const { prefs, update, reset } = useTheme()
   const [customAccentHex, setCustomAccentHex] = useState(prefs.customAccent || '#C15F3C')
-  const [customFrostHex, setCustomFrostHex] = useState(rgbStringToHex(prefs.customFrostColor || '255, 255, 255'))
   const [bgError, setBgError] = useState('')
   const [bgBusy, setBgBusy] = useState(false)
 
@@ -82,7 +81,7 @@ export default function AppearanceSettings() {
     <div className="card" style={{ marginTop: 20 }}>
       <h3 style={{ marginTop: 0 }}>🎨 Appearance</h3>
       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
-        Customize the theme, accent color, and frosted-glass effect used across the app. Saved on this device.
+        Customize the theme and accent color used across the app. Saved on this device.
       </div>
 
       {/* Theme mode */}
@@ -131,54 +130,11 @@ export default function AppearanceSettings() {
         </div>
       </div>
 
-      {/* Frost color */}
-      <div className="form-row" style={{ marginBottom: 20 }}>
-        <label>Frost Color</label>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          {Object.entries(FROST_PRESETS).map(([key, p]) => (
-            <Swatch
-              key={key}
-              title={p.label}
-              active={prefs.frostKey === key}
-              onClick={() => update({ frostKey: key })}
-              style={{ background: `rgb(${p.color})`, border: (prefs.frostKey === key ? '3px solid var(--text-dark)' : '2px solid var(--border-strong)') }}
-            />
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
-            <input
-              type="color"
-              value={customFrostHex}
-              onChange={(e) => {
-                setCustomFrostHex(e.target.value)
-                update({ frostKey: 'custom', customFrostColor: hexToRgbString(e.target.value) })
-              }}
-              style={{ width: 32, height: 32, border: prefs.frostKey === 'custom' ? '3px solid var(--text-dark)' : '2px solid var(--border)', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'none' }}
-              title="Custom frost color"
-            />
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Custom</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Frost intensity */}
-      <div className="form-row" style={{ marginBottom: 20, maxWidth: 320 }}>
-        <label>Frost Intensity ({Math.round(prefs.frostIntensity * 100)}%)</label>
-        <input
-          type="range"
-          min="0.04"
-          max="0.30"
-          step="0.01"
-          value={prefs.frostIntensity}
-          onChange={(e) => update({ frostIntensity: parseFloat(e.target.value) })}
-          style={{ width: '100%' }}
-        />
-      </div>
-
       {/* Background image */}
       <div className="form-row" style={{ marginBottom: 20 }}>
         <label>Background Image</label>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-          Replace the app's backdrop image with your own. It's what shows through behind the frosted cards.
+          Replace the app's backdrop image with your own.
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>

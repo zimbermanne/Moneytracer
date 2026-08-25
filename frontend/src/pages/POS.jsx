@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
@@ -26,7 +26,6 @@ export default function POS() {
   const [drafts, setDrafts] = useState([])
   const [showDrafts, setShowDrafts] = useState(false)
   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
-  const cartRef = useRef(null)
 
   const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0)
 
@@ -228,7 +227,7 @@ export default function POS() {
           </div>
         </div>
 
-        <div style={{ flex: 1, minWidth: 280 }} ref={cartRef}>
+        <div style={{ flex: 1, minWidth: 280 }}>
           <div className="card">
             <h2 style={{ marginTop: 0, fontSize: 16 }}>Cart</h2>
             {cart.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No items added.</div>}
@@ -370,17 +369,6 @@ export default function POS() {
             ))}
           </div>
         </Modal>
-      )}
-
-      {/* Phone-only: the cart lives below a whole grid of products, so
-          without this a cashier has to scroll all the way down just to see
-          the running total or reach checkout. This sticky bar surfaces
-          both at all times and jumps down to the real cart on tap. */}
-      {cart.length > 0 && (
-        <button type="button" className="pos-mobile-cart-bar" onClick={() => cartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-          <span>🛒 {cart.length} item{cart.length !== 1 ? 's' : ''}</span>
-          <span>TZS {total.toLocaleString()} · View Cart ▲</span>
-        </button>
       )}
     </div>
   )

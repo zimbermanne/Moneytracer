@@ -186,7 +186,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Appearance: theme mode, accent color, frost color */}
+      {/* Appearance: theme mode, accent color */}
       <AppearanceSettings />
 
       {/* Legal & policies — opens the public /legal pages in a new tab */}
