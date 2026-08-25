@@ -90,8 +90,8 @@ body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-weight: 500; /* Slightly heavier base weight for better visibility on glass */
   background:
-    linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15)),
-    url('https://images.unsplash.com/photo-1551384963-cccb0b7ed94b?q=80&w=3247&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+    linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.05)),
+    url('/bg.png');
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
