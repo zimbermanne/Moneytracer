@@ -1,7 +1,7 @@
 From ab898edd991fb6d46496b05524ba96e2496166cb Mon Sep 17 00:00:00 2001
 From: zimbermanne <zimbermanne@users.noreply.github.com>
 Date: Tue, 25 Aug 2026 06:36:16 +0000
-Subject: [PATCH 2/2] Replace frosted glass with liquid glass (SVG refraction +
+Subject: [PATCH 2/3] Replace frosted glass with liquid glass (SVG refraction +
  chromatic aberration)
 
 - Add LiquidGlassFilter.jsx: SVG feDisplacementMap-based filter with

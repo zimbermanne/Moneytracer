@@ -1,0 +1,145 @@
+From 8292f18071759b47bc3097ff4ff6f75ee9942224 Mon Sep 17 00:00:00 2001
+From: zimbermanne <zimbermanne@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 06:55:55 +0000
+Subject: [PATCH 3/3] Fix liquid-glass perf and overbright cards
+
+Two bugs from the previous liquid-glass commit:
+
+1. Overbright: the specular-highlight pass was additively composited
+   across the WHOLE surface at full strength (feComposite k2=1 k3=1),
+   not clipped to just curved edges the way a real light-catch should
+   be. On light cream/white cards this washed the surface out toward
+   white. Reduced specularConstant 0.55 -> 0.35 and weighted the
+   specular contribution down to ~18% of the composite instead of 100%.
+
+2. Slow: .card and .home-kpi-card were on the FULL filter (3x
+   feDisplacementMap chromatic split + feSpecularLighting), and both
+   render many-at-once (dashboard KPI row via .map(), 5-6 static cards
+   on Settings/Personal/Reports pages) -- that's the expensive filter
+   pipeline running a dozen+ times simultaneously on one page. Moved
+   both (light mode + both dark-mode override blocks) to the lighter
+   -sm filter (single displacement pass, no specular at all -- also
+   incidentally fixes the brightness issue on these specifically).
+   Full filter now reserved for surfaces that only ever render one at
+   a time: .modal, .sidebar, .login-card, .wizard-card, customer
+   list/detail panes, debtor-summary-card, and the Landing page hero.
+
+Also shrank the filter region (x/y -20%/140% -> -10%/120%) to cut
+raster area per instance.
+---
+ frontend/src/components/LiquidGlassFilter.jsx | 15 ++++++---
+ frontend/src/styles/globals.css               | 31 +++++++++++--------
+ 2 files changed, 28 insertions(+), 18 deletions(-)
+
+diff --git a/frontend/src/components/LiquidGlassFilter.jsx b/frontend/src/components/LiquidGlassFilter.jsx
+index 19a0189..7aa7fb1 100644
+--- a/frontend/src/components/LiquidGlassFilter.jsx
++++ b/frontend/src/components/LiquidGlassFilter.jsx
+@@ -30,7 +30,7 @@ export default function LiquidGlassFilter() {
+             Procedural fractal noise standing in for a baked displacement
+             map. baseFrequency/numOctaves tuned for a gentle, glassy
+             ripple rather than a busy/noisy texture. */}
+-        <filter id="liquid-glass-filter" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
++        <filter id="liquid-glass-filter" color-interpolation-filters="sRGB" x="-10%" y="-10%" width="120%" height="120%">
+           <feTurbulence
+             type="fractalNoise"
+             baseFrequency="0.008 0.012"
+@@ -70,13 +70,18 @@ export default function LiquidGlassFilter() {
+ 
+           {/* ---- Specular highlight: a soft directional light catch
+               along the distortion field, giving the "wet glass" sheen
+-              on curved corners. Kept subtle (low surfaceScale) so it
+-              reads as a highlight, not a glare. ---- */}
+-          <feSpecularLighting in="softNoise" surfaceScale="3" specularConstant="0.55" specularExponent="12" lightingColor="#ffffff" result="specular">
++              on curved corners. surfaceScale/specularConstant kept low,
++              and the final composite weights the specular contribution
++              down to ~18% (k2) instead of adding it at full strength —
++              full-strength addition washed out light-colored (cream/
++              white) cards to near-white since it wasn't actually
++              clipped to just the edges. This reads as a highlight
++              catching the light, not a glare covering the surface. ---- */}
++          <feSpecularLighting in="softNoise" surfaceScale="2" specularConstant="0.35" specularExponent="14" lightingColor="#ffffff" result="specular">
+             <feDistantLight azimuth="235" elevation="60" />
+           </feSpecularLighting>
+           <feComposite in="specular" in2="chroma" operator="in" result="specularClipped" />
+-          <feComposite in="chroma" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="withSpecular" />
++          <feComposite in="chroma" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.18" k4="0" result="withSpecular" />
+ 
+           <feGaussianBlur in="withSpecular" stdDeviation="0.6" />
+         </filter>
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index 9da141a..16e444c 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -164,18 +164,20 @@ button {
+ 
+ .card {
+   background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  /* -sm, not the full chromatic/specular filter: this page can render a
++     dozen+ .card instances at once (dashboards, list pages), and the
++     full filter running that many times simultaneously was the main
++     cause of the interface feeling slow. -sm keeps the refraction feel
++     at a fraction of the GPU cost. Full filter is reserved for one-at-a-
++     time surfaces (.modal, .sidebar, .login-card). */
++  backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+   border: 1px solid var(--glass-border) !important;
+   border-radius: 20px;
+   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+   padding: 18px;
+   transition: all 0.3s var(--ease);
+-  /* Dashboard/list pages can render a dozen+ .card instances at once,
+-     each now running the liquid-glass filter — isolate each one's paint
+-     bounds so rasterization cost stays local instead of compounding
+-     across the whole grid. (layout/paint/style, not the stricter
+-     `contain: strict`, since cards have variable/auto content height.) */
++  /* Isolate paint bounds so cost doesn't compound across a grid of cards. */
+   contain: layout paint style;
+ }
+ 
+@@ -187,13 +189,16 @@ button {
+ 
+ .home-kpi-card {
+   background: var(--glass-bg) !important;
+-  backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-  -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
++  /* Same reasoning as .card above — the dashboard renders several of
++     these side by side via .map(), so this needs to stay cheap. */
++  backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++  -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+   border-radius: 16px;
+   padding: 1.25rem;
+   border: 1px solid var(--glass-border) !important;
+   box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+   transition: all 0.3s var(--ease);
++  contain: layout paint style;
+ }
+ 
+ .home-kpi-card:hover {
+@@ -3397,8 +3402,8 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+@@ -3570,8 +3575,8 @@ label {
+         rgba(255,255,255,0.06) 0%,
+         rgba(255,255,255,0.02) 40%,
+         rgba(255,255,255,0.01) 100%);
+-    backdrop-filter: var(--glass-blur) var(--glass-saturate);
+-    -webkit-backdrop-filter: var(--glass-blur) var(--glass-saturate);
++    backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
++    -webkit-backdrop-filter: var(--glass-blur-sm) var(--glass-saturate);
+     border: 1px solid rgba(255, 255, 255, 0.06);
+     box-shadow:
+       0 12px 32px rgba(0, 0, 0, 0.22),
+-- 
+2.43.0
+
