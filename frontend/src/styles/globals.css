@@ -32,6 +32,13 @@
 
 @import './design-tokens.css';
 
+:root {
+  --glass-frost: 0.1;
+  --glass-saturation: 1.2;
+  --filter-id: url(#glass-filter-_r_b_);
+}
+
+
 @font-face {
   font-family: "Modern Mono";
   src: url('../assets/fonts/Modern_Mono.otf') format('opentype');
@@ -111,20 +118,50 @@ button {
   position: fixed;
   inset: 0;
   z-index: -1;
-  /* Sahel dusk illustration (baobabs + mudbrick mosque) fixed in place so it
-     doesn't scroll with page content, with a soft white wash over the top so
-     dense dashboard/table content stays readable on top of it. */
+  /* Liquid Glass theme background — uses a high-resolution Unsplash nature
+     shot with a soft wash to keep content legible. */
   background:
-    linear-gradient(rgba(247, 244, 238, 0.55), rgba(247, 244, 238, 0.45)),
-    var(--app-bg-image, url('../assets/hero-bg.jpg'));
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
+    linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15)),
+    url('https://images.unsplash.com/photo-1551384963-cccb0b7ed94b?q=80&w=3247&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 
 /* ── Soft ambient color blobs — give glass cards something to refract
    on flat (non-photo) pages. Fixed so they stay put while content scrolls. ── */
+.liquidglass {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: min(90vw, 340px);
+  height: min(30vh, 140px);
+  background: hsl(0 0% 0% / var(--glass-frost, 0));
+  -webkit-backdrop-filter: var(--filter-id) saturate(var(--glass-saturation, 1));
+  backdrop-filter: var(--filter-id) saturate(var(--glass-saturation, 1));
+  box-shadow:
+    inset 0 0 2px 1px rgba(255, 255, 255, 0.35),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    inset 0 4px 16px rgba(17, 17, 26, 0.05),
+    inset 0 8px 24px rgba(17, 17, 26, 0.05),
+    inset 0 6px 56px rgba(17, 17, 26, 0.05);
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.glass-surface__filter {
+  pointer-events: none;
+  opacity: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
 .app-blob {
   position: fixed;
   border-radius: 50%;

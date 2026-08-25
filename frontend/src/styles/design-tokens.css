@@ -139,7 +139,7 @@
   --glass-tint-hover: rgba(255, 255, 255, 0.14);
   --glass-border:    rgba(255, 255, 255, 0.30);
   --glass-highlight: rgba(255, 255, 255, 0.45);
-  --glass-filter:    url(#liquid-glass-filter) saturate(1.15);
+  --glass-filter:    url(#glass-filter-_r_b_) saturate(var(--glass-saturation, 1.2));
   --glass-filter-sm: url(#liquid-glass-filter-sm) saturate(1.15);
   --neu-accent-raised:  3px 3px 8px var(--neu-accent-dark), -3px -3px 8px var(--neu-accent-light);
   --neu-accent-pressed: inset 3px 3px 6px var(--neu-accent-dark), inset -2px -2px 5px var(--neu-accent-light);
