@@ -6,30 +6,35 @@ export default function Accordion({ title, defaultOpen = false, children }) {
   return (
     <div style={{
       marginBottom: '1rem',
-      borderRadius: '12px',
+      borderRadius: '20px',
       overflow: 'hidden',
-      border: '1px solid var(--border)',
-      background: 'var(--surface)',
+      border: '1px solid var(--glass-border)',
+      background: 'var(--glass-tint)',
+      backdropFilter: 'var(--glass-filter)',
+      WebkitBackdropFilter: 'var(--glass-filter)',
+      boxShadow: 'inset 0 0 2px 1px rgba(255, 255, 255, 0.35), inset 0 0 10px 4px rgba(255, 255, 255, 0.15)',
+      contain: 'layout paint style',
     }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
           width: '100%',
-          padding: '1rem 1.25rem',
+          padding: '1.1rem 1.4rem',
           display: 'flex',
           justify: 'space-between',
           alignItems: 'center',
-          background: 'var(--surface-sunken)',
+          background: 'rgba(255, 255, 255, 0.05)',
           border: 'none',
           cursor: 'pointer',
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: '1rem',
           color: 'var(--text-dark)',
           textAlign: 'left',
           transition: 'background 0.2s ease',
+          fontFamily: 'var(--font-display)',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.08)'}
-        onMouseLeave={(e) => e.currentTarget.style.filter = 'none'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {title}
@@ -45,7 +50,7 @@ export default function Accordion({ title, defaultOpen = false, children }) {
         <div style={{
           padding: '1.25rem',
           background: 'transparent',
-          borderTop: '1px solid var(--border)',
+          borderTop: '1px solid var(--glass-border)',
           animation: 'accordion-fade-in 0.2s ease-out'
         }}>
           {children}

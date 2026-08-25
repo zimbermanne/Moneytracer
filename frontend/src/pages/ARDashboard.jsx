@@ -26,7 +26,7 @@ function KpiCard({ label, value, health, onClick }) {
 
   return (
     <div
-      className="home-kpi-card metric-card"
+      className="card home-kpi-card metric-card"
       onClick={onClick}
       style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative' }}
     >

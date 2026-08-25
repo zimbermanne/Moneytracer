@@ -199,16 +199,16 @@ function LedgerReport({ data, listKey, title }) {
   return (
     <>
       <div className="card-grid">
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Total Outstanding</div>
           <div className="value">{money(data.total_outstanding)}</div>
         </div>
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Count</div>
           <div className="value">{data.count}</div>
         </div>
         {Object.entries(data.by_status || {}).map(([status, count]) => (
-          <div className="home-kpi-card metric-card" key={status}>
+          <div className="card home-kpi-card metric-card" key={status}>
             <div className="label" style={{ textTransform: 'capitalize' }}>{status}</div>
             <div className="value">{count}</div>
           </div>
@@ -232,7 +232,7 @@ function InventoryValuation({ data }) {
   return (
     <>
       <div className="card-grid">
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Total Inventory Value</div>
           <div className="value">{money(data.total_value)}</div>
         </div>
@@ -305,15 +305,15 @@ function BalanceSheet({ data }) {
   return (
     <>
       <div className="card-grid" style={{ marginBottom: 20 }}>
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Total Assets</div>
           <div className="value">{money(data.total_assets)}</div>
         </div>
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Total Liabilities</div>
           <div className="value">{money(data.total_liabilities)}</div>
         </div>
-        <div className="home-kpi-card metric-card">
+        <div className="card home-kpi-card metric-card">
           <div className="label">Total Equity</div>
           <div className="value">{money(data.total_equity)}</div>
         </div>
