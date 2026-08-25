@@ -32,12 +32,6 @@
 
 @import './design-tokens.css';
 
-:root {
-  --glass-frost: 0.1;
-  --glass-saturation: 1.2;
-  --filter-id: url(#glass-filter-_r_b_);
-}
-
 
 @font-face {
   font-family: "Modern Mono";
@@ -94,7 +88,12 @@ html, body, #root {
 
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: var(--cream);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15)),
+    url('https://images.unsplash.com/photo-1551384963-cccb0b7ed94b?q=80&w=3247&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
   color: var(--text-dark);
 }
 
@@ -111,57 +110,16 @@ button {
   gap: 16px;
   padding: 16px;
   position: relative;
+  background: transparent;
 }
 
 .app-shell::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  /* Liquid Glass theme background — uses a high-resolution Unsplash nature
-     shot with a soft wash to keep content legible. */
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15)),
-    url('https://images.unsplash.com/photo-1551384963-cccb0b7ed94b?q=80&w=3247&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  display: none;
 }
 
 
 /* ── Soft ambient color blobs — give glass cards something to refract
    on flat (non-photo) pages. Fixed so they stay put while content scrolls. ── */
-.liquidglass {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-  width: min(90vw, 340px);
-  height: min(30vh, 140px);
-  background: hsl(0 0% 0% / var(--glass-frost, 0));
-  -webkit-backdrop-filter: var(--filter-id) saturate(var(--glass-saturation, 1));
-  backdrop-filter: var(--filter-id) saturate(var(--glass-saturation, 1));
-  box-shadow:
-    inset 0 0 2px 1px rgba(255, 255, 255, 0.35),
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
-    inset 0 4px 16px rgba(17, 17, 26, 0.05),
-    inset 0 8px 24px rgba(17, 17, 26, 0.05),
-    inset 0 6px 56px rgba(17, 17, 26, 0.05);
-  border-radius: 9999px;
-  pointer-events: none;
-}
-
-.glass-surface__filter {
-  pointer-events: none;
-  opacity: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  inset: 0;
-}
-
 .app-blob {
   position: fixed;
   border-radius: 50%;
@@ -206,8 +164,11 @@ button {
   border: 1px solid var(--glass-border) !important;
   border-radius: 20px;
   box-shadow:
-    inset 0 1px 0 0 var(--glass-highlight),
-    inset 0 0 12px 1px rgba(255, 255, 255, 0.08) !important;
+    inset 0 0 2px 1px rgba(255, 255, 255, 0.35),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    inset 0 4px 16px rgba(17, 17, 26, 0.05),
+    inset 0 8px 24px rgba(17, 17, 26, 0.05),
+    inset 0 6px 56px rgba(17, 17, 26, 0.05) !important;
   padding: 18px;
   transition: all 0.3s var(--ease);
   contain: layout paint style;
@@ -312,6 +273,8 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
 }
 
 .metric-card.tone-blue    { background: linear-gradient(135deg, #4f7cff, #2f4fd6); }
@@ -798,15 +761,21 @@ label {
 }
 
 .customers-list-pane {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass-tint) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-border) !important;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 16px 1px rgba(255, 255, 255, 0.08) !important;
   padding: 14px;
   max-height: calc(100vh - 220px);
   overflow-y: auto;
   position: sticky;
   top: 88px;
+  contain: layout paint style;
+  will-change: transform;
 }
 
 .customers-list {
@@ -857,15 +826,30 @@ label {
 
 .customers-detail-pane {
   min-width: 0;
+  background: var(--glass-tint) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 16px 1px rgba(255, 255, 255, 0.08) !important;
+  padding: 20px;
+  contain: layout paint style;
+  will-change: transform;
 }
 
 .customers-detail-placeholder {
-  background: var(--surface);
-  border: 1px dashed var(--border);
+  background: var(--glass-tint) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px dashed var(--glass-border) !important;
   border-radius: var(--radius-lg);
   padding: 40px 20px;
   text-align: center;
   color: var(--text-muted);
+  contain: layout paint style;
+  will-change: transform;
 }
 
 .customer-detail-header {
