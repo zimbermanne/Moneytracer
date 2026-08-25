@@ -1,0 +1,36 @@
+From ee78bf5c5834715ebc14ef64a67a576c37241d6d Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Tue, 25 Aug 2026 12:31:02 +0000
+Subject: [PATCH] Fix custom background image not showing in light mode
+
+--app-bg-image was only consumed by the dark-theme .app-shell rules,
+so a custom uploaded background had no effect unless the theme
+resolved to dark. Add a base rule that applies it regardless of theme.
+---
+ frontend/src/styles/globals.css | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/frontend/src/styles/globals.css b/frontend/src/styles/globals.css
+index 39a8011..6ab7bcf 100644
+--- a/frontend/src/styles/globals.css
++++ b/frontend/src/styles/globals.css
+@@ -120,6 +120,16 @@ button {
+   background: transparent;
+ }
+ 
++/* Custom background image applies regardless of light/dark theme.
++   The dark-theme rules below layer their own gradient + fallback hero
++   image on top of this when no custom image is set. */
++.app-shell {
++  background: var(--app-bg-image, transparent);
++  background-size: cover;
++  background-position: center;
++  background-repeat: no-repeat;
++}
++
+ .app-shell::before {
+   display: none;
+ }
+-- 
+2.43.0
+
