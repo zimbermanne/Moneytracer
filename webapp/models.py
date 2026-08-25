@@ -372,7 +372,20 @@ class Expense(Base):
     category = Column(String(80), default="General")
     description = Column(String(255), default="")
     amount = Column(Float, default=0)
+    # Which till/bank/mobile-money account the money actually left — the
+    # same PaymentMethod used on the POS checkout dropdown, so an expense
+    # posts (Dr Expense / Cr <that account>) instead of always assuming
+    # generic Cash. Nullable for expenses recorded before this existed, or
+    # a cash-drawer expense with no method configured — those fall back to
+    # the legacy hard-coded Cash account (1000) in post_expense_entry().
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    payment_method = relationship("PaymentMethod")
+
+    @property
+    def payment_method_name(self):
+        return self.payment_method.name if self.payment_method else None
 
 
 class Debtor(Base):

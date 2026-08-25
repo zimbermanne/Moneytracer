@@ -313,10 +313,24 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
 
 
 def post_expense_entry(db: Session, account_id: int, expense, created_by: str = None) -> JournalEntry:
-    """Dr Operating Expenses, Cr Cash."""
+    """Dr Operating Expenses, Cr the mapped Payment Method's Cash/Bank
+    account — same resolution order as post_sale_entry():
+      1. expense.payment_method.chart_account.code — which till/bank/
+         mobile-money account the cash actually left, set via
+         payment_method_id.
+      2. Fall back to the legacy hard-coded Cash account (1000) for
+         expenses recorded before Payment Methods existed, or when no
+         method was selected.
+    """
+    payment_method = getattr(expense, "payment_method", None)
+    cash_or_bank_code = (
+        payment_method.chart_account.code
+        if payment_method is not None and payment_method.chart_account is not None
+        else "1000"
+    )
     lines = [
         ("5100", expense.amount, 0),
-        ("1000", 0, expense.amount),
+        (cash_or_bank_code, 0, expense.amount),
     ]
     return post_journal_entry(
         db, account_id,

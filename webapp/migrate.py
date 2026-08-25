@@ -75,6 +75,11 @@ _SCHEMA_MIGRATIONS = {
         # Mirrors debtors.tin_number — see models.Creditor.tin_number.
         ("tin_number", "VARCHAR(50)", "''"),
     ],
+    ("business", "expenses"): [
+        # Which till/bank/mobile-money account the expense was paid from —
+        # see models.Expense.payment_method_id.
+        ("payment_method_id", "INTEGER", "NULL"),
+    ],
     ("business", "sales"): [
         # Snapshot of the item's cost at time of sale, so historical gross
         # margin doesn't silently shift when the item's current cost changes.
