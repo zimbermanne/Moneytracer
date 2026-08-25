@@ -1,8 +1,8 @@
 From b2d4ee4bd0e126c1752076da9648c4bbadbe521d Mon Sep 17 00:00:00 2001
 From: Reggie <reggie@moneytracer.dev>
 Date: Tue, 25 Aug 2026 05:48:57 +0000
-Subject: [PATCH] Reorganize sidebar navigation into Sales, Purchases, Debtors,
- Creditors, Inventory, Accounting & Reports, Expenses Ledger sections
+Subject: [PATCH 1/2] Reorganize sidebar navigation into Sales, Purchases,
+ Debtors, Creditors, Inventory, Accounting & Reports, Expenses Ledger sections
 
 ---
  frontend/src/components/Sidebar.jsx | 45 ++++++++++++++++++-----------

@@ -1,0 +1,276 @@
+/* ==========================================================================
+   Company Manager — Design Tokens
+   Calm, trustworthy, editorial. Warm cream base, single terracotta accent.
+   Drop this file in before globals.css and swap old var() references —
+   the variable names below mirror the app's existing ones where possible
+   so most components need zero changes.
+   ========================================================================== */
+
+:root {
+  /* ---- Layout ---- */
+  --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
+
+  /* ---- Glassmorphism ----
+     Shared tokens for the frosted-glass surfaces (.sidebar, .card,
+     .login-card, .modal, form inputs). Kept here rather than hardcoded
+     per-selector so the whole app's glass look-and-feel stays in sync from
+     one place. */
+  --glass-bg:         rgba(255, 255, 255, 0.22);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.30);
+  --glass-border:     rgba(255, 255, 255, 0.35);
+  --glass-blur:       blur(40px);
+  --glass-saturate:   saturate(200%);
+  --glass-shadow:     0 8px 32px 0 rgba(0, 0, 0, 0.12);
+  /* Sidebar sits at a different depth than cards, so it needs a slightly
+     higher base opacity to read correctly — same recipe, different ratio.
+     Kept as its own token pair (rather than reusing --glass-bg) so the
+     theme customizer in Settings can scale both consistently. */
+  --glass-bg-sidebar:     rgba(255, 255, 255, 0.18);
+  --glass-border-sidebar: rgba(255, 255, 255, 0.35);
+
+  /* ---- Core palette ---- */
+  --cream:            #F7F4EE;   /* page background */
+  --surface:          #FFFFFF;   /* cards, inputs, modals */
+  --surface-sunken:   #FBF8F2;   /* subtly recessed panels, table hover */
+  --border:           #E4DED3;   /* hairline borders */
+  --border-strong:    #D8CFBF;   /* input borders, dividers that need more presence */
+
+  --text-dark:        #000000;   /* primary text — pure black */
+  --text-muted:       #6B6258;   /* secondary text, labels, captions */
+  --text-faint:       #A79D8E;   /* placeholder, disabled text */
+
+  /* ---- Accent (use sparingly — primary actions & focus only) ---- */
+  --accent:           #C15F3C;   /* terracotta */
+  --accent-hover:     #A94F30;
+  --accent-soft:      #F3E1D6;   /* accent-tinted backgrounds, badges */
+
+  /* ---- Legacy alias so existing navy/gold references still resolve ----
+     (point old brand vars at the new palette rather than rewriting every
+     component; remove once all components are migrated) */
+  --navy:             var(--text-dark);
+  --gold:             var(--accent);
+
+  /* ---- Status colors (muted, kept in-family — not saturated system colors) ---- */
+  --success:          #6B8F5E;
+  --success-bg:       #E8EEE3;
+  --warning:          #B9862E;
+  --warning-bg:       #F5E9D3;
+  --danger:           #B4453A;
+  --danger-bg:        #F5E1DE;
+  --info:             #4C6B8A;
+  --info-bg:          #E1E9F0;
+
+  /* ---- Sidebar / chrome ---- */
+  --sidebar-bg:            #FFFFFF;
+  --sidebar-border:        #E4DED3;
+  --sidebar-hover:         #F3EEE4;
+  --sidebar-active-bg:     #F3E1D6;
+  --sidebar-active-text:   #A94F30;
+  --sidebar-footer-bg:     #FBF8F2;
+
+  /* ---- Typography ---- */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Document/cheque numbering — blocky, machine-stamped feel like MICR
+     numbers printed along the bottom of a bank cheque. */
+  --font-cheque:      "Nova Mono", "Courier New", monospace;
+  /* General numeric data (amounts, quantities, dates, IDs) — self-hosted
+     Modern Mono. */
+  --font-typewriter:  "Modern Mono", "Courier Prime", "Courier New", monospace;
+
+  /* Numeric-only face for amounts, totals, stats — see globals.css for the
+     @font-face + unicode-range that keeps this scoped to digits/currency
+     symbols only. Falls back to the typewriter face for any non-numeric
+     character it doesn't cover. */
+  --font-numeric: "Micrenc", "Modern Mono", "Courier New", monospace;
+
+  /* Type scale — modest 1.25 ratio, generous line-height */
+  --text-xs:    0.75rem;   /* 12px — captions, badges */
+  --text-sm:    0.8125rem; /* 13px — labels, secondary text */
+  --text-base:  0.9375rem; /* 15px — body */
+  --text-md:    1.0625rem; /* 17px — emphasized body, form values */
+  --text-lg:    1.25rem;   /* 20px — card titles */
+  --text-xl:    1.5625rem; /* 25px — section headings */
+  --text-2xl:   1.953rem;  /* 31px — page titles */
+  --text-3xl:   2.441rem;  /* 39px — hero / login title */
+
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+  --leading-loose:  1.7;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:  0.03em;
+
+  /* ---- Spacing (8px base unit) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius:    10px;   /* default — cards, inputs, buttons */
+  --radius-lg: 16px;   /* modals, hero cards */
+  --radius-full: 999px; /* pills, avatars, dots */
+
+  /* ---- Shadow (soft & ambient, never hard drop-shadows) ---- */
+  --shadow-sm: 0 1px 2px rgba(43, 38, 34, 0.05);
+  --shadow:    0 2px 8px rgba(43, 38, 34, 0.06), 0 1px 2px rgba(43, 38, 34, 0.04);
+  --shadow-lg: 0 12px 32px rgba(43, 38, 34, 0.10), 0 2px 8px rgba(43, 38, 34, 0.05);
+
+  /* ---- Neumorphic (soft-UI) shadows ----
+     Same light source (top-left) convention throughout: a light highlight
+     paired with a warm charcoal shadow, both derived from the existing
+     surfaces so the effect stays in the terracotta/cream family rather
+     than looking like a generic gray neumorphic kit. Neutral variant is for
+     controls sitting on --surface/--cream; accent variant is for terracotta
+     surfaces (primary buttons), lightened/darkened from --accent itself so
+     the emboss reads correctly against that background color.
+     Raised = resting state; Pressed = inset, active/toggled state. */
+  --neu-light: rgba(255, 255, 255, 0.85);
+  --neu-dark:  rgba(43, 38, 34, 0.16);
+  --neu-raised:  4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+  --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+  /* Compact variant for small chips/badges — same recipe, tighter offset/blur
+     so it doesn't overpower tiny elements. */
+  --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+  --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
+
+  --neu-accent-light: color-mix(in srgb, var(--accent) 100%, white 30%);
+  --neu-accent-dark:  color-mix(in srgb, var(--accent) 100%, black 25%);
+  --neu-accent-raised:  3px 3px 8px var(--neu-accent-dark), -3px -3px 8px var(--neu-accent-light);
+  --neu-accent-pressed: inset 3px 3px 6px var(--neu-accent-dark), inset -2px -2px 5px var(--neu-accent-light);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration: 200ms;
+  --duration-slow: 320ms;
+}
+
+/* ==========================================================================
+   Dark Mode — override every light token.
+   Uses the same variable names so every component that uses var(--surface),
+   var(--text-dark), etc. automatically gets the dark version — no component
+   changes needed. Only genuinely theme-relevant values are swapped; layout,
+   spacing, typography scale, radius, and motion are left untouched.
+
+   Two ways in:
+   - [data-theme="dark"] — explicit user choice (set by the theme switcher
+     in Settings, persisted to localStorage). Wins regardless of OS setting.
+   - prefers-color-scheme — OS-level default, only applies when the user
+     hasn't made an explicit choice (:root without a data-theme attribute,
+     i.e. the "System" option).
+   ========================================================================== */
+/* Explicit dark mode (user chose it in Settings) — wins over OS setting. */
+:root[data-theme="dark"] {
+  /* ---- Core palette ---- */
+  --cream:            #0f1117;   /* page background — very dark blue-black */
+  --surface:          #1a1d27;   /* cards, inputs, modals */
+  --surface-sunken:   #13151e;   /* recessed panels, table hover */
+  --border:           #2a2d3a;   /* hairline borders */
+  --border-strong:    #363a4d;   /* input borders, dividers */
+
+  /* ---- Text ---- */
+  --text-dark:        #f0eee8;   /* primary text — warm off-white */
+  --text-muted:       #9b9aab;   /* secondary text, labels */
+  --text-faint:       #5c5b6e;   /* placeholder, disabled */
+
+  /* ---- Accent — terracotta stays, just slightly brightened ---- */
+  --accent:           #d4724f;
+  --accent-hover:     #e08060;
+  --accent-soft:      #2d1e17;   /* accent-tinted backgrounds in dark */
+
+  /* ---- Status colors — slightly lifted so they read on dark surfaces ---- */
+  --success:          #7daa6d;
+  --success-bg:       #1a2a18;
+  --warning:          #d49a3a;
+  --warning-bg:       #2a2010;
+  --danger:           #d4564a;
+  --danger-bg:        #2d1512;
+  --info:             #5e88b0;
+  --info-bg:          #111d2a;
+
+  /* ---- Sidebar / chrome ---- */
+  --sidebar-bg:            #1a1d27;
+  --sidebar-border:        #2a2d3a;
+  --sidebar-hover:         #22253a;
+  --sidebar-active-bg:     #2d1e17;
+  --sidebar-active-text:   #d4724f;
+  --sidebar-footer-bg:     #13151e;
+
+  /* ---- Shadows — deeper on dark so elevation still reads ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow:    0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* ---- Neumorphic — dark inversion ---- */
+  --neu-light: rgba(255, 255, 255, 0.05);
+  --neu-dark:  rgba(0, 0, 0, 0.45);
+  --neu-raised:  4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+  --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+  --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+  --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
+}
+
+/* System default (user hasn't explicitly chosen light or dark) — same
+   overrides, gated on OS preference instead of the data-theme attribute. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --cream:            #0f1117;
+    --surface:          #1a1d27;
+    --surface-sunken:   #13151e;
+    --border:           #2a2d3a;
+    --border-strong:    #363a4d;
+
+    --text-dark:        #f0eee8;
+    --text-muted:       #9b9aab;
+    --text-faint:       #5c5b6e;
+
+    --accent:           #d4724f;
+    --accent-hover:     #e08060;
+    --accent-soft:      #2d1e17;
+
+    --success:          #7daa6d;
+    --success-bg:       #1a2a18;
+    --warning:          #d49a3a;
+    --warning-bg:       #2a2010;
+    --danger:           #d4564a;
+    --danger-bg:        #2d1512;
+    --info:             #5e88b0;
+    --info-bg:          #111d2a;
+
+    --sidebar-bg:            #1a1d27;
+    --sidebar-border:        #2a2d3a;
+    --sidebar-hover:         #22253a;
+    --sidebar-active-bg:     #2d1e17;
+    --sidebar-active-text:   #d4724f;
+    --sidebar-footer-bg:     #13151e;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow:    0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    --neu-light: rgba(255, 255, 255, 0.05);
+    --neu-dark:  rgba(0, 0, 0, 0.45);
+    --neu-raised:  4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+    --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+    --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+    --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
+  }
+}
+
+/* Explicit light mode (user chose it in Settings, overriding a dark OS) —
+   :root already holds light defaults, so this only needs to exist to give
+   [data-theme="light"] priority in the cascade over the OS media query
+   above; no properties to override. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
