@@ -322,6 +322,8 @@ let currentUser = null;
 let accounts = [];
 let expandedAccountId = null;
 let accountUsersCache = {};
+let expandedItemsId = null;
+let accountItemsCache = {};
 let selectedAccountIds = new Set();
 let expandedPlanNotesId = null;
 let accountAdminCache = {};
@@ -519,6 +521,8 @@ async function loadAccounts() {
     accounts = await api('/api/accounts/');
     accountUsersCache = {};
     expandedAccountId = null;
+    accountItemsCache = {};
+    expandedItemsId = null;
     expandedPlanNotesId = null;
     selectedAccountIds.clear();
     renderStats();
@@ -557,6 +561,7 @@ function renderAccounts() {
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? !a.is_suspended : a.is_suspended);
     return matchesQ && matchesStatus;
   });
+  filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const tbody = document.getElementById('accounts-tbody');
   document.getElementById('accounts-empty').classList.toggle('hidden', filtered.length > 0);
@@ -578,6 +583,7 @@ function renderAccounts() {
       <td>
         <div class="action-row" style="justify-content:flex-end;">
           <button class="btn-outline btn-sm" onclick="event.stopPropagation(); toggleUsers(${a.id})">Users</button>
+          <button class="btn-outline btn-sm" onclick="event.stopPropagation(); toggleItems(${a.id})">Items</button>
           <button class="btn-outline btn-sm" onclick="event.stopPropagation(); togglePlanNotes(${a.id})">Plan & Notes</button>
           <button class="btn-warn btn-sm" onclick="event.stopPropagation(); forceLogoutAccount(${a.id}, '${escapeJs(a.name)}')">Force logout</button>
           ${a.is_suspended
@@ -598,6 +604,15 @@ function renderAccounts() {
       td.innerHTML = renderUsersPanel(a.id);
       usersTr.appendChild(td);
       tbody.appendChild(usersTr);
+    }
+    if (expandedItemsId === a.id) {
+      const itemsTr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 10;
+      td.className = 'users-panel';
+      td.innerHTML = renderItemsPanel(a.id);
+      itemsTr.appendChild(td);
+      tbody.appendChild(itemsTr);
     }
     if (expandedPlanNotesId === a.id) {
       const pnTr = document.createElement('tr');
@@ -826,6 +841,45 @@ async function toggleUsers(accountId) {
   } catch (e) {
     toast(e.message, 'err');
     expandedAccountId = null;
+    renderAccounts();
+  }
+}
+
+function renderItemsPanel(accountId) {
+  const items = accountItemsCache[accountId];
+  if (!items) return `<div class="empty">Loading items…</div>`;
+  if (items.length === 0) return `<div class="empty">No inventory items — this account hasn't listed anything it sells yet.</div>`;
+  const rows = items.map(it => `
+    <tr>
+      <td>${escapeHtml(it.name)}</td>
+      <td>${escapeHtml(it.category || '—')}</td>
+      <td>${escapeHtml(it.sku || '—')}</td>
+      <td>${it.quantity} ${escapeHtml(it.unit || '')}</td>
+      <td>${it.selling_price}</td>
+    </tr>
+  `).join('');
+  return `
+    <table>
+      <thead><tr><th>Item</th><th>Category</th><th>SKU</th><th>Stock</th><th>Selling price</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function toggleItems(accountId) {
+  if (expandedItemsId === accountId) {
+    expandedItemsId = null;
+    renderAccounts();
+    return;
+  }
+  expandedItemsId = accountId;
+  renderAccounts();
+  try {
+    accountItemsCache[accountId] = await api(`/api/superadmin/accounts/${accountId}/items`);
+    renderAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+    expandedItemsId = null;
     renderAccounts();
   }
 }

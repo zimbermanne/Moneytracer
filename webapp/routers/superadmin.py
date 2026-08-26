@@ -24,11 +24,12 @@ from models import (
     Account, User, RoleEnum, AccountType, ActivityLog, SuperadminAuditLog,
     Sale, Purchase, Expense, Invoice, Quotation, PurchaseOrder,
     JournalEntry, FiscalPeriod, FiscalPeriodStatus, Reminder,
-    Announcement, AnnouncementLevel,
+    Announcement, AnnouncementLevel, InventoryItem,
 )
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
     RoleUpdate, AnnouncementCreate, AnnouncementOut, SuperadminAuditLogOut,
+    InventoryOut,
 )
 from auth import require_superadmin
 from activity import log_activity_for_user, log_superadmin_action
@@ -276,6 +277,24 @@ def get_account_admin_view(account_id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Account not found")
     users = db.query(User).filter(User.account_id == account_id).all()
     return AccountAdminOut(**account.__dict__, users=users)
+
+
+@router.get("/accounts/{account_id}/items", response_model=List[InventoryOut])
+def get_account_items(account_id: int, db: Session = Depends(get_db),
+                       superadmin: User = Depends(require_superadmin)):
+    """What this tenant actually sells — their inventory catalog, for the
+    'Items' panel on the superadmin Accounts tab. Read-only; not logged to
+    the audit trail (viewing isn't a tenant-affecting action, same as
+    get_account_admin_view above)."""
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return (
+        db.query(InventoryItem)
+        .filter(InventoryItem.account_id == account_id)
+        .order_by(InventoryItem.name)
+        .all()
+    )
 
 
 @router.put("/accounts/{account_id}/plan")
