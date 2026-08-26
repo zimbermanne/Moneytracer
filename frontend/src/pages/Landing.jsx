@@ -82,16 +82,21 @@ export default function Landing() {
         .lg-page {
           min-height: 100vh;
           font-family: var(--font-body);
-          color: #fff;
+          font-weight: 500;
+          color: var(--text-dark);
           overflow-x: hidden;
-          background: #0a0a1a;
+          background: transparent;
+        }
+
+        h1, h2, h3, h4 {
+          font-family: var(--font-display);
         }
 
         /* ── Animated blob backdrop ── */
         .lg-blobs {
           position: fixed;
           inset: 0;
-          z-index: 0;
+          z-index: -1;
           pointer-events: none;
           overflow: hidden;
         }
@@ -99,14 +104,14 @@ export default function Landing() {
           position: absolute;
           border-radius: 50%;
           filter: blur(80px);
-          opacity: 0.55;
+          opacity: 0.35;
           animation: lg-drift 18s ease-in-out infinite alternate;
         }
         .lg-blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, #6c3bfa, #3b1fa8); top: -150px; left: -100px; animation-duration: 20s; }
         .lg-blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, #1aa3ff, #005fa3); top: 40%; right: -80px; animation-duration: 16s; animation-delay: -5s; }
         .lg-blob-3 { width: 420px; height: 420px; background: radial-gradient(circle, #ff6db0, #c1002d); bottom: 10%; left: 15%; animation-duration: 22s; animation-delay: -8s; }
-        .lg-blob-4 { width: 350px; height: 350px; background: radial-gradient(circle, #00d4aa, #007a5e); top: 20%; left: 40%; animation-duration: 25s; animation-delay: -3s; opacity: 0.35; }
-        .lg-blob-5 { width: 280px; height: 280px; background: radial-gradient(circle, #ffc947, #e07800); bottom: 25%; right: 20%; animation-duration: 19s; animation-delay: -11s; opacity: 0.4; }
+        .lg-blob-4 { width: 350px; height: 350px; background: radial-gradient(circle, #00d4aa, #007a5e); top: 20%; left: 40%; animation-duration: 25s; animation-delay: -3s; opacity: 0.25; }
+        .lg-blob-5 { width: 280px; height: 280px; background: radial-gradient(circle, #ffc947, #e07800); bottom: 25%; right: 20%; animation-duration: 19s; animation-delay: -11s; opacity: 0.25; }
 
         @keyframes lg-drift {
           0%   { transform: translate(0, 0) scale(1); }
@@ -117,19 +122,32 @@ export default function Landing() {
 
         /* ── Glass surface utility ── */
         .lg-glass {
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.18);
+          background: var(--glass-tint) !important;
+          backdrop-filter: var(--glass-filter) !important;
+          -webkit-backdrop-filter: var(--glass-filter) !important;
+          border: 1px solid var(--glass-border) !important;
         }
         .lg-glass-card {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.15);
+          background: var(--glass-tint) !important;
+          backdrop-filter: var(--glass-filter) !important;
+          -webkit-backdrop-filter: var(--glass-filter) !important;
+          border: 1px solid var(--glass-border) !important;
           border-radius: 20px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+          box-shadow:
+            inset 0 0 2px 1px rgba(255, 255, 255, 0.35),
+            inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+            0 8px 32px rgba(0,0,0,0.22) !important;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
+          contain: layout paint style;
+          will-change: transform;
         }
         .lg-glass-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 16px 48px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.25);
+          background: var(--glass-tint-hover) !important;
+          box-shadow:
+            inset 0 0 2px 1px rgba(255, 255, 255, 0.45),
+            inset 0 0 12px 6px rgba(255, 255, 255, 0.2),
+            0 16px 48px rgba(0,0,0,0.36) !important;
         }
 
         /* ── Header ── */
@@ -140,8 +158,10 @@ export default function Landing() {
           transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .lg-header.scrolled {
-          background: rgba(10,10,26,0.72);
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          background: var(--glass-tint) !important;
+          backdrop-filter: var(--glass-filter) !important;
+          -webkit-backdrop-filter: var(--glass-filter) !important;
+          border-bottom: 1px solid var(--glass-border);
           box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
         .lg-header-inner {
@@ -162,10 +182,10 @@ export default function Landing() {
         .lg-brand-mark {
           width: 36px; height: 36px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: var(--accent);
           display: flex; align-items: center; justify-content: center;
           font-weight: 900; font-size: 18px; color: #fff;
-          box-shadow: 0 4px 16px rgba(124,92,252,0.5);
+          box-shadow: var(--neu-accent-raised);
         }
         .lg-brand-name {
           font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
@@ -185,7 +205,7 @@ export default function Landing() {
           font-weight: 600;
         }
         .lg-nav-cta {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6) !important;
+          background: var(--accent) !important;
           color: #fff !important;
           padding: 9px 20px;
           border-radius: 12px;
@@ -229,7 +249,7 @@ export default function Landing() {
           font-weight: 900;
           line-height: 1.1;
           margin: 0 0 24px;
-          background: linear-gradient(135deg, #fff 30%, rgba(180,160,255,0.85) 70%, #7cf4ff);
+          background: linear-gradient(135deg, #fff 30%, rgba(255, 255, 255, 0.85) 70%, #fff);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -263,7 +283,7 @@ export default function Landing() {
           transition: all 0.25s ease;
         }
         .lg-track-switch button.active {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: var(--accent);
           color: #fff;
           box-shadow: 0 4px 16px rgba(124,92,252,0.45);
         }
@@ -275,13 +295,13 @@ export default function Landing() {
         }
         .lg-btn-primary {
           display: inline-flex; align-items: center; gap: 8px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: var(--accent);
           color: #fff;
           text-decoration: none;
           font-weight: 700; font-size: 16px;
           padding: 14px 32px;
           border-radius: 14px;
-          box-shadow: 0 6px 28px rgba(124,92,252,0.45);
+          box-shadow: var(--neu-accent-raised);
           transition: transform 0.15s, box-shadow 0.15s;
         }
         .lg-btn-primary:hover {
@@ -364,8 +384,10 @@ export default function Landing() {
           font-size: clamp(1.8rem, 4vw, 2.8rem);
           font-weight: 900;
           margin: 0 0 14px;
-          background: linear-gradient(135deg, #fff 40%, rgba(180,160,255,0.8));
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+          background: linear-gradient(135deg, #fff 40%, rgba(255, 255, 255, 0.8));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
           letter-spacing: -0.5px;
         }
         .lg-section-sub {
@@ -597,7 +619,7 @@ export default function Landing() {
               <div className="lg-feature-title">{t('landing.accountBusinessTitle')}</div>
               <div className="lg-feature-text">{t('landing.accountBusinessText')}</div>
             </GlassCard>
-            <GlassCard className="lg-feature-card" style={{ border: '1px solid rgba(124,92,252,0.45)', background: 'rgba(124,92,252,0.12)' }}>
+            <GlassCard className="lg-feature-card" style={{ border: `1px solid var(--accent)`, background: 'rgba(var(--accent-rgb), 0.12)' }}>
               <div className="lg-feature-icon">🌿</div>
               <div className="lg-feature-title">{t('landing.accountCommunityTitle')}</div>
               <div className="lg-feature-text">{t('landing.accountCommunityText')}</div>
