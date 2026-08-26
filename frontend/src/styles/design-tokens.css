@@ -11,15 +11,15 @@
   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
 
   /* ---- Core palette ---- */
-  --cream:            #0a0b10;   /* dark page base */
-  --surface:          rgba(255, 255, 255, 0.05);   /* glassy surface fallback */
-  --surface-sunken:   rgba(0, 0, 0, 0.2);   /* recessed panels */
-  --border:           rgba(255, 255, 255, 0.15);   /* glassy hairline borders */
-  --border-strong:    rgba(255, 255, 255, 0.25);   /* stronger glassy dividers */
+  --cream:            #F7F4EE;   /* page background */
+  --surface:          #FFFFFF;   /* cards, inputs, modals */
+  --surface-sunken:   #FBF8F2;   /* subtly recessed panels, table hover */
+  --border:           #E4DED3;   /* hairline borders */
+  --border-strong:    #D8CFBF;   /* input borders, dividers that need more presence */
 
-  --text-dark:        #FFFFFF;   /* primary text — pure white */
-  --text-muted:       rgba(255, 255, 255, 0.7);   /* secondary text, labels, captions */
-  --text-faint:       rgba(255, 255, 255, 0.5);   /* placeholder, disabled text */
+  --text-dark:        #000000;   /* primary text — pure black */
+  --text-muted:       #6B6258;   /* secondary text, labels, captions */
+  --text-faint:       #A79D8E;   /* placeholder, disabled text */
 
   /* ---- Accent (use sparingly — primary actions & focus only) ---- */
   --accent:           #C15F3C;   /* terracotta */
@@ -167,6 +167,45 @@
      hasn't made an explicit choice (:root without a data-theme attribute,
      i.e. the "System" option).
    ========================================================================== */
+/* ==========================================================================
+   Theme STYLE — "Liquid Glass" vs "Classic" (the app's original, pre-glass
+   look). Independent of light/dark MODE above: this swaps the glass tokens
+   themselves so every component that already reads var(--glass-tint),
+   var(--glass-filter), etc. automatically flattens to solid opaque
+   surfaces with no blur, no component-level CSS changes needed.
+   Opt in via [data-style="classic"] on :root (set by the theme switcher in
+   Settings, persisted to localStorage). Default (no attribute, or
+   data-style="glass") keeps the existing liquid-glass look.
+   ========================================================================== */
+:root[data-style="classic"] {
+  --glass-tint:       var(--surface);
+  --glass-tint-hover: var(--surface-sunken);
+  --glass-border:     var(--border);
+  --glass-highlight:  rgba(0, 0, 0, 0);
+  --glass-filter:     none;
+  --glass-filter-sm:  none;
+}
+
+:root[data-theme="dark"][data-style="classic"] {
+  --glass-tint:       var(--surface);
+  --glass-tint-hover: var(--surface-sunken);
+  --glass-border:     var(--border);
+  --glass-highlight:  rgba(0, 0, 0, 0);
+  --glass-filter:     none;
+  --glass-filter-sm:  none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme])[data-style="classic"] {
+    --glass-tint:       var(--surface);
+    --glass-tint-hover: var(--surface-sunken);
+    --glass-border:     var(--border);
+    --glass-highlight:  rgba(0, 0, 0, 0);
+    --glass-filter:     none;
+    --glass-filter-sm:  none;
+  }
+}
+
 /* Explicit dark mode (user chose it in Settings) — wins over OS setting. */
 :root[data-theme="dark"] {
   /* ---- Core palette ---- */

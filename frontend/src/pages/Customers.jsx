@@ -53,9 +53,6 @@ function CustomerDetail({ customer, onBack, onEdit, onDelete }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [printStatement, setPrintStatement] = useState(false)
-  const [emailStatementOpen, setEmailStatementOpen] = useState(false)
-  const [statementEmail, setStatementEmail] = useState('')
-  const [emailSending, setEmailSending] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
@@ -66,8 +63,6 @@ function CustomerDetail({ customer, onBack, onEdit, onDelete }) {
     setTab('Overview')
     setDateFrom('')
     setDateTo('')
-    setEmailStatementOpen(false)
-    setStatementEmail(customer.email || '')
     api.get(`/customers/${customer.id}/profile`)
       .then(setProfile)
       .catch((e) => setError(e.message))
@@ -94,25 +89,6 @@ function CustomerDetail({ customer, onBack, onEdit, onDelete }) {
     if (tab !== 'Statement' || statement) return
     loadStatement()
   }, [tab]) // eslint-disable-line
-
-  const handleEmailStatement = async () => {
-    if (!statementEmail.trim()) { setError('Enter a recipient email'); return }
-    setError(''); setEmailSending(true)
-    try {
-      const params = new URLSearchParams()
-      if (dateFrom) params.set('date_from', new Date(dateFrom).toISOString())
-      if (dateTo) {
-        const end = new Date(dateTo)
-        end.setHours(23, 59, 59, 999)
-        params.set('date_to', end.toISOString())
-      }
-      const qs = params.toString()
-      const res = await api.post(`/customers/${customer.id}/email-statement${qs ? `?${qs}` : ''}`, { to_email: statementEmail.trim() })
-      alert(res.detail || 'Statement emailed.')
-      setEmailStatementOpen(false)
-    } catch (e) { setError(e.message) }
-    finally { setEmailSending(false) }
-  }
 
   const invoiceColumns = [
     { key: 'invoice_no', header: 'Invoice #' },
@@ -248,29 +224,10 @@ function CustomerDetail({ customer, onBack, onEdit, onDelete }) {
                     </button>
                   )}
                   <div style={{ flex: 1 }} />
-                  <button className="btn btn-outline" onClick={() => setEmailStatementOpen(!emailStatementOpen)}>
-                    ✉ Email Statement
-                  </button>
                   <button className="btn btn-outline" onClick={() => setPrintStatement(true)}>
                     🖨 Print Statement
                   </button>
                 </div>
-
-                {emailStatementOpen && (
-                  <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <input
-                      type="email"
-                      placeholder="customer@email.com"
-                      value={statementEmail}
-                      onChange={(e) => setStatementEmail(e.target.value)}
-                      style={{ flex: 1 }}
-                    />
-                    <button className="btn btn-primary" onClick={handleEmailStatement} disabled={emailSending}>
-                      {emailSending ? 'Sending…' : 'Send Statement'}
-                    </button>
-                  </div>
-                )}
-
                 <div className="card-grid" style={{ marginBottom: 16 }}>
                   <div className="card metric-card">
                     <div className="label">Opening Balance</div>

@@ -1,11 +1,8 @@
 from collections import defaultdict
-import io
-import os
 from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -16,16 +13,8 @@ from schemas import (
     CustomerProfile, CustomerMonthlyIncome,
     CustomerStatement, CustomerStatementEntry,
     InvoiceOut, QuotationOut, DebtorOut,
-    EmailDocRequest,
 )
 from activity import log_activity_for_user
-import email_utils
-from routers.invoices import get_account_details
-
-router = APIRouter(prefix="/api/customers", tags=["customers"])
-
-COMPANY_NAME = os.getenv("COMPANY_NAME", "Moneytracer")
-CURRENCY = os.getenv("CURRENCY", "TZS")
 
 router = APIRouter(prefix="/api/customers", tags=["customers"])
 
@@ -298,132 +287,6 @@ def customer_statement(customer_id: int, date_from: datetime = None, date_to: da
         balance_due=round(running, 2),
         entries=entries,
     )
-
-
-@router.post("/{customer_id}/email-statement")
-def email_statement(customer_id: int, payload: EmailDocRequest,
-                    date_from: datetime = None, date_to: datetime = None,
-                    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    account_id = get_account_filter(current_user)
-    customer = _scoped_customer(db, customer_id, account_id)
-
-    statement = customer_statement(customer_id, date_from, date_to, db, current_user)
-    account = get_account_details(db, current_user.account_id)
-
-    buf = _render_statement_pdf(statement, account)
-    company = (account or {}).get("name") or COMPANY_NAME
-
-    body = payload.message or (
-        f"Dear {customer.name},\n\n"
-        f"Please find attached your Statement of Account from {company}.\n"
-        f"Period: {statement.date_from.strftime('%d/%m/%Y')} to {statement.date_to.strftime('%d/%m/%Y')}\n"
-        f"Balance Due: {CURRENCY} {statement.balance_due:,.2f}.\n\n"
-        f"Regards,\n{company}"
-    )
-
-    try:
-        email_utils.send_email_with_attachment(
-            to_email=payload.to_email,
-            subject=f"Statement of Account from {company}",
-            body=body,
-            attachment_bytes=buf.getvalue(),
-            attachment_filename=f"Statement-{customer.name.replace(' ', '_')}.pdf",
-        )
-    except RuntimeError as exc:
-        raise HTTPException(400, str(exc))
-    except Exception as exc:
-        raise HTTPException(502, f"Failed to send email: {exc}")
-
-    log_activity_for_user(db, current_user, "customer_email_statement", f"Emailed statement to {payload.to_email} for {customer.name}")
-    return {"detail": f"Statement emailed to {payload.to_email}"}
-
-
-def _render_statement_pdf(statement: CustomerStatement, account: dict = None) -> io.BytesIO:
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_RIGHT
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-
-    ACCENT = colors.HexColor("#C15F3C")
-    INK = colors.HexColor("#2B2622")
-
-    biz_name = (account or {}).get("name") or COMPANY_NAME
-    biz_address = (account or {}).get("address") or ""
-    biz_phone = (account or {}).get("phone") or ""
-    biz_email = (account or {}).get("email") or ""
-
-    buf = io.BytesIO()
-    pdf = SimpleDocTemplate(buf, pagesize=A4,
-                            topMargin=18*mm, bottomMargin=24*mm, leftMargin=18*mm, rightMargin=18*mm)
-    styles = getSampleStyleSheet()
-    normal = ParagraphStyle("N", parent=styles["Normal"], fontSize=10, leading=14)
-    right = ParagraphStyle("R", parent=styles["Normal"], fontSize=10, leading=14, alignment=TA_RIGHT)
-    section = ParagraphStyle("S", parent=styles["Heading4"], fontSize=11, textColor=ACCENT)
-    biz_name_style = ParagraphStyle("BN", parent=styles["Normal"], fontSize=15, leading=18, textColor=INK)
-
-    elems = []
-    elems.append(Paragraph(f"<b>{biz_name}</b>", biz_name_style))
-    if biz_address: elems.append(Paragraph(biz_address, normal))
-    if biz_phone: elems.append(Paragraph(f"Phone: {biz_phone}", normal))
-    if biz_email: elems.append(Paragraph(f"Email: {biz_email}", normal))
-    elems += [Spacer(1, 8*mm)]
-
-    hr = Table([[""]], colWidths=[164*mm])
-    hr.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 1, INK)]))
-    elems += [hr, Spacer(1, 8*mm)]
-
-    elems.append(Paragraph("<b>Statement of Account</b>", styles["Heading2"]))
-    elems.append(Paragraph(f"<b>Customer:</b> {statement.customer_name}", normal))
-    elems.append(Paragraph(f"<b>Period:</b> {statement.date_from.strftime('%d/%m/%Y')} to {statement.date_to.strftime('%d/%m/%Y')}", normal))
-    elems += [Spacer(1, 6*mm)]
-
-    summary_data = [
-        ["Opening Balance", f"{CURRENCY} {statement.opening_balance:,.2f}"],
-        ["Invoiced in Period", f"{CURRENCY} {statement.invoiced_amount:,.2f}"],
-        ["Received in Period", f"{CURRENCY} {statement.amount_received:,.2f}"],
-        ["Balance Due", f"{CURRENCY} {statement.balance_due:,.2f}"]
-    ]
-    st = Table(summary_data, colWidths=[60*mm, 40*mm])
-    st.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("FONTNAME", (0, 3), (1, 3), "Helvetica-Bold"),
-        ("LINEABOVE", (0, 3), (1, 3), 0.5, INK),
-    ]))
-    elems.append(st)
-    elems += [Spacer(1, 10*mm)]
-
-    # Transaction Table
-    rows = [["Date", "Description", "Invoiced", "Received", "Balance"]]
-    for e in statement.entries:
-        rows.append([
-            e.date.strftime("%d/%m/%Y"),
-            e.description,
-            f"{e.invoiced:,.2f}" if e.invoiced else "—",
-            f"{e.received:,.2f}" if e.received else "—",
-            f"{e.balance:,.2f}"
-        ])
-
-    t = Table(rows, colWidths=[25*mm, 64*mm, 25*mm, 25*mm, 25*mm], repeatRows=1)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), ACCENT),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("ALIGN", (2, 0), (4, -1), "RIGHT"),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
-    ]))
-    elems.append(t)
-
-    elems += [Spacer(1, 12*mm), Paragraph("Thank you for your business.", normal)]
-
-    pdf.build(elems)
-    buf.seek(0)
-    return buf
 
 
 # ---------- Backfill: link customer names already scattered across Sale/

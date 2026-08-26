@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import (
     PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus, User, RoleEnum,
-    Account, InventoryItem, Purchase, PaymentMode, Creditor, CreditorItem, LedgerStatus,
+    Account, InventoryItem, Purchase,
 )
-from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut, EmailDocRequest
+from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
@@ -116,7 +116,6 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         expected_date=payload.expected_date,
         subtotal=subtotal, tax_rate=payload.tax_rate, tax_amount=tax_amount,
         discount=payload.discount, total=total, notes=payload.notes or "",
-        payment_mode=payload.payment_mode,
         status=PurchaseOrderStatus.sent, created_by=current_user.username,
     )
     db.add(po); db.flush()
@@ -212,35 +211,11 @@ def _convert_po_to_purchases(db: Session, po: PurchaseOrder, current_user: User)
             quantity=line.quantity,
             unit_cost=line.unit_price,
             total=round(line.quantity * line.unit_price, 2),
-            payment_mode=po.payment_mode,
         )
         db.add(purchase)
         db.flush()
         post_purchase_entry(db, po.account_id, purchase, created_by=current_user.username)
         created.append(purchase)
-
-    # Credit PO — money hasn't left yet, it's owed to the supplier. Raise a
-    # Creditor row (mirrors the Debtor row a credit Sale raises) so it shows
-    # up on the Creditors ledger and can be settled/tracked separately from
-    # the immediate-payment case.
-    if po.payment_mode == PaymentMode.credit and po.total:
-        creditor = Creditor(
-            account_id=po.account_id,
-            name=po.supplier_name or "Supplier",
-            total_owed=po.total,
-            status=LedgerStatus.unpaid,
-            note=f"Credit purchase order: {po.po_no}",
-        )
-        db.add(creditor)
-        db.flush()
-        for line in po.items:
-            db.add(CreditorItem(
-                creditor_id=creditor.id,
-                item_id=line.item_id,
-                description=line.description or "",
-                quantity=line.quantity,
-                unit_price=line.unit_price,
-            ))
 
     po.converted_to_purchase = True
     return created
@@ -271,35 +246,6 @@ def approve_purchase_order(po_id: int, db: Session = Depends(get_db),
     po.approved_at = datetime.utcnow()
     db.commit(); db.refresh(po)
     log_activity_for_user(db, current_user, "po_approved", f"{po.po_no} approved by {current_user.username}")
-    return po
-
-
-class PaymentModeRequest(BaseModel):
-    payment_mode: PaymentMode
-
-
-@router.patch("/{po_id}/payment-mode", response_model=PurchaseOrderOut)
-def set_po_payment_mode(po_id: int, payload: PaymentModeRequest, db: Session = Depends(get_db),
-                        current_user: User = Depends(get_current_user)):
-    """Toggle a PO between cash and credit ('Pay as Credit'). Kept as its own
-    endpoint (rather than folded into the generic PUT) so payment terms can
-    still be changed on an approved PO — approval only signs off on buying
-    the goods, not on how they'll be paid for. Once received, the Purchase
-    and (for credit) Creditor rows already exist downstream, so the terms
-    are locked at that point same as the rest of the PO."""
-    q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
-    account_id = get_account_filter(current_user)
-    if account_id is not None:
-        q = q.filter(PurchaseOrder.account_id == account_id)
-    po = q.first()
-    if not po: raise HTTPException(404, "Purchase order not found")
-    if po.status == PurchaseOrderStatus.received:
-        raise HTTPException(400, "Cannot change payment terms on a purchase order that's already been received")
-
-    po.payment_mode = payload.payment_mode
-    db.commit(); db.refresh(po)
-    log_activity_for_user(db, current_user, "po_payment_mode",
-        f"{po.po_no} set to pay as {payload.payment_mode.value}")
     return po
 
 
@@ -355,8 +301,13 @@ def purchase_order_pdf(po_id: int, db: Session = Depends(get_db), current_user: 
         headers={"Content-Disposition": f'attachment; filename="PurchaseOrder-{po.po_no}.pdf"'})
 
 
+class EmailPORequest(BaseModel):
+    to_email: EmailStr
+    message: Optional[str] = ""
+
+
 @router.post("/{po_id}/email")
-def email_purchase_order(po_id: int, payload: EmailDocRequest, db: Session = Depends(get_db),
+def email_purchase_order(po_id: int, payload: EmailPORequest, db: Session = Depends(get_db),
                          current_user: User = Depends(get_current_user)):
     """Sends the PO PDF straight to the supplier's inbox — the main point of
     a purchase order being 'previewable' at all: reviewing it before it goes

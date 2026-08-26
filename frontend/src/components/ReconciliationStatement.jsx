@@ -202,14 +202,6 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
             </>
           )}
         </div>
-
-        <div className="receipt-center" style={{ marginTop: 10 }}>Thank you for your business!</div>
-        <div className="receipt-center receipt-bold" style={{ marginTop: 6 }}>END OF STATEMENT</div>
-
-        <div className="receipt-hr" style={{ borderStyle: 'dashed', marginTop: 12 }} />
-        <div className="receipt-center receipt-small" style={{ marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', lineHeight: 1.5 }}>
-          &#9888; CAUTION THIS IS NOT EFD RECEIPT.
-        </div>
       </div>
     </Modal>
   )

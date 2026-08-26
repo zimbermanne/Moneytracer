@@ -299,13 +299,8 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     else:
         # Non-VAT purchase: full amount to cost/inventory
         lines.append((cost_code, purchase.total, 0))
-
-    # "Pay as Credit" — mirrors post_sale_entry's cash_or_ar_code resolution.
-    # A credit purchase doesn't hit Cash yet; it's owed to the supplier, so
-    # it credits Accounts Payable (2000) instead of Cash (1000).
-    payment_mode = getattr(purchase, "payment_mode", None)
-    cash_or_ap_code = "2000" if payment_mode is not None and payment_mode.value == "credit" else "1000"
-    lines.append((cash_or_ap_code, 0, purchase.total))
+    
+    lines.append(("1000", 0, purchase.total))
     
     return post_journal_entry(
         db, account_id,

@@ -34,7 +34,6 @@ export default function Settings() {
   const [resetTarget, setResetTarget] = useState(null)
   const [resetPwd, setResetPwd] = useState('')
   const [resetMsg, setResetMsg] = useState('')
-  const [testingEmail, setTestingEmail] = useState(false)
 
   useEffect(() => {
     if (isAdmin && !isSuperadmin) {
@@ -87,18 +86,6 @@ export default function Settings() {
       setResetPwd('')
       setTimeout(() => { setResetTarget(null); setResetMsg('') }, 1500)
     } catch (e) { setResetMsg('Error: ' + e.message) }
-  }
-
-  const testEmail = async () => {
-    setTestingEmail(true)
-    try {
-      const res = await api.post('/accounts/test-email', {})
-      alert(res.detail || 'Test email sent!')
-    } catch (e) {
-      alert(`Email test failed: ${e.message}`)
-    } finally {
-      setTestingEmail(false)
-    }
   }
 
   const saveAccountSettings = async () => {
@@ -161,14 +148,9 @@ export default function Settings() {
           <div className="form-row"><label>Username</label><input value={user?.username || ''} disabled /></div>
           <div className="form-row"><label>Full Name</label><input value={user?.full_name || ''} disabled /></div>
           <div className="form-row"><label>Role</label><input value={user?.role || ''} disabled /></div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <button className="btn btn-outline" onClick={testEmail} disabled={testingEmail}>
-              {testingEmail ? 'Sending...' : '✉ Test Email'}
-            </button>
-            <button className="btn btn-danger" onClick={logout}>
-              🚪 Log Out
-            </button>
-          </div>
+          <button className="btn btn-danger" onClick={logout} style={{ marginTop: 8 }}>
+            🚪 Log Out
+          </button>
         </div>
 
         {/* Language preference card */}

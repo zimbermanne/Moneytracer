@@ -7,6 +7,7 @@ const ACCENT = { accent: '#ED9121', hover: '#D67F16', soft: '#FBE3C7', softDark:
 
 const DEFAULTS = {
   mode: 'system',           // 'light' | 'dark' | 'system'
+  style: 'glass',           // 'glass' (liquid glass) | 'classic' (original flat look)
   customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 
@@ -35,6 +36,13 @@ function applyPrefs(prefs) {
     root.removeAttribute('data-theme')
   } else {
     root.setAttribute('data-theme', prefs.mode)
+  }
+
+  // ---- Style: liquid glass vs classic ----
+  if (prefs.style === 'classic') {
+    root.setAttribute('data-style', 'classic')
+  } else {
+    root.removeAttribute('data-style')
   }
 
   // ---- Accent (fixed) ----

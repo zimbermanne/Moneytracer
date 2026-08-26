@@ -15,7 +15,7 @@ const emptyLine = () => ({ description: '', quantity: 1, unit_price: 0, item_id:
 const emptyForm = () => ({
   supplier_name: '', supplier_phone: '', supplier_email: '', supplier_address: '',
   supplier_tin: '', supplier_vrn: '', expected_date: '',
-  tax_rate: 0, discount: 0, notes: '', payment_mode: 'cash', items: [emptyLine()],
+  tax_rate: 0, discount: 0, notes: '', items: [emptyLine()],
 })
 
 export default function PurchaseOrders() {
@@ -105,7 +105,6 @@ export default function PurchaseOrders() {
       supplier_vrn: doc.supplier_vrn || '',
       expected_date: doc.expected_date ? doc.expected_date.slice(0, 10) : '',
       tax_rate: doc.tax_rate, discount: doc.discount, notes: doc.notes || '',
-      payment_mode: doc.payment_mode || 'cash',
       items: doc.items.map((l) => ({ description: l.description, quantity: l.quantity, unit_price: l.unit_price, item_id: l.item_id ?? null })),
     })
     setError('')
@@ -154,17 +153,6 @@ export default function PurchaseOrders() {
     } catch (e) { setError(e.message) }
   }
 
-  // Flip between Cash and Credit ("pay as credit"). Kept as a lightweight
-  // toggle rather than routing through Edit, since it works even once the
-  // PO is approved (payment terms aren't part of what approval locks in).
-  const togglePaymentMode = async (doc) => {
-    const next = doc.payment_mode === 'credit' ? 'cash' : 'credit'
-    try {
-      await api.patch(`/purchase-orders/${doc.id}/payment-mode`, { payment_mode: next })
-      load()
-    } catch (e) { setError(e.message) }
-  }
-
   const downloadPdf = (doc) => {
     downloadFile(apiUrl(`/api/purchase-orders/${doc.id}/pdf`), `PurchaseOrder-${doc.po_no}.pdf`)
   }
@@ -174,11 +162,6 @@ export default function PurchaseOrders() {
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'supplier_name', header: 'Supplier' },
     { key: 'total', header: 'Total', render: (r) => money(r.total) },
-    { key: 'payment_mode', header: 'Terms', render: (r) => (
-        <span className={`badge ${r.payment_mode === 'credit' ? 'badge-credit' : 'badge-cash'}`}>
-          {r.payment_mode === 'credit' ? 'Credit' : 'Cash'}
-        </span>
-      ) },
     { key: 'status', header: 'Status', render: (r) => <span className={`badge badge-${r.status}`}>{r.status}</span> },
     {
       key: 'actions', header: '',
@@ -194,8 +177,6 @@ export default function PurchaseOrders() {
           <RowActionsMenu items={[
             { label: 'Preview', icon: '👁', onClick: () => setPreviewDoc(r) },
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
-            { label: r.payment_mode === 'credit' ? 'Pay as Cash' : 'Pay as Credit', icon: '💳',
-              onClick: () => togglePaymentMode(r), hidden: r.status === 'received' },
             { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
             { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
             { label: pdfLoading === r.id ? 'Downloading…' : 'PDF', icon: '⬇', onClick: () => downloadPdf(r), disabled: pdfLoading === r.id },
@@ -283,12 +264,6 @@ export default function PurchaseOrders() {
               <input value={form.supplier_vrn} onChange={(e) => setForm({ ...form, supplier_vrn: e.target.value })} /></div>
             <div className="form-row"><label>Expected Delivery</label>
               <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} /></div>
-            <div className="form-row"><label>Payment Terms</label>
-              <select value={form.payment_mode} onChange={(e) => setForm({ ...form, payment_mode: e.target.value })}>
-                <option value="cash">Cash</option>
-                <option value="credit">Pay as Credit</option>
-              </select>
-            </div>
 
             <div className="invoice-editor-section-label">Line Items</div>
             {form.items.map((line, idx) => {

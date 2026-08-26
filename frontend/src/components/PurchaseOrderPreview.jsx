@@ -123,8 +123,6 @@ export default function PurchaseOrderPreview({ doc, company, onClose }) {
                     <div>{new Date(doc.expected_date).toLocaleDateString()}</div>
                   </>
                 )}
-                <div className="doc-sheet-label" style={{ marginTop: 8 }}>Payment Terms</div>
-                <div>{doc.payment_mode === 'credit' ? 'Credit' : 'Cash'}</div>
               </div>
             </div>
 

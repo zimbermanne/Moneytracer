@@ -7,6 +7,11 @@ const MODES = [
   { key: 'system', label: '🖥️ System' },
 ]
 
+const STYLES = [
+  { key: 'glass', label: '💧 Liquid Glass' },
+  { key: 'classic', label: '▫️ Classic' },
+]
+
 // Downscale + compress an uploaded image before it goes into localStorage —
 // a full-resolution photo can easily blow past the ~5MB storage quota.
 function fileToCompressedDataUrl(file, maxDim = 1600, quality = 0.72) {
@@ -89,6 +94,26 @@ export default function AppearanceSettings() {
               onClick={() => update({ mode: m.key })}
             >
               {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Style: liquid glass vs classic */}
+      <div className="form-row" style={{ marginBottom: 20 }}>
+        <label>Style</label>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+          Switch between the frosted "Liquid Glass" look and the original flat "Classic" look.
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {STYLES.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              className={(prefs.style || 'glass') === s.key ? 'btn btn-primary' : 'btn btn-outline'}
+              onClick={() => update({ style: s.key })}
+            >
+              {s.label}
             </button>
           ))}
         </div>
