@@ -1,4 +1,7 @@
 """Run once (or automatically on startup) to seed the default admin account."""
+import os
+import secrets
+
 from database import SessionLocal, Base, engine
 from models import User, RoleEnum, Account
 from auth import hash_password
@@ -26,17 +29,32 @@ def seed():
 
         # Create superadmin (platform owner)
         if not db.query(User).filter(User.username == "superadmin").first():
+            # Never a hardcoded password: set SUPERADMIN_SEED_PASSWORD in your
+            # environment (Railway variables, .env, etc.) before first boot to
+            # choose it yourself. If it's unset, a random one is generated and
+            # printed to the deploy logs ONCE — copy it immediately, it is not
+            # stored anywhere in plaintext and this message won't repeat.
+            seed_password = os.environ.get("SUPERADMIN_SEED_PASSWORD")
+            generated = seed_password is None
+            if generated:
+                seed_password = secrets.token_urlsafe(18)
             superadmin = User(
                 username="superadmin",
                 full_name="Platform Superadmin",
                 email="superadmin@moneytracer.africa",
-                hashed_password=hash_password("superadmin123"),
+                hashed_password=hash_password(seed_password),
                 role=RoleEnum.superadmin,
                 account_id=None,  # Superadmin has no account
             )
             db.add(superadmin)
             db.commit()
-            print("[OK] Superadmin created -> username: superadmin, password: superadmin123")
+            if generated:
+                print("=" * 70)
+                print("[OK] Superadmin created -> username: superadmin")
+                print(f"[OK] Generated password (SAVE THIS NOW, shown once): {seed_password}")
+                print("=" * 70)
+            else:
+                print("[OK] Superadmin created -> username: superadmin, password: <from SUPERADMIN_SEED_PASSWORD>")
         else:
             print("[INFO] Superadmin already exists, skipping seed.")
 
