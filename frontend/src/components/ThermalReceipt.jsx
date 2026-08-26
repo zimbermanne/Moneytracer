@@ -176,10 +176,7 @@ export default function ThermalReceipt({ receipt, company, onClose }) {
 
         <div className="receipt-hr" style={{ borderStyle: 'dashed' }} />
         <div className="receipt-center receipt-small" style={{ marginTop: 4, fontWeight: 700, letterSpacing: '0.05em', lineHeight: 1.5 }}>
-          &#9888; THIS IS NOT A FISCAL RECEIPT
-        </div>
-        <div className="receipt-center receipt-small" style={{ marginBottom: 8, lineHeight: 1.5 }}>
-          For internal use only
+          &#9888; CAUTION THIS IS NOT EFD RECEIPT.
         </div>
       </div>
     </Modal>

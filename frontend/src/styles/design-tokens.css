@@ -11,15 +11,15 @@
   --bottom-nav-height: 64px; /* mobile fixed tab bar height, excl. safe-area inset */
 
   /* ---- Core palette ---- */
-  --cream:            #F7F4EE;   /* page background */
-  --surface:          #FFFFFF;   /* cards, inputs, modals */
-  --surface-sunken:   #FBF8F2;   /* subtly recessed panels, table hover */
-  --border:           #E4DED3;   /* hairline borders */
-  --border-strong:    #D8CFBF;   /* input borders, dividers that need more presence */
+  --cream:            #0a0b10;   /* dark page base */
+  --surface:          rgba(255, 255, 255, 0.05);   /* glassy surface fallback */
+  --surface-sunken:   rgba(0, 0, 0, 0.2);   /* recessed panels */
+  --border:           rgba(255, 255, 255, 0.15);   /* glassy hairline borders */
+  --border-strong:    rgba(255, 255, 255, 0.25);   /* stronger glassy dividers */
 
-  --text-dark:        #000000;   /* primary text — pure black */
-  --text-muted:       #6B6258;   /* secondary text, labels, captions */
-  --text-faint:       #A79D8E;   /* placeholder, disabled text */
+  --text-dark:        #FFFFFF;   /* primary text — pure white */
+  --text-muted:       rgba(255, 255, 255, 0.7);   /* secondary text, labels, captions */
+  --text-faint:       rgba(255, 255, 255, 0.5);   /* placeholder, disabled text */
 
   /* ---- Accent (use sparingly — primary actions & focus only) ---- */
   --accent:           #C15F3C;   /* terracotta */

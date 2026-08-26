@@ -7,11 +7,34 @@ from models import Account, User, RoleEnum, Country, RevenueAuthority, ExchangeR
 from schemas import AccountOut, AccountUpdate, AccountWithUsersOut, ExchangeRateCreate, ExchangeRateOut
 from auth import require_superadmin, require_admin, get_current_user
 from activity import log_activity_for_user
+import email_utils
 from african_currencies import default_currency_for_country
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
 
- 
+
+@router.post("/test-email")
+def test_email(current_user: User = Depends(require_admin)):
+    """Sends a test email to the current user to verify SMTP configuration."""
+    if not current_user.email:
+        raise HTTPException(status_code=400, detail="Your user account has no email address set.")
+
+    try:
+        email_utils.send_plain_email(
+            to_email=current_user.email,
+            subject="Moneytracer Email Test",
+            body=f"Hi {current_user.full_name or current_user.username},\n\n"
+                 "This is a test email from your Moneytracer instance. "
+                 "If you're reading this, your SMTP settings are configured correctly!\n\n"
+                 "— Moneytracer"
+        )
+        return {"detail": f"Test email sent to {current_user.email}"}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to send test email: {exc}")
+
+
 @router.get("/company-info")
 def company_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lightweight account name/address/contact for any logged-in user —

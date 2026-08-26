@@ -18,7 +18,6 @@ export default function SearchBar({ value, onChange, placeholder = 'Search…', 
         <div className="typing-container">
           <div className="typing-text">
             {placeholder}
-            <span className="typing-mask"></span>
           </div>
         </div>
       )}

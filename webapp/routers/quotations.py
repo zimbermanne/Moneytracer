@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Quotation, QuotationItem, Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account
-from schemas import QuotationCreate, QuotationUpdate, QuotationOut, InvoiceOut
+from schemas import QuotationCreate, QuotationUpdate, QuotationOut, InvoiceOut, EmailDocRequest
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
@@ -241,11 +241,6 @@ def quotation_pdf(qid: int, db: Session = Depends(get_db),
     log_activity_for_user(db, current_user, "quotation_pdf", f"Exported {q.quote_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="Quotation-{q.quote_no}.pdf"'})
-
-
-class EmailDocRequest(BaseModel):
-    to_email: EmailStr
-    message: Optional[str] = ""
 
 
 @router.post("/{qid}/email")

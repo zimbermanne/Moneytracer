@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, EmailStr
 from models import (
     RoleEnum, PaymentMode, LedgerStatus, DocumentStatus, BusinessStructure,
     AccountType, CogsMethod, ContributionStyle, CycleFrequency, GroupLoanStatus, PurchaseOrderStatus,
@@ -65,6 +65,11 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordConfirmRequest(BaseModel):
     token: str
     new_password: str
+
+
+class EmailDocRequest(BaseModel):
+    to_email: EmailStr
+    message: Optional[str] = ""
 
 
 # ---------- Customers ----------

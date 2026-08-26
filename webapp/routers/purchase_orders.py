@@ -12,7 +12,7 @@ from models import (
     PurchaseOrder, PurchaseOrderItem, PurchaseOrderStatus, User, RoleEnum,
     Account, InventoryItem, Purchase, PaymentMode, Creditor, CreditorItem, LedgerStatus,
 )
-from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
+from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut, EmailDocRequest
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
@@ -355,13 +355,8 @@ def purchase_order_pdf(po_id: int, db: Session = Depends(get_db), current_user: 
         headers={"Content-Disposition": f'attachment; filename="PurchaseOrder-{po.po_no}.pdf"'})
 
 
-class EmailPORequest(BaseModel):
-    to_email: EmailStr
-    message: Optional[str] = ""
-
-
 @router.post("/{po_id}/email")
-def email_purchase_order(po_id: int, payload: EmailPORequest, db: Session = Depends(get_db),
+def email_purchase_order(po_id: int, payload: EmailDocRequest, db: Session = Depends(get_db),
                          current_user: User = Depends(get_current_user)):
     """Sends the PO PDF straight to the supplier's inbox — the main point of
     a purchase order being 'previewable' at all: reviewing it before it goes

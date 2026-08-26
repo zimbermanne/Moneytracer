@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode, RecurringInvoice
-from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut, RecurringInvoiceCreate, RecurringInvoiceUpdate, RecurringInvoiceOut
+from schemas import (
+    InvoiceCreate, InvoiceUpdate, InvoiceOut, RecurringInvoiceCreate, RecurringInvoiceUpdate,
+    RecurringInvoiceOut, EmailDocRequest
+)
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
@@ -381,11 +384,6 @@ def invoice_delivery_note_pdf(invoice_id: int, db: Session = Depends(get_db),
     log_activity_for_user(db, current_user, "invoice_delivery_note_pdf", f"Exported delivery note for {inv.invoice_no}")
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="DeliveryNote-{inv.invoice_no}.pdf"'})
-
-
-class EmailDocRequest(BaseModel):
-    to_email: EmailStr
-    message: Optional[str] = ""
 
 
 @router.post("/{invoice_id}/email")
