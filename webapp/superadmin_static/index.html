@@ -159,6 +159,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
+      <div class="tab" data-tab="auditlog" onclick="switchTab('auditlog')">Superadmin Audit Log</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
       <div class="tab" data-tab="announcements" onclick="switchTab('announcements')">Announcements</div>
     </div>
@@ -217,6 +218,25 @@
           <tbody id="activity-tbody"></tbody>
         </table>
         <div id="activity-empty" class="empty-state hidden">No critical events. That's good.</div>
+      </div>
+    </div>
+
+    <!-- SUPERADMIN AUDIT LOG TAB -->
+    <div id="tab-auditlog" class="hidden">
+      <div class="warn-note">Every write a superadmin makes through this console — who did it, to which account/user, and when. This is separate from Critical Activity above (which is tenant-facing).</div>
+      <div class="toolbar">
+        <input id="auditlog-actor-filter" placeholder="Filter by admin username…" oninput="loadAuditLog()" />
+        <input id="auditlog-account-filter" placeholder="Filter by target account ID…" oninput="loadAuditLog()" />
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="exportAuditLogCsv()">⇩ Export CSV</button>
+        <button class="btn-outline btn-sm" onclick="loadAuditLog()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target Account</th><th>Target</th><th>Details</th></tr></thead>
+          <tbody id="auditlog-tbody"></tbody>
+        </table>
+        <div id="auditlog-empty" class="empty-state hidden">No superadmin actions recorded yet.</div>
       </div>
     </div>
 
@@ -383,11 +403,12 @@ function logout() {
 }
 
 function switchTab(name) {
-  ['accounts','activity','health','announcements'].forEach(t => {
+  ['accounts','activity','auditlog','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
   if (name === 'activity') loadActivity();
+  if (name === 'auditlog') loadAuditLog();
   if (name === 'health') loadHealth();
   if (name === 'announcements') loadAnnouncements();
 }
@@ -783,6 +804,34 @@ async function loadActivity() {
     toast(e.message, 'err');
   }
 }
+
+async function loadAuditLog() {
+  const tbody = document.getElementById('auditlog-tbody');
+  const emptyEl = document.getElementById('auditlog-empty');
+  const actor = document.getElementById('auditlog-actor-filter').value.trim();
+  const accountId = document.getElementById('auditlog-account-filter').value.trim();
+  const params = new URLSearchParams({ limit: '200' });
+  if (actor) params.set('actor', actor);
+  if (accountId) params.set('target_account_id', accountId);
+  try {
+    const rows = await api('/api/superadmin/audit-log?' + params.toString());
+    emptyEl.classList.toggle('hidden', rows.length > 0);
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td style="white-space:nowrap;">${new Date(r.created_at).toLocaleString()}</td>
+        <td>${escapeHtml(r.actor_username)}</td>
+        <td><span class="badge">${escapeHtml(r.action)}</span></td>
+        <td>${r.target_account_id != null ? escapeHtml(String(r.target_account_id)) : '—'}</td>
+        <td>${escapeHtml(r.target_label || '—')}</td>
+        <td>${escapeHtml(r.details || '')}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function exportAuditLogCsv() { downloadCsv('/api/superadmin/audit-log/export', 'superadmin_audit_log_export.csv'); }
 
 async function loadHealth() {
   const grid = document.getElementById('health-grid');

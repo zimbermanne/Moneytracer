@@ -14,7 +14,7 @@ from auth import (
     get_current_user, require_admin, require_superadmin, set_auth_cookie, clear_auth_cookie,
     create_password_reset_token, verify_password_reset_token,
 )
-from activity import log_activity_for_user, log_activity
+from activity import log_activity_for_user, log_activity, log_superadmin_action
 from rate_limit import limiter
 import email_utils
 
@@ -302,5 +302,10 @@ def impersonate(user_id: int, db: Session = Depends(get_db),
         details=f"{superadmin.username} started a support session as {target.username} "
                 f"(expires in {IMPERSONATION_MINUTES} min)",
         account_id=target.account_id,
+    )
+    log_superadmin_action(
+        db, superadmin, "impersonate",
+        details=f"Started {IMPERSONATION_MINUTES}-min support session as {target.username}",
+        target_account_id=target.account_id, target_user_id=target.id, target_label=target.username,
     )
     return Token(access_token=token, user=target)

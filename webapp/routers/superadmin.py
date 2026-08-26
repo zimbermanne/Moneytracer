@@ -21,17 +21,17 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import (
-    Account, User, RoleEnum, AccountType, ActivityLog,
+    Account, User, RoleEnum, AccountType, ActivityLog, SuperadminAuditLog,
     Sale, Purchase, Expense, Invoice, Quotation, PurchaseOrder,
     JournalEntry, FiscalPeriod, FiscalPeriodStatus, Reminder,
     Announcement, AnnouncementLevel,
 )
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
-    RoleUpdate, AnnouncementCreate, AnnouncementOut,
+    RoleUpdate, AnnouncementCreate, AnnouncementOut, SuperadminAuditLogOut,
 )
 from auth import require_superadmin
-from activity import log_activity_for_user
+from activity import log_activity_for_user, log_superadmin_action
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/superadmin", tags=["superadmin"])
@@ -123,6 +123,38 @@ def platform_activity(
     return q.order_by(ActivityLog.created_at.desc()).offset(offset).limit(limit).all()
 
 
+# ---------- Superadmin audit log ----------
+# Distinct from /activity above: that's the tenant-facing feed (what
+# happened inside each account). This is "what has each superadmin done,
+# and to whom" — see models.SuperadminAuditLog for why it's a separate
+# table rather than reusing ActivityLog.
+
+@router.get("/audit-log", response_model=List[SuperadminAuditLogOut])
+def superadmin_audit_log(
+    actor: Optional[str] = Query(None, description="Substring match on actor_username"),
+    action: Optional[str] = Query(None, description="Substring match on the action field"),
+    target_account_id: Optional[int] = Query(None),
+    since: Optional[datetime] = Query(None),
+    until: Optional[datetime] = Query(None),
+    limit: int = Query(100, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    q = db.query(SuperadminAuditLog)
+    if actor:
+        q = q.filter(SuperadminAuditLog.actor_username.ilike(f"%{actor}%"))
+    if action:
+        q = q.filter(SuperadminAuditLog.action.ilike(f"%{action}%"))
+    if target_account_id is not None:
+        q = q.filter(SuperadminAuditLog.target_account_id == target_account_id)
+    if since:
+        q = q.filter(SuperadminAuditLog.created_at >= since)
+    if until:
+        q = q.filter(SuperadminAuditLog.created_at <= until)
+    return q.order_by(SuperadminAuditLog.created_at.desc()).offset(offset).limit(limit).all()
+
+
 # ---------- System health / diagnostics ----------
 
 class HealthOut(BaseModel):
@@ -171,6 +203,7 @@ def health(db: Session = Depends(get_db), superadmin: User = Depends(require_sup
         "quotations": db.query(Quotation).count(),
         "journal_entries": db.query(JournalEntry).count(),
         "activity_log_entries": db.query(ActivityLog).count(),
+        "superadmin_audit_log_entries": db.query(SuperadminAuditLog).count(),
     }
 
     open_reminders = db.query(Reminder).filter(Reminder.is_done.is_(False)).count()
@@ -228,6 +261,7 @@ def export_accounts(db: Session = Depends(get_db), superadmin: User = Depends(re
         for a in accounts
     ]
     log_activity_for_user(db, superadmin, "export_accounts", f"Exported {len(rows)} account(s) to CSV")
+    log_superadmin_action(db, superadmin, "export_accounts", details=f"Exported {len(rows)} account(s)")
     return _csv_response(rows, "accounts_export.csv")
 
 
@@ -257,6 +291,11 @@ def update_plan(account_id: int, payload: PlanUpdate, db: Session = Depends(get_
         db, superadmin, "account_plan_change",
         f"Changed plan for {account.name} from '{old_plan}' to '{payload.plan}'",
     )
+    log_superadmin_action(
+        db, superadmin, "account_plan_change",
+        details=f"Plan '{old_plan}' -> '{payload.plan}'",
+        target_account_id=account.id, target_label=account.name,
+    )
     return {"detail": f"Plan updated to {payload.plan}", "plan": account.plan}
 
 
@@ -272,6 +311,11 @@ def update_notes(account_id: int, payload: NotesUpdate, db: Session = Depends(ge
     # sensitive support context that doesn't belong duplicated into the
     # activity feed shown elsewhere in the console.
     log_activity_for_user(db, superadmin, "account_notes_update", f"Updated internal notes for {account.name}")
+    log_superadmin_action(
+        db, superadmin, "account_notes_update",
+        details="Internal notes updated (contents not logged)",
+        target_account_id=account.id, target_label=account.name,
+    )
     return {"detail": "Notes updated"}
 
 
@@ -290,6 +334,8 @@ def bulk_suspend(payload: BulkAccountIds, db: Session = Depends(get_db),
         )
     db.commit()
     log_activity_for_user(db, superadmin, "bulk_account_suspend", f"Bulk-suspended {len(found_ids)} account(s)")
+    for aid in found_ids:
+        log_superadmin_action(db, superadmin, "account_suspend", target_account_id=aid)
     missing = set(payload.account_ids) - found_ids
     return {"suspended": sorted(found_ids), "not_found": sorted(missing)}
 
@@ -303,6 +349,8 @@ def bulk_activate(payload: BulkAccountIds, db: Session = Depends(get_db),
         account.is_suspended = False
     db.commit()
     log_activity_for_user(db, superadmin, "bulk_account_activate", f"Bulk-activated {len(found_ids)} account(s)")
+    for aid in found_ids:
+        log_superadmin_action(db, superadmin, "account_activate", target_account_id=aid)
     missing = set(payload.account_ids) - found_ids
     return {"activated": sorted(found_ids), "not_found": sorted(missing)}
 
@@ -323,6 +371,10 @@ def force_logout_account(account_id: int, db: Session = Depends(get_db),
     )
     db.commit()
     log_activity_for_user(db, superadmin, "force_logout_account", f"Force-logged-out all users of {account.name}")
+    log_superadmin_action(
+        db, superadmin, "force_logout_account", details=f"Logged out {updated} user(s)",
+        target_account_id=account.id, target_label=account.name,
+    )
     return {"detail": f"Logged out {updated} user(s) of {account.name}"}
 
 
@@ -335,6 +387,10 @@ def force_logout_user(user_id: int, db: Session = Depends(get_db),
     user.token_version = (user.token_version or 0) + 1
     db.commit()
     log_activity_for_user(db, superadmin, "force_logout_user", f"Force-logged-out {user.username}")
+    log_superadmin_action(
+        db, superadmin, "force_logout_user",
+        target_account_id=user.account_id, target_user_id=user.id, target_label=user.username,
+    )
     return {"detail": f"Logged out {user.username}"}
 
 
@@ -357,6 +413,11 @@ def change_user_role(user_id: int, payload: RoleUpdate, db: Session = Depends(ge
         db, superadmin, "user_role_change",
         f"Changed {user.username}'s role from {old_role} to {payload.role.value}",
     )
+    log_superadmin_action(
+        db, superadmin, "user_role_change",
+        details=f"Role '{old_role}' -> '{payload.role.value}'",
+        target_account_id=user.account_id, target_user_id=user.id, target_label=user.username,
+    )
     return {"detail": f"{user.username} is now {payload.role.value}"}
 
 
@@ -370,6 +431,10 @@ def deactivate_user(user_id: int, db: Session = Depends(get_db),
     user.token_version = (user.token_version or 0) + 1
     db.commit()
     log_activity_for_user(db, superadmin, "user_deactivate", f"Deactivated {user.username}")
+    log_superadmin_action(
+        db, superadmin, "user_deactivate",
+        target_account_id=user.account_id, target_user_id=user.id, target_label=user.username,
+    )
     return {"detail": f"{user.username} deactivated"}
 
 
@@ -382,6 +447,10 @@ def activate_user(user_id: int, db: Session = Depends(get_db),
     user.is_active = True
     db.commit()
     log_activity_for_user(db, superadmin, "user_activate", f"Activated {user.username}")
+    log_superadmin_action(
+        db, superadmin, "user_activate",
+        target_account_id=user.account_id, target_user_id=user.id, target_label=user.username,
+    )
     return {"detail": f"{user.username} activated"}
 
 
@@ -403,6 +472,10 @@ def superadmin_reset_password(user_id: int, payload: SuperadminPasswordReset,
     user.token_version = (user.token_version or 0) + 1  # old password's sessions shouldn't outlive the reset
     db.commit()
     log_activity_for_user(db, superadmin, "superadmin_reset_password", f"Reset password for {user.username}")
+    log_superadmin_action(
+        db, superadmin, "reset_password",
+        target_account_id=user.account_id, target_user_id=user.id, target_label=user.username,
+    )
     return {"detail": f"Password reset for {user.username}"}
 
 
@@ -439,7 +512,47 @@ def export_activity(
         for e in entries
     ]
     log_activity_for_user(db, superadmin, "export_activity", f"Exported {len(rows)} activity log entries to CSV")
+    log_superadmin_action(
+        db, superadmin, "export_activity",
+        details=f"Exported {len(rows)} entries (account_id={account_id}, critical_only={critical_only})",
+        target_account_id=account_id,
+    )
     return _csv_response(rows, "activity_export.csv")
+
+
+@router.get("/audit-log/export")
+def export_audit_log(
+    since: Optional[datetime] = Query(None),
+    until: Optional[datetime] = Query(None),
+    target_account_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    q = db.query(SuperadminAuditLog)
+    if since:
+        q = q.filter(SuperadminAuditLog.created_at >= since)
+    if until:
+        q = q.filter(SuperadminAuditLog.created_at <= until)
+    if target_account_id is not None:
+        q = q.filter(SuperadminAuditLog.target_account_id == target_account_id)
+    entries = q.order_by(SuperadminAuditLog.created_at.desc()).limit(10000).all()
+    rows = [
+        {
+            "id": e.id,
+            "actor_username": e.actor_username,
+            "action": e.action,
+            "target_account_id": e.target_account_id,
+            "target_user_id": e.target_user_id,
+            "target_label": e.target_label,
+            "details": e.details,
+            "created_at": e.created_at.isoformat() if e.created_at else "",
+        }
+        for e in entries
+    ]
+    # Deliberately not self-logged into SuperadminAuditLog — exporting the
+    # audit log itself isn't a tenant-affecting action, and self-logging
+    # every read of this endpoint would just add noise to itself.
+    return _csv_response(rows, "superadmin_audit_log_export.csv")
 
 
 # ---------- Platform announcements ----------
@@ -464,6 +577,10 @@ def create_announcement(payload: AnnouncementCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(announcement)
     log_activity_for_user(db, superadmin, "announcement_create", f"Posted announcement: {payload.message[:80]}")
+    log_superadmin_action(
+        db, superadmin, "announcement_create",
+        details=f"[{level.value}] {payload.message[:120]}", target_label=f"announcement #{announcement.id}",
+    )
     return announcement
 
 
@@ -476,4 +593,7 @@ def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db),
     announcement.is_active = False
     db.commit()
     log_activity_for_user(db, superadmin, "announcement_deactivate", f"Deactivated announcement #{announcement_id}")
+    log_superadmin_action(
+        db, superadmin, "announcement_deactivate", target_label=f"announcement #{announcement_id}",
+    )
     return {"detail": "Announcement deactivated"}

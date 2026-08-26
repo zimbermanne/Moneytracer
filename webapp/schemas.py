@@ -833,6 +833,19 @@ class ActivityOut(BaseModel):
     details: str
     created_at: datetime
 
+
+class SuperadminAuditLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    actor_username: str
+    action: str
+    target_account_id: Optional[int] = None
+    target_user_id: Optional[int] = None
+    target_label: str
+    details: str
+    created_at: datetime
+
+
 # ---------- Admin: user profile ----------
 class UserProfileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

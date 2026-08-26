@@ -599,6 +599,35 @@ class ActivityLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
+class SuperadminAuditLog(Base):
+    """Immutable-by-convention record of every write a superadmin makes
+    through the superadmin console — distinct from ActivityLog, which is
+    the tenant-facing (and tenant-scoped) activity feed.
+
+    ActivityLog entries for superadmin actions are logged with
+    account_id=None (see comment above) because the superadmin generally
+    has no account_id of their own — that made superadmin actions
+    un-queryable by "which tenant did this affect?". This table fixes
+    that: every row records the actor, the specific action, and the
+    target (account and/or user) it was performed on, so "what has this
+    admin done, and to whom" is a straightforward query rather than a
+    grep through free-text details.
+
+    Nothing in the app currently exposes an UPDATE or DELETE for these
+    rows — treat that as a hard rule, not just an oversight, if this
+    model is ever touched again."""
+    __tablename__ = "superadmin_audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_username = Column(String(80), nullable=False, index=True)
+    action = Column(String(255), nullable=False, index=True)
+    target_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    target_label = Column(String(255), default="")  # human-readable target, e.g. account name / username
+    details = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class AnnouncementLevel(str, enum.Enum):
     info = "info"
     warning = "warning"
