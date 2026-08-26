@@ -582,8 +582,54 @@ export default function Legal() {
   const c = CONTENT[lang]
 
   return (
-    <div className="landing-page" dir={activeDoc === 'disclaimer' && lang === 'ar' ? 'rtl' : 'ltr'}>
-      <header className="landing-header">
+    <div className="landing-page legal-page-wrap" dir={activeDoc === 'disclaimer' && lang === 'ar' ? 'rtl' : 'ltr'}>
+      <style>{`
+        .legal-page-wrap {
+          min-height: 100vh;
+          position: relative;
+          background: #000;
+        }
+        .legal-page-wrap::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          background:
+            linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)),
+            url('/bg.png');
+          background-size: cover;
+          background-position: center;
+          background-attachment: fixed;
+          filter: sepia(0.2) brightness(0.8);
+        }
+        .legal-page-wrap > * {
+          position: relative;
+          z-index: 1;
+        }
+        .legal-section-glass {
+          background: var(--glass-tint) !important;
+          backdrop-filter: var(--glass-filter) !important;
+          -webkit-backdrop-filter: var(--glass-filter) !important;
+          border: 1px solid var(--glass-border) !important;
+          border-radius: 24px;
+          margin: 40px auto;
+          padding: 40px !important;
+          box-shadow:
+            inset 0 0 2px 1px rgba(255, 255, 255, 0.2),
+            0 12px 40px rgba(0, 0, 0, 0.4) !important;
+          max-width: 900px !important;
+        }
+        .legal-clause h3 {
+          color: var(--accent);
+          margin-top: 24px;
+        }
+        .legal-updated {
+          color: var(--text-muted);
+          font-weight: 600;
+        }
+      `}</style>
+
+      <header className="landing-header" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}>
         <div className="landing-header-inner">
           <Link to="/" className="landing-brand">
             <img src={logoMark} alt="Moneytracer" className="landing-brand-mark" />
@@ -596,7 +642,7 @@ export default function Legal() {
         </div>
       </header>
 
-      <section className="landing-section legal-section">
+      <section className="landing-section legal-section legal-section-glass">
         <div className="legal-doc-tabs">
           {DOC_TABS.map((d) => (
             <button
@@ -637,7 +683,7 @@ export default function Legal() {
               ))}
             </div>
 
-            <p className="landing-disclaimer-note">{c.footerNote}</p>
+            <p className="landing-disclaimer-note" style={{ marginTop: 32, opacity: 0.8 }}>{c.footerNote}</p>
           </>
         ) : (
           <ExtraDoc doc={EXTRA_LEGAL_DOCS[activeDoc]} />
