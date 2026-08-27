@@ -29,7 +29,7 @@ from models import (
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
     RoleUpdate, AnnouncementCreate, AnnouncementOut, SuperadminAuditLogOut,
-    InventoryOut,
+    InventoryOut, SuperadminUserOut,
 )
 from auth import require_superadmin
 from activity import log_activity_for_user, log_superadmin_action
@@ -418,6 +418,38 @@ def force_logout_user(user_id: int, db: Session = Depends(get_db),
 # managing users within one's own account — a superadmin (who typically has
 # no account_id) can't use them. These give the superadmin console the same
 # capabilities across any account.
+
+@router.get("/users", response_model=List[SuperadminUserOut])
+def list_all_users(
+    q: Optional[str] = Query(None, description="Substring match on username, full_name, or email"),
+    account_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    """Every user on the platform, across every account, in one flat list —
+    routers/users.py's GET / is gated to require_manager_up (admin/manager
+    only, no superadmin) so it 403s here; this is the console's actual
+    source for the Users tab."""
+    query = db.query(User).filter(User.is_demo == False)  # noqa: E712
+    if account_id is not None:
+        query = query.filter(User.account_id == account_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (User.username.ilike(like)) | (User.full_name.ilike(like)) | (User.email.ilike(like))
+        )
+    users = query.order_by(User.username).all()
+
+    account_ids = {u.account_id for u in users if u.account_id}
+    names = dict(
+        db.query(Account.id, Account.name).filter(Account.id.in_(account_ids)).all()
+    ) if account_ids else {}
+    return [
+        SuperadminUserOut(**{c.name: getattr(u, c.name) for c in User.__table__.columns},
+                           account_name=names.get(u.account_id))
+        for u in users
+    ]
+
 
 @router.put("/users/{user_id}/role", response_model=None)
 def change_user_role(user_id: int, payload: RoleUpdate, db: Session = Depends(get_db),

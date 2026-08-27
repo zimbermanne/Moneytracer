@@ -35,6 +35,13 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class SuperadminUserOut(UserOut):
+    """UserOut plus the account name, so the superadmin console can list
+    every user platform-wide (across all accounts) in one flat table
+    without a second lookup per row."""
+    account_name: Optional[str] = None
+
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None

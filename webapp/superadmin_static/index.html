@@ -185,6 +185,7 @@
   <div class="page">
     <div class="tabs">
       <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
+      <div class="tab" data-tab="users" onclick="switchTab('users')">Users</div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
       <div class="tab" data-tab="auditlog" onclick="switchTab('auditlog')">Superadmin Audit Log</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
@@ -229,6 +230,27 @@
           <tbody id="accounts-tbody"></tbody>
         </table>
         <div id="accounts-empty" class="empty-state hidden">No accounts match your search.</div>
+      </div>
+    </div>
+
+    <!-- USERS TAB (platform-wide, every user across every account) -->
+    <div id="tab-users" class="hidden">
+      <div class="toolbar">
+        <input id="users-search-box" placeholder="Search by username, name, or email…" oninput="loadUsers()" />
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadUsers()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th><th>Full name</th><th>Account</th><th>Role</th><th>Email</th>
+              <th>Status</th><th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+        <div id="users-empty" class="empty-state hidden">No users match your search.</div>
       </div>
     </div>
 
@@ -486,10 +508,11 @@ async function submitChangePassword() {
 }
 
 function switchTab(name) {
-  ['accounts','activity','auditlog','health','announcements'].forEach(t => {
+  ['accounts','users','activity','auditlog','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
+  if (name === 'users') loadUsers();
   if (name === 'activity') loadActivity();
   if (name === 'auditlog') loadAuditLog();
   if (name === 'health') loadHealth();
@@ -915,6 +938,53 @@ async function loginAs(userId, username) {
     const url = `${appBase}?impersonate=${encodeURIComponent(data.access_token)}`;
     window.open(url, '_blank');
     toast(`Opened a session as ${username}. It expires in 30 minutes.`, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+let users = [];
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  const emptyEl = document.getElementById('users-empty');
+  const q = document.getElementById('users-search-box').value.trim();
+  try {
+    const params = q ? '?q=' + encodeURIComponent(q) : '';
+    users = await api('/api/superadmin/users' + params);
+    emptyEl.classList.toggle('hidden', users.length > 0);
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${escapeHtml(u.username)}</strong></td>
+        <td>${escapeHtml(u.full_name || '—')}</td>
+        <td>${u.account_name ? escapeHtml(u.account_name) : '<span style="color:var(--text-faint);">— (platform)</span>'}</td>
+        <td><span class="badge">${escapeHtml(u.role)}</span></td>
+        <td>${escapeHtml(u.email || '—')}</td>
+        <td>${u.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-suspended">Inactive</span>'}</td>
+        <td>
+          <div class="action-row" style="justify-content:flex-end;">
+            ${u.role === 'superadmin' ? '' : `
+              <button class="btn-outline btn-sm" ${!u.is_active ? 'disabled title="User is inactive"' : ''} onclick="loginAs(${u.id}, '${escapeJs(u.username)}')">Login as</button>
+              <button class="btn-outline btn-sm" onclick="resetUserPassword(${u.id}, '${escapeJs(u.username)}')">Reset password</button>
+              ${u.is_active
+                ? `<button class="btn-warn btn-sm" onclick="toggleUserActiveGlobal(${u.id}, false)">Deactivate</button>`
+                : `<button class="btn-success btn-sm" onclick="toggleUserActiveGlobal(${u.id}, true)">Activate</button>`}
+              <button class="btn-warn btn-sm" onclick="forceLogoutUser(${u.id}, '${escapeJs(u.username)}')">Force logout</button>
+            `}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function toggleUserActiveGlobal(userId, activate) {
+  try {
+    await api(`/api/superadmin/users/${userId}/${activate ? 'activate' : 'deactivate'}`, { method: 'POST' });
+    toast(activate ? 'User activated.' : 'User deactivated.', 'ok');
+    loadUsers();
   } catch (e) {
     toast(e.message, 'err');
   }
