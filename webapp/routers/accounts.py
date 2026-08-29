@@ -1,15 +1,18 @@
 from typing import List
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Account, User, RoleEnum, Country, RevenueAuthority, ExchangeRate
-from schemas import AccountOut, AccountUpdate, AccountWithUsersOut, ExchangeRateCreate, ExchangeRateOut
+from schemas import AccountOut, AccountUpdate, AccountWithUsersOut, AccountTrashOut, ExchangeRateCreate, ExchangeRateOut
 from auth import require_superadmin, require_admin, get_current_user
-from activity import log_activity_for_user
+from activity import log_activity_for_user, log_activity
 from african_currencies import default_currency_for_country
 
 router = APIRouter(prefix="/api/accounts", tags=["accounts"])
+
+DELETION_GRACE_DAYS = 90  # ~3 months
 
  
 @router.get("/company-info")
@@ -105,8 +108,16 @@ def update_my_account(payload: AccountUpdate, db: Session = Depends(get_db),
 
 @router.get("/", response_model=List[AccountOut])
 def list_accounts(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
-    """List all accounts (superadmin only)."""
-    return db.query(Account).order_by(Account.created_at.desc()).all()
+    """List all accounts (superadmin only). Excludes accounts pending
+    deletion — those live in the Trash view (GET /trash/list) instead, so
+    they don't clutter the main Accounts tab while still being fully
+    recoverable within the grace period."""
+    return (
+        db.query(Account)
+        .filter(Account.pending_deletion.is_(False))
+        .order_by(Account.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{account_id}", response_model=AccountWithUsersOut)
@@ -177,15 +188,130 @@ def activate_account(account_id: int, db: Session = Depends(get_db), superadmin:
 
 @router.delete("/{account_id}")
 def delete_account(account_id: int, db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
-    """Delete an account (superadmin only) - USE WITH CAUTION."""
+    """Soft-delete an account (superadmin only). This does NOT destroy any
+    data — it flags the account as pending_deletion, suspends it (blocks
+    login), and schedules a permanent purge DELETION_GRACE_DAYS (~3
+    months) out. See purge_expired_accounts() below for what actually
+    deletes it, and POST /{id}/restore to cancel a pending deletion
+    within the grace window."""
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
-    
-    # This will cascade delete all related data due to foreign keys
-    db.delete(account)
+    if account.pending_deletion:
+        raise HTTPException(status_code=400, detail="Account is already pending deletion")
+
+    now = datetime.utcnow()
+    account.pending_deletion = True
+    account.is_suspended = True
+    account.deletion_requested_at = now
+    account.scheduled_purge_at = now + timedelta(days=DELETION_GRACE_DAYS)
+    account.deletion_requested_by = superadmin.username
     db.commit()
-    log_activity_for_user(db, superadmin, "account_delete", f"Deleted account {account.name}")
+    log_activity_for_user(
+        db, superadmin, "account_delete_requested",
+        f"Marked {account.name} for deletion — permanent purge in {DELETION_GRACE_DAYS} days "
+        f"({account.scheduled_purge_at.date()}) unless restored",
+    )
+    return {
+        "detail": f"{account.name} moved to trash. It will be permanently deleted on "
+                   f"{account.scheduled_purge_at.date()} unless restored before then.",
+        "scheduled_purge_at": account.scheduled_purge_at,
+    }
+
+
+@router.post("/{account_id}/restore")
+def restore_account(account_id: int, db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    """Cancel a pending deletion within the grace window."""
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if not account.pending_deletion:
+        raise HTTPException(status_code=400, detail="Account is not pending deletion")
+
+    account.pending_deletion = False
+    account.is_suspended = False
+    account.deletion_requested_at = None
+    account.scheduled_purge_at = None
+    account.deletion_requested_by = ""
+    db.commit()
+    log_activity_for_user(db, superadmin, "account_delete_restored", f"Restored {account.name} from trash")
+    return {"detail": f"{account.name} restored."}
+
+
+@router.post("/{account_id}/purge-now")
+def purge_account_now(account_id: int, db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    """Skip the grace period and permanently delete a pending-deletion
+    account immediately. Deliberately requires the account to already be
+    pending_deletion (i.e. someone already went through the normal
+    DELETE /{id} step) — this is not a shortcut around the trash flow,
+    it's a way to empty it early for an account already in it."""
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if not account.pending_deletion:
+        raise HTTPException(status_code=400, detail="Account must be moved to trash (DELETE) before it can be purged")
+
+    name = account.name
+    log_activity_for_user(db, superadmin, "account_purged", f"Permanently deleted {name} (early purge, before grace period ended)")
+    db.delete(account)  # cascades to related data via FK relationships, same as before
+    db.commit()
+    return {"detail": f"{name} permanently deleted."}
+
+
+@router.get("/trash/list", response_model=List[AccountTrashOut])
+def list_trash(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    """Every account currently in the ~90-day deletion grace window,
+    soonest-to-be-purged first."""
+    now = datetime.utcnow()
+    accounts = (
+        db.query(Account)
+        .filter(Account.pending_deletion.is_(True))
+        .order_by(Account.scheduled_purge_at.asc())
+        .all()
+    )
+    out = []
+    for a in accounts:
+        remaining = (a.scheduled_purge_at - now).days if a.scheduled_purge_at else 0
+        out.append(AccountTrashOut(
+            id=a.id, name=a.name, owner_full_name=a.owner_full_name,
+            deletion_requested_at=a.deletion_requested_at,
+            scheduled_purge_at=a.scheduled_purge_at,
+            deletion_requested_by=a.deletion_requested_by,
+            days_remaining=max(0, remaining),
+        ))
+    return out
+
+
+def purge_expired_accounts(db: Session) -> int:
+    """Permanently delete every account whose grace period has fully
+    elapsed. Called automatically once a day by scheduler.py
+    (purge_expired_deleted_accounts), and can also be triggered on demand
+    via POST /api/accounts/trash/purge-expired for testing or to not wait
+    for the next scheduled run."""
+    now = datetime.utcnow()
+    expired = (
+        db.query(Account)
+        .filter(Account.pending_deletion.is_(True))
+        .filter(Account.scheduled_purge_at <= now)
+        .all()
+    )
+    for account in expired:
+        log_activity(
+            db, username="system", action="account_purged",
+            details=f"Permanently deleted {account.name} (grace period elapsed)",
+        )
+        db.delete(account)
+    if expired:
+        db.commit()
+    return len(expired)
+
+
+@router.post("/trash/purge-expired")
+def purge_expired_now(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    """Manually run the purge sweep now, instead of waiting for the next
+    app startup — useful since this app has no background scheduler."""
+    count = purge_expired_accounts(db)
+    return {"detail": f"Purged {count} account(s) past their grace period."}
 
 
 # ---------- Exchange Rates (Multi-Currency) ----------

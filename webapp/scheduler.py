@@ -25,7 +25,6 @@ from models import (
 from activity import log_activity
 import email_utils
 from ledger import post_loan_interest_accrual_entry
-
 _REMINDER_ACTION = "invoice_reminder_sent"
 _DEADLINE_REMINDER_ACTION = "deadline_reminder_sent"
 _LOAN_REMINDER_ACTION = "loan_reminder_sent"
@@ -260,6 +259,24 @@ def accrue_loan_interest():
         db.close()
 
 
+def purge_expired_deleted_accounts():
+    """Permanently deletes accounts whose ~90-day post-deletion grace
+    period (see routers/accounts.py delete_account / DELETION_GRACE_DAYS)
+    has fully elapsed. The actual query+delete logic lives in
+    routers/accounts.py (purge_expired_accounts) so it can also be
+    triggered on demand via POST /api/accounts/trash/purge-expired — this
+    is just the daily automatic trigger for it."""
+    from routers.accounts import purge_expired_accounts  # local import: avoids a circular import at module load time
+    db = SessionLocal()
+    try:
+        count = purge_expired_accounts(db)
+        if count:
+            log_activity(db, username="system", action="scheduler_heartbeat",
+                         details=f"purge_expired_deleted_accounts: purged {count} account(s)", account_id=None)
+    finally:
+        db.close()
+
+
 _scheduler = None
 
 
@@ -294,6 +311,13 @@ def start_scheduler():
         "interval", hours=24,
         id="accrue_loan_interest",
         next_run_time=datetime.utcnow() + timedelta(seconds=120),
+        coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        purge_expired_deleted_accounts,
+        "interval", hours=24,
+        id="purge_expired_deleted_accounts",
+        next_run_time=datetime.utcnow() + timedelta(seconds=150),
         coalesce=True, max_instances=1,
     )
     _scheduler.start()

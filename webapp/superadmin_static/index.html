@@ -185,6 +185,7 @@
   <div class="page">
     <div class="tabs">
       <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
+      <div class="tab" data-tab="trash" onclick="switchTab('trash')">Trash</div>
       <div class="tab" data-tab="users" onclick="switchTab('users')">Users</div>
       <div class="tab" data-tab="messages" onclick="switchTab('messages')">Messages <span id="messages-badge" class="badge badge-critical hidden" style="margin-left:4px;"></span></div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
@@ -231,6 +232,22 @@
           <tbody id="accounts-tbody"></tbody>
         </table>
         <div id="accounts-empty" class="empty-state hidden">No accounts match your search.</div>
+      </div>
+    </div>
+
+    <!-- TRASH TAB (accounts pending deletion, ~90-day grace period) -->
+    <div id="tab-trash" class="hidden">
+      <div class="warn-note">Deleted accounts land here for 90 days before being permanently purged. Restore an account any time before then, or purge it early if you're sure.</div>
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadTrash()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Account</th><th>Owner</th><th>Deleted by</th><th>Deleted on</th><th>Purges on</th><th>Days left</th><th style="text-align:right;">Actions</th></tr></thead>
+          <tbody id="trash-tbody"></tbody>
+        </table>
+        <div id="trash-empty" class="empty-state hidden">Nothing in trash.</div>
       </div>
     </div>
 
@@ -532,10 +549,11 @@ async function submitChangePassword() {
 }
 
 function switchTab(name) {
-  ['accounts','users','messages','activity','auditlog','health','announcements'].forEach(t => {
+  ['accounts','trash','users','messages','activity','auditlog','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
+  if (name === 'trash') loadTrash();
   if (name === 'users') loadUsers();
   if (name === 'messages') loadMessages();
   if (name === 'activity') loadActivity();
@@ -957,11 +975,60 @@ async function setSuspended(accountId, suspend) {
 }
 
 async function deleteAccount(accountId, name) {
-  if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+  if (!confirm(`Move "${name}" to trash? It will be usable-blocked immediately and permanently deleted in 90 days unless restored before then.`)) return;
   try {
-    await api(`/api/accounts/${accountId}`, { method: 'DELETE' });
-    toast('Account deleted.', 'ok');
+    const result = await api(`/api/accounts/${accountId}`, { method: 'DELETE' });
+    toast(result.detail, 'ok');
     await loadAccounts();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadTrash() {
+  const tbody = document.getElementById('trash-tbody');
+  const emptyEl = document.getElementById('trash-empty');
+  try {
+    const rows = await api('/api/accounts/trash/list');
+    emptyEl.classList.toggle('hidden', rows.length > 0);
+    tbody.innerHTML = rows.map(a => `
+      <tr>
+        <td><strong>${escapeHtml(a.name)}</strong></td>
+        <td>${escapeHtml(a.owner_full_name)}</td>
+        <td>${escapeHtml(a.deletion_requested_by || '—')}</td>
+        <td style="white-space:nowrap;">${a.deletion_requested_at ? new Date(a.deletion_requested_at).toLocaleDateString() : '—'}</td>
+        <td style="white-space:nowrap;">${a.scheduled_purge_at ? new Date(a.scheduled_purge_at).toLocaleDateString() : '—'}</td>
+        <td>${a.days_remaining} day(s)</td>
+        <td>
+          <div class="action-row" style="justify-content:flex-end;">
+            <button class="btn-success btn-sm" onclick="restoreAccount(${a.id}, '${escapeJs(a.name)}')">Restore</button>
+            <button class="btn-danger btn-sm" onclick="purgeAccountNow(${a.id}, '${escapeJs(a.name)}')">Purge now</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function restoreAccount(accountId, name) {
+  if (!confirm(`Restore "${name}"? This cancels the scheduled deletion and reactivates the account.`)) return;
+  try {
+    const result = await api(`/api/accounts/${accountId}/restore`, { method: 'POST' });
+    toast(result.detail, 'ok');
+    await loadTrash();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function purgeAccountNow(accountId, name) {
+  if (!confirm(`Permanently delete "${name}" right now? This skips the rest of the 90-day grace period and CANNOT be undone.`)) return;
+  try {
+    const result = await api(`/api/accounts/${accountId}/purge-now`, { method: 'POST' });
+    toast(result.detail, 'ok');
+    await loadTrash();
   } catch (e) {
     toast(e.message, 'err');
   }

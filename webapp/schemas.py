@@ -239,6 +239,23 @@ class AccountAdminOut(AccountWithUsersOut):
     must never appear on any tenant-facing response (AccountOut/
     AccountWithUsersOut above stay as-is for that reason)."""
     admin_notes: Optional[str] = ""
+    pending_deletion: bool = False
+    deletion_requested_at: Optional[datetime] = None
+    scheduled_purge_at: Optional[datetime] = None
+    deletion_requested_by: Optional[str] = ""
+
+
+class AccountTrashOut(BaseModel):
+    """One row in the superadmin 'Trash' view — a soft-deleted account
+    counting down to permanent purge."""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    owner_full_name: str
+    deletion_requested_at: Optional[datetime] = None
+    scheduled_purge_at: Optional[datetime] = None
+    deletion_requested_by: Optional[str] = ""
+    days_remaining: int
 
 
 class PlanUpdate(BaseModel):

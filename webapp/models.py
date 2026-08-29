@@ -102,6 +102,17 @@ class Account(Base):
     # includes it.
     admin_notes = Column(Text, default="")
 
+    # ---- Soft-delete / trash (see routers/accounts.py delete_account) ----
+    # "Delete" from the superadmin console never immediately destroys data:
+    # it flags the account here and schedules a permanent purge ~90 days
+    # out, giving a recovery window for accidental/mistaken deletes or a
+    # tenant who changes their mind. Only the purge sweep (or an explicit
+    # superadmin "purge now" override) actually calls db.delete().
+    pending_deletion = Column(Boolean, default=False, index=True)
+    deletion_requested_at = Column(DateTime, nullable=True)
+    scheduled_purge_at = Column(DateTime, nullable=True, index=True)
+    deletion_requested_by = Column(String(80), default="")
+
     users = relationship("User", back_populates="account")
     country = relationship("Country")
     revenue_authority = relationship("RevenueAuthority")
