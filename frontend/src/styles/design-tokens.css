@@ -215,109 +215,109 @@
 /* Explicit dark mode (user chose it in Settings) — wins over OS setting. */
 :root[data-theme="dark"] {
   /* ---- Core palette ---- */
-  --cream:            #0f1117;   /* page background — very dark blue-black */
-  --surface:          #1a1d27;   /* cards, inputs, modals */
-  --surface-sunken:   #13151e;   /* recessed panels, table hover */
-  --border:           #2a2d3a;   /* hairline borders */
-  --border-strong:    #363a4d;   /* input borders, dividers */
+  --cream:            #0A0B0E;   /* deep obsidian background */
+  --surface:          #14161B;   /* elevated slate surface */
+  --surface-sunken:   #0E1014;   /* subtly recessed */
+  --border:           #24272E;   /* slate border */
+  --border-strong:    #2D323B;   /* prominent border */
 
   /* ---- Text ---- */
-  --text-dark:        #f0eee8;   /* primary text — warm off-white */
-  --text-muted:       #9b9aab;   /* secondary text, labels */
-  --text-faint:       #5c5b6e;   /* placeholder, disabled */
+  --text-dark:        #F0F1F5;   /* pure silk white */
+  --text-muted:       #8E95A2;   /* cool gray muted */
+  --text-faint:       #525966;   /* dark slate faint */
 
-  /* ---- Accent — terracotta stays, just slightly brightened ---- */
-  --accent:           #d4724f;
-  --accent-hover:     #e08060;
-  --accent-soft:      #2d1e17;   /* accent-tinted backgrounds in dark */
+  /* ---- Accent — terracotta brightened for dark mode visibility ---- */
+  --accent:           #E27A52;
+  --accent-hover:     #F08C66;
+  --accent-soft:      #2A1D18;
 
-  /* ---- Status colors — slightly lifted so they read on dark surfaces ---- */
-  --success:          #7daa6d;
-  --success-bg:       #1a2a18;
-  --warning:          #d49a3a;
-  --warning-bg:       #2a2010;
-  --danger:           #d4564a;
-  --danger-bg:        #2d1512;
-  --info:             #5e88b0;
-  --info-bg:          #111d2a;
+  /* ---- Status colors — lifted for dark mode ---- */
+  --success:          #86B37B;
+  --success-bg:       #18241C;
+  --warning:          #E2A644;
+  --warning-bg:       #241F14;
+  --danger:           #E2635B;
+  --danger-bg:        #241818;
+  --info:             #6A96C2;
+  --info-bg:          #141D29;
 
   /* ---- Sidebar / chrome ---- */
-  --sidebar-bg:            #1a1d27;
-  --sidebar-border:        #2a2d3a;
-  --sidebar-hover:         #22253a;
-  --sidebar-active-bg:     #2d1e17;
-  --sidebar-active-text:   #d4724f;
-  --sidebar-footer-bg:     #13151e;
+  --sidebar-bg:            #14161B;
+  --sidebar-border:        #24272E;
+  --sidebar-hover:         #1C1F26;
+  --sidebar-active-bg:     #2A1D18;
+  --sidebar-active-text:   #E27A52;
+  --sidebar-footer-bg:     #0E1014;
 
-  /* ---- Shadows — deeper on dark so elevation still reads ---- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow:    0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  /* ---- Shadows — deep obsidian shadows ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow:    0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
 
-  /* ---- Neumorphic — dark inversion ---- */
-  --neu-light: rgba(255, 255, 255, 0.05);
-  --neu-dark:  rgba(0, 0, 0, 0.45);
-  --neu-raised:  4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
-  --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
-  --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
-  --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
+  /* ---- Neumorphic — dark obsidian inversion ---- */
+  --neu-light: rgba(255, 255, 255, 0.03);
+  --neu-dark:  rgba(0, 0, 0, 0.50);
+  --neu-raised:  4px 4px 12px var(--neu-dark), -2px -2px 8px var(--neu-light);
+  --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
+  --neu-raised-sm:  2px 2px 6px var(--neu-dark), -1px -1px 4px var(--neu-light);
+  --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -1px -1px 3px var(--neu-light);
 
-  /* ---- Liquid glass — dark inversion: darker tint, dimmer highlight ---- */
-  --glass-tint:      rgba(255, 255, 255, 0.05);
-  --glass-tint-hover: rgba(255, 255, 255, 0.08);
-  --glass-border:    rgba(255, 255, 255, 0.10);
-  --glass-highlight: rgba(255, 255, 255, 0.14);
+  /* ---- Liquid glass — dark inversion ---- */
+  --glass-tint:      rgba(255, 255, 255, 0.04);
+  --glass-tint-hover: rgba(255, 255, 255, 0.07);
+  --glass-border:    rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.18);
 }
 
 /* System default (user hasn't explicitly chosen light or dark) — same
    overrides, gated on OS preference instead of the data-theme attribute. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --cream:            #0f1117;
-    --surface:          #1a1d27;
-    --surface-sunken:   #13151e;
-    --border:           #2a2d3a;
-    --border-strong:    #363a4d;
+    --cream:            #0A0B0E;
+    --surface:          #14161B;
+    --surface-sunken:   #0E1014;
+    --border:           #24272E;
+    --border-strong:    #2D323B;
 
-    --text-dark:        #f0eee8;
-    --text-muted:       #9b9aab;
-    --text-faint:       #5c5b6e;
+    --text-dark:        #F0F1F5;
+    --text-muted:       #8E95A2;
+    --text-faint:       #525966;
 
-    --accent:           #d4724f;
-    --accent-hover:     #e08060;
-    --accent-soft:      #2d1e17;
+    --accent:           #E27A52;
+    --accent-hover:     #F08C66;
+    --accent-soft:      #2A1D18;
 
-    --success:          #7daa6d;
-    --success-bg:       #1a2a18;
-    --warning:          #d49a3a;
-    --warning-bg:       #2a2010;
-    --danger:           #d4564a;
-    --danger-bg:        #2d1512;
-    --info:             #5e88b0;
-    --info-bg:          #111d2a;
+    --success:          #86B37B;
+    --success-bg:       #18241C;
+    --warning:          #E2A644;
+    --warning-bg:       #241F14;
+    --danger:           #E2635B;
+    --danger-bg:        #241818;
+    --info:             #6A96C2;
+    --info-bg:          #141D29;
 
-    --sidebar-bg:            #1a1d27;
-    --sidebar-border:        #2a2d3a;
-    --sidebar-hover:         #22253a;
-    --sidebar-active-bg:     #2d1e17;
-    --sidebar-active-text:   #d4724f;
-    --sidebar-footer-bg:     #13151e;
+    --sidebar-bg:            #14161B;
+    --sidebar-border:        #24272E;
+    --sidebar-hover:         #1C1F26;
+    --sidebar-active-bg:     #2A1D18;
+    --sidebar-active-text:   #E27A52;
+    --sidebar-footer-bg:     #0E1014;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow:    0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow:    0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
 
-    --neu-light: rgba(255, 255, 255, 0.05);
-    --neu-dark:  rgba(0, 0, 0, 0.45);
-    --neu-raised:  4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+    --neu-light: rgba(255, 255, 255, 0.03);
+    --neu-dark:  rgba(0, 0, 0, 0.50);
+    --neu-raised:  4px 4px 12px var(--neu-dark), -2px -2px 8px var(--neu-light);
     --neu-pressed: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
-    --neu-raised-sm:  2px 2px 5px var(--neu-dark), -2px -2px 5px var(--neu-light);
+    --neu-raised-sm:  2px 2px 6px var(--neu-dark), -1px -1px 4px var(--neu-light);
     --neu-pressed-sm: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
 
-    --glass-tint:      rgba(255, 255, 255, 0.05);
-    --glass-tint-hover: rgba(255, 255, 255, 0.08);
-    --glass-border:    rgba(255, 255, 255, 0.10);
-    --glass-highlight: rgba(255, 255, 255, 0.14);
+    --glass-tint:      rgba(255, 255, 255, 0.04);
+    --glass-tint-hover: rgba(255, 255, 255, 0.07);
+    --glass-border:    rgba(255, 255, 255, 0.12);
+    --glass-highlight: rgba(255, 255, 255, 0.18);
   }
 }
 

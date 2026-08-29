@@ -226,6 +226,10 @@ button {
   }
 }
 
+:root[data-theme="dark"] .card {
+  background: var(--surface) !important; /* Force solid surface in dark mode for better contrast */
+}
+
 /* Classic style: the two literal white-inset "glass edge" shadows on .card
    and .login-card aren't driven by the --glass-* variables, so flatten them
    here to the plain elevation shadow used elsewhere in Classic mode. */
@@ -3478,14 +3482,13 @@ label {
 :root:not([data-theme]) .card {
     background:
       linear-gradient(135deg,
-        rgba(255,255,255,0.06) 0%,
-        rgba(255,255,255,0.02) 40%,
-        rgba(255,255,255,0.01) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+        rgba(255,255,255,0.04) 0%,
+        rgba(255,255,255,0.01) 40%,
+        rgba(255,255,255,0.00) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.22),
-      0 2px 8px rgba(0, 0, 0, 0.10),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 :root:not([data-theme]) .card::before {
     background: linear-gradient(90deg,
@@ -3630,14 +3633,13 @@ label {
 :root[data-theme="dark"] .card {
     background:
       linear-gradient(135deg,
-        rgba(255,255,255,0.06) 0%,
-        rgba(255,255,255,0.02) 40%,
-        rgba(255,255,255,0.01) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+        rgba(255,255,255,0.04) 0%,
+        rgba(255,255,255,0.01) 40%,
+        rgba(255,255,255,0.00) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.22),
-      0 2px 8px rgba(0, 0, 0, 0.10),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 :root[data-theme="dark"] .card::before {
     background: linear-gradient(90deg,
@@ -3729,9 +3731,9 @@ label {
     background-repeat: no-repeat, no-repeat;
   }
 :root[data-theme="dark"] .login-card {
-    background: rgba(26, 29, 39, 0.82);
+    background: #14161B;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 :root[data-theme="dark"] .login-card h1 { color: var(--text-dark); }
 :root[data-theme="dark"] .login-card .sub { color: var(--text-muted); }
