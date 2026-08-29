@@ -168,14 +168,12 @@
      i.e. the "System" option).
    ========================================================================== */
 /* ==========================================================================
-   Theme STYLE — "Liquid Glass" vs "Classic" (the app's original, pre-glass
-   look). Independent of light/dark MODE above: this swaps the glass tokens
+   Theme STYLE — "Liquid Glass" vs "Classic" (Editorial)
+   Independent of light/dark MODE above: this swaps the glass tokens
    themselves so every component that already reads var(--glass-tint),
    var(--glass-filter), etc. automatically flattens to solid opaque
    surfaces with no blur, no component-level CSS changes needed.
-   Opt in via [data-style="classic"] on :root (set by the theme switcher in
-   Settings, persisted to localStorage). Default (no attribute, or
-   data-style="glass") keeps the existing liquid-glass look.
+   "Classic" is optimized to match the clean, professional Superadmin look.
    ========================================================================== */
 :root[data-style="classic"] {
   --glass-tint:       var(--surface);
@@ -184,6 +182,10 @@
   --glass-highlight:  rgba(0, 0, 0, 0);
   --glass-filter:     none;
   --glass-filter-sm:  none;
+
+  /* Classic uses the more editorial Superadmin shadows */
+  --shadow:    0 2px 8px rgba(43,38,34,0.06), 0 1px 2px rgba(43,38,34,0.04);
+  --shadow-lg: 0 12px 32px rgba(43, 38, 34, 0.08), 0 2px 8px rgba(43, 38, 34, 0.04);
 }
 
 :root[data-theme="dark"][data-style="classic"] {
@@ -193,6 +195,10 @@
   --glass-highlight:  rgba(0, 0, 0, 0);
   --glass-filter:     none;
   --glass-filter-sm:  none;
+
+  /* Deeper shadows for dark mode classic */
+  --shadow:    0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
