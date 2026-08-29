@@ -1,0 +1,403 @@
+{
+  "common": {
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ",
+    "delete": "ሰርዝ",
+    "edit": "አርትዕ",
+    "add": "ጨምር",
+    "search": "ፈልግ",
+    "loading": "በመጫን ላይ...",
+    "noResults": "ምንም ውጤት አልተገኘም",
+    "confirm": "አረጋግጥ",
+    "back": "ተመለስ",
+    "next": "ቀጣይ",
+    "submit": "አስገባ",
+    "close": "ዝጋ",
+    "yes": "አዎ",
+    "no": "አይ",
+    "or": "ወይም",
+    "and": "እና"
+  },
+  "nav": {
+    "dashboard": "ዳሽቦርድ",
+    "sales": "ሽያጭ",
+    "purchases": "ግዢዎች",
+    "inventory": "የእቃ ክምችት",
+    "expenses": "ወጪዎች",
+    "documents": "ሰነዶች",
+    "reports": "ሪፖርቶች",
+    "customers": "ደንበኞች",
+    "debtors": "ተበዳሪዎች",
+    "creditors": "አበዳሪዎች",
+    "settings": "ቅንብሮች",
+    "activity": "የእንቅስቃሴ መዝገብ",
+    "pos": "የሽያጭ ነጥብ",
+    "logout": "ውጣ",
+    "home": "መነሻ",
+    "salesGroup": "ሽያጭ",
+    "salesHistory": "የሽያጭ ታሪክ",
+    "clientsDebtors": "ደንበኞች / ተበዳሪዎች",
+    "purchasesGroup": "ግዢዎች",
+    "purchasesLedger": "የግዢ መዝገብ",
+    "creditorsLedger": "የአበዳሪ መዝገብ",
+    "proformaGroup": "የክፍያ መጠየቂያ / ግምት",
+    "invoices": "የክፍያ መጠየቂያዎች",
+    "quotations": "ግምቶች",
+    "inventoryGroup": "የእቃ ክምችት",
+    "inventoryLedger": "የክምችት መዝገብ",
+    "reportsGroup": "ሪፖርቶች",
+    "profitLoss": "ትርፍ እና ኪሳራ",
+    "financialSummary": "የገንዘብ ማጠቃለያ",
+    "cashFlow": "የገንዘብ ፍሰት",
+    "debtorsReport": "የተበዳሪ ሪፖርት",
+    "creditorsReport": "የአበዳሪ ሪፖርት",
+    "inventoryValuation": "የክምችት ግምት",
+    "expensesItem": "ወጪዎች",
+    "activityLogsItem": "የእንቅስቃሴ መዝገቦች",
+    "settingsItem": "ቅንብሮች",
+    "logOut": "ውጣ",
+    "purchaseOrders": "የግዢ ትዕዛዞች"
+  },
+  "auth": {
+    "login": "ግባ",
+    "register": "መዝገብ",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "fullName": "ሙሉ ስም",
+    "businessName": "የንግድ ስም",
+    "username": "የተጠቃሚ ስም",
+    "loginTitle": "እንኳን ደህና መጡ",
+    "loginSubtitle": "ወደ መለያዎ ይግቡ",
+    "registerTitle": "መለያ ይፍጠሩ",
+    "registerSubtitle": "ንግድዎን ማስተዳደር ይጀምሩ",
+    "forgotPassword": "የይለፍ ቃል ረሱ?",
+    "noAccount": "መለያ የለዎትም?",
+    "hasAccount": "መለያ አለዎት?",
+    "signUp": "ይመዝገቡ",
+    "signIn": "ይግቡ",
+    "welcomeBack": "እንኳን ደህና መጡ",
+    "signInSubtitle": "ወደ መለያዎ ይግቡ",
+    "tagline": "ገንዘብ ወደ ውስጥ፣ ገንዘብ ወደ ውጪ — ሁልጊዜ በእይታ ውስጥ።",
+    "signingIn": "በመግባት ላይ...",
+    "continueAsDemo": "እንደ ማሳያ ይቀጥሉ",
+    "loadingDemo": "ማሳያ በመጫን ላይ...",
+    "dontHaveAccount": "መለያ የለዎትም?",
+    "createOne": "አንድ ይፍጠሩ"
+  },
+  "onboarding": {
+    "title": "ንግድዎን ያዘጋጁ",
+    "subtitle": "መለያዎን እናዘጋጅ",
+    "step1": "የንግድ መረጃ",
+    "step2": "የመገናኛ ዝርዝሮች",
+    "step3": "ግብር እና ገንዘብ",
+    "businessType": "የንግድ አይነት",
+    "businessStructure": "የንግድ አወቃቀር",
+    "solo": "ነጠላ ባለቤት",
+    "company": "ኩባንያ",
+    "retail": "ችርቻሮ",
+    "service": "አገልግሎት",
+    "manufacturing": "ማምረቻ",
+    "country": "ሀገር",
+    "currency": "ገንዘብ",
+    "taxRate": "የግብር መጠን (%)",
+    "tin": "የግብር መለያ ቁጥር",
+    "vrn": "የተጨማሪ እሴት ታክስ ምዝገባ ቁጥር",
+    "phone": "የስልክ ቁጥር",
+    "address": "አድራሻ",
+    "region": "ክልል",
+    "district": "ወረዳ",
+    "complete": "ማዋቀርን ጨርስ",
+    "skip": "አሁን ዝለል"
+  },
+  "dashboard": {
+    "title": "ዳሽቦርድ",
+    "overview": "አጠቃላይ እይታ",
+    "totalSales": "ጠቅላላ ሽያጭ",
+    "totalPurchases": "ጠቅላላ ግዢዎች",
+    "totalExpenses": "ጠቅላላ ወጪዎች",
+    "netProfit": "ተጣራ ትርፍ",
+    "recentActivity": "የቅርብ ጊዜ እንቅስቃሴ",
+    "quickActions": "ፈጣን ተግባራት",
+    "newSale": "አዲስ ሽያጭ",
+    "newPurchase": "አዲስ ግዢ",
+    "newExpense": "አዲስ ወጪ",
+    "newInvoice": "አዲስ የክፍያ መጠየቂያ",
+    "cashFlowTitle": "የገንዘብ ፍሰት",
+    "groupFeatures": "የቡድን ባህሪያት",
+    "inventoryValue": "የክምችት ዋጋ",
+    "itemsSoldToday": "ዛሬ የተሸጡ እቃዎች",
+    "lendingDisabled": "ብድር ተሰናክሏል",
+    "lendingEnabled": "ብድር ነቅቷል",
+    "loansOutstanding": "ያልተከፈለ ብድር",
+    "lowStockAlert": "ዝቅተኛ ክምችት ማንቂያ",
+    "lowStockItems": "ዝቅተኛ ክምችት ያላቸው እቃዎች",
+    "members": "አባላት",
+    "mostSoldItemAllTime": "በጣም የተሸጠ እቃ",
+    "netProfitAllTime": "ጠቅላላ ተጣራ ትርፍ",
+    "noSalesYet": "እስካሁን ሽያጭ የለም",
+    "rotationDisabled": "ሽክርክር ተሰናክሏል",
+    "rotationEnabled": "ሽክርክር ነቅቷል",
+    "tapToReview": "ለመገምገም ይንኩ",
+    "todaysEarnings": "የዛሬ ገቢ",
+    "topProductToday": "የዛሬ ምርጥ ምርት",
+    "topRevenueItemAllTime": "ምርጥ ገቢ ያለው እቃ",
+    "totalContributionsAllTime": "ጠቅላላ መዋጮ",
+    "totalPayoutsAllTime": "ጠቅላላ ክፍያዎች",
+    "totalRevenueAllTime": "ጠቅላላ ገቢ",
+    "totalStockUnits": "ጠቅላላ የክምችት ብዛት"
+  },
+  "sales": {
+    "title": "ሽያጭ",
+    "newSale": "አዲስ ሽያጭ",
+    "editSale": "ሽያጭ አርትዕ",
+    "customerName": "የደንበኛ ስም",
+    "item": "እቃ",
+    "quantity": "ብዛት",
+    "unitPrice": "የአንድ ዋጋ",
+    "total": "ጠቅላላ",
+    "paymentMode": "የክፍያ ዘዴ",
+    "cash": "ጥሬ ገንዘብ",
+    "credit": "ብድር",
+    "mobileMoney": "የሞባይል ገንዘብ",
+    "date": "ቀን",
+    "receiptNo": "የደረሰኝ ቁጥር",
+    "soldBy": "የተሸጠው በ"
+  },
+  "purchases": {
+    "title": "ግዢዎች",
+    "newPurchase": "አዲስ ግዢ",
+    "supplier": "አቅራቢ",
+    "unitCost": "የአንድ ዋጋ"
+  },
+  "inventory": {
+    "title": "የእቃ ክምችት",
+    "addItem": "እቃ ጨምር",
+    "itemName": "የእቃ ስም",
+    "sku": "SKU",
+    "category": "ምድብ",
+    "quantity": "ብዛት",
+    "unit": "አሃድ",
+    "costPrice": "የመግዣ ዋጋ",
+    "sellingPrice": "የመሸጫ ዋጋ",
+    "reorderPoint": "የድጋሚ ትዕዛዝ ደረጃ",
+    "lowStock": "ዝቅተኛ ክምችት ማንቂያ"
+  },
+  "expenses": {
+    "title": "ወጪዎች",
+    "newExpense": "አዲስ ወጪ",
+    "category": "ምድብ",
+    "description": "መግለጫ",
+    "amount": "መጠን"
+  },
+  "documents": {
+    "title": "ሰነዶች",
+    "invoices": "የክፍያ መጠየቂያዎች",
+    "quotations": "ግምቶች",
+    "newInvoice": "አዲስ የክፍያ መጠየቂያ",
+    "newQuotation": "አዲስ ግምት",
+    "invoiceNo": "የክፍያ መጠየቂያ ቁጥር",
+    "quoteNo": "የግምት ቁጥር",
+    "customer": "ደንበኛ",
+    "dueDate": "የመክፈያ ቀን",
+    "status": "ሁኔታ",
+    "draft": "ረቂቅ",
+    "sent": "ተልኳል",
+    "paid": "ተከፍሏል",
+    "expired": "ጊዜው አልፏል"
+  },
+  "reports": {
+    "title": "ሪፖርቶች",
+    "salesReport": "የሽያጭ ሪፖርት",
+    "purchasesReport": "የግዢ ሪፖርት",
+    "expensesReport": "የወጪ ሪፖርት",
+    "profitLoss": "ትርፍ እና ኪሳራ",
+    "dateRange": "የቀን ክልል",
+    "fromDate": "ከ",
+    "toDate": "እስከ",
+    "generate": "ሪፖርት ፍጠር",
+    "export": "ላክ"
+  },
+  "settings": {
+    "title": "ቅንብሮች",
+    "profile": "መገለጫ",
+    "business": "ንግድ",
+    "users": "ተጠቃሚዎች",
+    "preferences": "ምርጫዎች",
+    "language": "ቋንቋ",
+    "theme": "ገጽታ",
+    "light": "ብሩህ",
+    "dark": "ጨለማ",
+    "updateProfile": "መገለጫ አዘምን",
+    "changePassword": "የይለፍ ቃል ቀይር"
+  },
+  "errors": {
+    "required": "ይህ መስክ ያስፈልጋል",
+    "invalidEmail": "ልክ ያልሆነ የኢሜይል አድራሻ",
+    "passwordMismatch": "የይለፍ ቃላት አይዛመዱም",
+    "networkError": "የአውታረ መረብ ስህተት። እንደገና ይሞክሩ።",
+    "unauthorized": "ያልተፈቀደ መዳረሻ",
+    "notFound": "አልተገኘም",
+    "serverError": "የአገልጋይ ስህተት። ቆይተው እንደገና ይሞክሩ።"
+  },
+  "success": {
+    "saved": "በተሳካ ሁኔታ ተቀምጧል",
+    "deleted": "በተሳካ ሁኔታ ተሰርዟል",
+    "updated": "በተሳካ ሁኔታ ዘምኗል",
+    "created": "በተሳካ ሁኔታ ተፈጥሯል"
+  },
+  "landing": {
+    "brand": {
+      "name": "Moneytracer"
+    },
+    "nav": {
+      "features": "ባህሪያት",
+      "download": "መተግበሪያውን አውርድ",
+      "about": "ስለ እኛ",
+      "pricing": "ዋጋ",
+      "login": "ግባ",
+      "getStarted": "ጀምር",
+      "faq": "FAQ"
+    },
+    "hero": {
+      "title": "ገንዘብ ወደ ውስጥ፣ ገንዘብ ወደ ውጪ — ሁልጊዜ በእይታ ውስጥ።",
+      "subtitle": "Moneytracer ለትናንሽ ንግዶች፣ ለማህበረሰብ ቁጠባ ቡድኖች እና ለግል ወጪ የሂሳብ አያያዝ እና የፋይናንስ መሳሪያ ነው። ሽያጭንና ክምችትን ይከታተሉ፣ የቡድንዎን መዋጮ ያስተዳድሩ፣ ወይም የራስዎን በጀት ያስተዳድሩ — ሁሉም ከአንድ ቀላል ዳሽቦርድ።",
+      "trackBusiness": "ንግድ አስተዳድራለሁ",
+      "trackCommunity": "የቁጠባ ቡድን አስተዳድራለሁ",
+      "trackPersonal": "የራሴን ወጪ እከታተላለሁ",
+      "setupBusiness": "ንግዴን አዘጋጅ",
+      "setupCommunity": "የቁጠባ ቡድኔን አዘጋጅ",
+      "setupPersonal": "ወጪዬን መከታተል ጀምር",
+      "haveAccount": "አስቀድሜ መለያ አለኝ",
+      "downloadApp": "የAndroid መተግበሪያውን አውርድ"
+    },
+    "features": {
+      "business": {
+        "title": "አንድ ትንሽ ንግድ ገንዘቡን ለመከታተል የሚያስፈልገው ሁሉ",
+        "subtitle": "ከካሽ ማሽን እስከ የሂሳብ መዝገብ፣ Moneytracer ሽያጭዎን፣ ክምችትዎን እና የገንዘብ ፍሰትዎን ያለ ስፕሬድሺት ያደራጃል።"
+      },
+      "community": {
+        "title": "ለቁጠባ ቡድኖች እና ለማህበረሰብ ባንክ የተሰራ",
+        "subtitle": "መዋጮዎችን በማስታወሻ ደብተር መከታተል ያቁሙ። Moneytracer ለቡድንዎ እያንዳንዱ አባል ሊያምነው የሚችል የተጋራ መዝገብ ይሰጣል።"
+      },
+      "personal": {
+        "title": "ያለ ስፕሬድሺት በጥበብ ወጪ ያድርጉ",
+        "subtitle": "ወጪን በሰከንዶች ውስጥ ይመዝግቡ፣ ዛሬ ምን ያህል ደህንነቱ የተጠበቀ እንደሆነ ይወቁ፣ እና ልማድዎን በጊዜ ያሻሽሉ።"
+      },
+      "pos": {
+        "title": "የሽያጭ ነጥብ",
+        "text": "ከቀጥታ የክምችት ማረጋገጫ ጋር ፈጣን የብዙ-እቃ ክፍያ።"
+      },
+      "inventory": {
+        "title": "የእቃ ክምችት",
+        "text": "የክምችት ደረጃዎችን ይከታተሉ፣ ምርቶችን በጅምላ ያስመጡ፣ እና ከማለቁ በፊት ማንቂያ ያግኙ።"
+      },
+      "invoices": {
+        "title": "የክፍያ መጠየቂያዎች እና ግምቶች",
+        "text": "ሙያዊ የክፍያ መጠየቂያዎችን እና ግምቶችን ይላኩ፣ የተቀበሉ ግምቶችን ወደ ሽያጭ ይለውጡ።"
+      },
+      "debtors": {
+        "title": "ተበዳሪዎች እና አበዳሪዎች",
+        "text": "ማን እንደሚያስፈልግዎ እና ማንን እንደሚያስፈልገው በአንድ እይታ ይወቁ።"
+      },
+      "reports": {
+        "title": "ሪፖርቶች",
+        "text": "ትርፍ እና ኪሳራ፣ የገንዘብ ማጠቃለያዎች እና የክምችት ግምት — ሁልጊዜ ወቅታዊ።"
+      },
+      "activity": {
+        "title": "የእንቅስቃሴ መዝገቦች",
+        "text": "ማን ምን እንዳደረገ ሙሉ የኦዲት መከታተያ።"
+      },
+      "members": {
+        "title": "የአባላት አስተዳደር",
+        "text": "አባላትን ይጨምሩ፣ ተባባሪ መዝጋቢዎችን ይመድቡ፣ እና ለአባላት የራሳቸውን የንባብ-ብቻ መግቢያ ይስጡ።"
+      },
+      "contributions": {
+        "title": "መዋጮዎች",
+        "text": "የእያንዳንዱን አባል የቁጠባ መዋጮ ይመዝግቡ እና የቡድኑ ጠቅላላ ወዲያውኑ ሲዘምን ይመልከቱ።"
+      },
+      "payouts": {
+        "title": "ክፍያዎች",
+        "text": "የተራ ወይም የትርፍ ክፍያዎችን በፍትሃዊነት ይከታተሉ፣ ለእያንዳንዱ አባል ሙሉ ታሪክ።"
+      },
+      "loans": {
+        "title": "የቡድን ብድሮች",
+        "text": "ከቡድን ቁጠባ ለአባላት ብድር ይስጡ እና ክፍያዎችን በትክክል ይከታተሉ።"
+      },
+      "groupSummary": {
+        "title": "የቡድን ማጠቃለያ",
+        "text": "የጠቅላላ ቁጠባ፣ ያልተከፈለ ብድር እና የቡድን ጤንነት ግልፅ እይታ — ለእያንዳንዱ ስብሰባ።"
+      },
+      "roles": {
+        "title": "በሚና ላይ የተመሰረተ መዳረሻ",
+        "text": "አስተዳዳሪዎች እና መዝጋቢዎች ግቤቶችን ያስተዳድራሉ፤ አባላት ሁልጊዜ የራሳቸውን መዝገቦች ማየት ይችላሉ።"
+      },
+      "expenseLog": {
+        "title": "ፈጣን የወጪ መዝገብ",
+        "text": "ወጪን በሰከንዶች ውስጥ ይጨምሩ — መጠን፣ ምድብ፣ ተጠናቀቀ። ስፕሬድሺት የለም።"
+      },
+      "budgets": {
+        "title": "የፖስታ በጀቶች",
+        "text": "ለእያንዳንዱ ምድብ ወርሃዊ በጀት ያዘጋጁ እና ዛሬ ምን ማውጣት እንደሚችሉ ሁልጊዜ ይወቁ።"
+      },
+      "habits": {
+        "title": "የወጪ ልማዶች",
+        "text": "ወጪዎችን እንደ አስፈላጊ ወይም ድንገተኛ ምልክት ያድርጉ እና ልማዶችዎ ሲሻሻሉ ይመልከቱ።"
+      },
+      "goals": {
+        "title": "የቁጠባ ግቦች",
+        "text": "ግብ ያዘጋጁ፣ እድገትን ይከታተሉ፣ እና ግልፅ በሆነ የመጨረሻ መስመር ተነሳሽነትዎን ይጠብቁ።"
+      },
+      "challenges": {
+        "title": "የቡድን ፈተናዎች",
+        "text": "ከጓደኞች ጋር ወደ አንድ የጋራ ግብ አብረው ይቆጥቡ፣ የሁሉም እድገት በእይታ ውስጥ።"
+      },
+      "insights": {
+        "title": "የግል ግንዛቤዎች",
+        "text": "ገንዘብዎ በትክክል የት እንደሚሄድ እና የትኞቹ ሳምንታት ወይም ምድቦች እንደሚጨምሩ ይመልከቱ።"
+      }
+    },
+    "accounts": {
+      "title": "አንድ መለያ፣ በሚያስፈልግዎት መንገድ ሁሉ",
+      "subtitle": "ሲመዘገቡ የንግድ፣ የማህበረሰብ ወይም የግል መለያ ይምረጡ — ዳሽቦርድ፣ ሚናዎች እና ሪፖርቶች ይስማማሉ።",
+      "business": "የንግድ መለያዎች",
+      "businessText": "POS፣ ክምችት፣ ደረሰኝ አሰራር እና ሪፖርቶች ለማንኛውም መጠን ላላቸው ሱቆች፣ ነጋዴዎች እና የአገልግሎት ንግዶች።",
+      "community": "የማህበረሰብ መለያዎች",
+      "communityText": "መዋጮዎች፣ ክፍያዎች እና የቡድን ብድሮች ለቁጠባ ቡድኖች እና የማህበረሰብ ፋይናንስ ክበቦች።",
+      "personal": "የግል መለያዎች",
+      "personalText": "በጀቶች፣ ልማዶች እና የቁጠባ ግቦች ለማንኛውም ብቻውን ወይም ከጓደኞች ጋር በጥበብ ማውጣት ለሚፈልግ ሰው።"
+    },
+    "about": {
+      "title": "ገንዘብ በትክክል በሚንቀሳቀስበት መንገድ የተሰራ",
+      "description1": "Moneytracer እንደ ቀላል ሀሳብ ተጀመረ፡ የሱቅ ባለቤት፣ የቁጠባ ቡድን ገንዘብ ያዥ፣ ወይም የራሱን ደመወዝ የሚያስተዳድር ሰው የሂሳብ ዲግሪ ወይም ስፕሬድሺት መጠቀም ማስፈለግ የለበትም። የሃርድዌር ሱቅ እያስተዳደሩ ይሁን፣ ወርሃዊ መዋጮዎችን እያስተዳደሩ፣ ወይም ገንዘብዎ የት እንደሚሄድ ለማየት እየሞከሩ፣ Moneytracer ግልፅና ታማኝ መዝገብ ይሰጥዎታል።",
+      "description2": "ለአፍሪካ ንግዶች እና ማህበረሰቦች መጀመሪያ ገንብተነዋል — በአህጉሪቱ ውስጥ ባለ ብዙ ገንዘብ ድጋፍ፣ ከበይነመረብ ጋር ተስማሚ የስራ ፍሰቶች፣ እና ለትንሽ ንግድ የሚስማማ ዋጋ አዘጋጅተናል።",
+      "countries": "የተደገፉ የአፍሪካ ሀገራት",
+      "accountTypes": "የመለያ አይነቶች — ንግድ፣ ማህበረሰብ፣ ግል",
+      "dashboard": "ለሚከታተሉት ነገር ሁሉ አንድ ዳሽቦርድ",
+      "simple": "ቀላል እንዲሆን የተሰራ",
+      "simpleText": "ስልጠና አያስፈልግም። ስልክ መጠቀም ከቻሉ፣ ከመጀመሪያው ቀን ጀምሮ በ Moneytracer ሂሳብዎን ማስተዳደር ይችላሉ።",
+      "protected": "ውሂብዎ የተጠበቀ",
+      "protectedText": "እያንዳንዱ መለያ የተነጠለና የተጠበቀ ነው፣ ሙሉ የእንቅስቃሴ መዝገብ ስላለው ሁልጊዜ ማን ምን እንደቀየረ ያውቃሉ።",
+      "africa": "ለአፍሪካ የተሰራ",
+      "africaText": "የአካባቢ ገንዘብ፣ የአካባቢ እውነታዎች — እዚህ ንግዶች እና ማህበረሰቦች በትክክል በሚሰሩበት መንገድ የተነደፈ።"
+    },
+    "cta": {
+      "title": "ገንዘብዎን ለማደራጀት ዝግጁ ነዎት?",
+      "subtitle": "በደቂቃዎች ውስጥ መለያ ይፍጠሩ። ስፕሬድሺት አያስፈልግም።",
+      "button": "በነጻ ጀምር",
+      "beta": "ቅድመ-ሙከራ",
+      "betaText": "Moneytracer ለመጀመሪያዎቹ 90 ቀናት በንቁ ልማት ላይ እያለን በነጻ ይገኛል። በዚህ ደረጃ ላይ የዕለት ተዕለት ለውጦችን፣ አልፎ አልፎ ስህተቶችን፣ ወይም አጭር መቆራረጥ ሊያዩ ይችላሉ። የዋጋ እቅዶችን ከቅድመ-ሙከራ ጊዜው ማብቂያ በፊት እናስታውቃለን።"
+    },
+    "disclaimer": {
+      "title": "የኃላፊነት ማስተባበያ",
+      "text": "Moneytracer በአሁኑ ጊዜ በንቁ ልማት (ቅድመ-ሙከራ) ላይ ነው። የአገልግሎቱ አጠቃቀም ውሂብ ማጣትን፣ የዋስትና ገደቦችን፣ ኃላፊነትን እና የክርክር አፈታትን የሚሸፍኑ ሙሉ የአጠቃቀም ውሎቻችንን እና ማስተባበያዎቻችንን ተከትሎ ነው።",
+      "legalLink": "ሙሉ የአጠቃቀም ውሎች እና ማስተባበያ ያንብቡ →",
+      "languages": "በብዙ ቋንቋዎች ይገኛል፣ አማርኛ፣ እንግሊዝኛ፣ ፈረንሳይኛ፣ ፖርቱጋልኛ፣ ስዋሂሊ፣ ዓረብኛ እና ሃውሳ ጨምሮ።"
+    },
+    "footer": {
+      "copyright": "Moneytracer.",
+      "login": "ግባ",
+      "signup": "ተመዝገብ"
+    },
+    "availableInLanguages": "በብዙ ቋንቋዎች ይገኛል፣ አማርኛ፣ እንግሊዝኛ፣ ፈረንሳይኛ፣ ፖርቱጋልኛ፣ ስዋሂሊ፣ ዓረብኛ እና ሃውሳ ጨምሮ።"
+  }
+}

@@ -1,0 +1,404 @@
+{
+  "common": {
+    "save": "Stoor",
+    "cancel": "Kanselleer",
+    "delete": "Verwyder",
+    "edit": "Wysig",
+    "add": "Voeg by",
+    "search": "Soek",
+    "loading": "Laai tans...",
+    "noResults": "Geen resultate gevind nie",
+    "confirm": "Bevestig",
+    "back": "Terug",
+    "next": "Volgende",
+    "submit": "Dien in",
+    "close": "Maak toe",
+    "yes": "Ja",
+    "no": "Nee",
+    "or": "of",
+    "and": "en"
+  },
+  "nav": {
+    "dashboard": "Paneelbord",
+    "sales": "Verkope",
+    "purchases": "Aankope",
+    "inventory": "Voorraad",
+    "expenses": "Uitgawes",
+    "documents": "Dokumente",
+    "reports": "Verslae",
+    "customers": "Kliënte",
+    "debtors": "Debiteure",
+    "creditors": "Krediteure",
+    "settings": "Instellings",
+    "activity": "Aktiwiteitlogboek",
+    "pos": "Verkoopspunt",
+    "logout": "Teken uit",
+    "home": "Tuis",
+    "salesGroup": "Verkope",
+    "salesHistory": "Verkoopsgeskiedenis",
+    "clientsDebtors": "Kliënte / Debiteure",
+    "purchasesGroup": "Aankope",
+    "purchasesLedger": "Aankoopgrootboek",
+    "creditorsLedger": "Krediteurgrootboek",
+    "proformaGroup": "Kwotasies",
+    "invoices": "Fakture",
+    "quotations": "Kwotasies",
+    "inventoryGroup": "Voorraad",
+    "inventoryLedger": "Voorraadgrootboek",
+    "reportsGroup": "Verslae",
+    "profitLoss": "Wins & Verlies",
+    "financialSummary": "Finansiële Opsomming",
+    "cashFlow": "Kontantvloei",
+    "debtorsReport": "Debiteureverslag",
+    "creditorsReport": "Krediteureverslag",
+    "inventoryValuation": "Voorraadwaardasie",
+    "expensesItem": "Uitgawes",
+    "activityLogsItem": "Aktiwiteitlogboeke",
+    "settingsItem": "Instellings",
+    "logOut": "Teken uit",
+    "purchaseOrders": "Aankooporders"
+  },
+  "auth": {
+    "login": "Meld aan",
+    "register": "Registreer",
+    "email": "E-pos",
+    "password": "Wagwoord",
+    "fullName": "Volle Naam",
+    "businessName": "Besigheidsnaam",
+    "username": "Gebruikersnaam",
+    "loginTitle": "Welkom Terug",
+    "loginSubtitle": "Meld aan by jou rekening",
+    "registerTitle": "Skep Rekening",
+    "registerSubtitle": "Begin jou besigheid bestuur",
+    "forgotPassword": "Wagwoord vergeet?",
+    "noAccount": "Het jy nie 'n rekening nie?",
+    "hasAccount": "Het jy reeds 'n rekening?",
+    "signUp": "Registreer",
+    "signIn": "Meld aan",
+    "welcomeBack": "Welkom terug",
+    "signInSubtitle": "Meld aan by jou besigheidspaneelbord",
+    "signingIn": "Meld tans aan…",
+    "continueAsDemo": "Gaan voort as demo",
+    "loadingDemo": "Laai demo tans…",
+    "dontHaveAccount": "Het jy nie 'n rekening nie?",
+    "createOne": "Skep een",
+    "tagline": "Salarisse, nakoming, en boeke — stil en netjies hanteer."
+  },
+  "onboarding": {
+    "title": "Stel Jou Besigheid Op",
+    "subtitle": "Kom ons stel jou rekening op",
+    "step1": "Besigheidsinligting",
+    "step2": "Kontakbesonderhede",
+    "step3": "Belasting & Geldeenheid",
+    "businessType": "Besigheidstipe",
+    "businessStructure": "Besigheidstruktuur",
+    "solo": "Enkeleienaar",
+    "company": "Maatskappy",
+    "retail": "Kleinhandel",
+    "service": "Diens",
+    "manufacturing": "Vervaardiging",
+    "country": "Land",
+    "currency": "Geldeenheid",
+    "taxRate": "Belastingkoers (%)",
+    "tin": "Belastingidentifikasienommer",
+    "vrn": "BTW-registrasienommer",
+    "phone": "Telefoonnommer",
+    "address": "Adres",
+    "region": "Streek",
+    "district": "Distrik",
+    "complete": "Voltooi Opstelling",
+    "skip": "Slaan vir nou oor"
+  },
+  "dashboard": {
+    "title": "Paneelbord",
+    "overview": "Oorsig",
+    "totalSales": "Totale Verkope",
+    "totalPurchases": "Totale Aankope",
+    "totalExpenses": "Totale Uitgawes",
+    "netProfit": "Netto Wins",
+    "recentActivity": "Onlangse Aktiwiteit",
+    "quickActions": "Vinnige Aksies",
+    "newSale": "Nuwe Verkoop",
+    "newPurchase": "Nuwe Aankoop",
+    "newExpense": "Nuwe Uitgawe",
+    "newInvoice": "Nuwe Faktuur",
+    "cashFlowTitle": "Kontantvloei",
+    "cashFlowSubtitle": "Geld in teenoor geld uit, laaste {{count}} maande",
+    "members": "Lede",
+    "totalContributionsAllTime": "Totale Bydraes (Deurentyd)",
+    "totalPayoutsAllTime": "Totale Uitbetalings (Deurentyd)",
+    "loansOutstanding": "Uitstaande Lenings",
+    "groupFeatures": "Groepkenmerke",
+    "rotationEnabled": "Rotasie-uitbetalings: geaktiveer",
+    "rotationDisabled": "Rotasie-uitbetalings: nie geaktiveer nie",
+    "lendingEnabled": "Interne uitlening: geaktiveer",
+    "lendingDisabled": "Interne uitlening: nie geaktiveer nie",
+    "todaysEarnings": "Vandag se Verdienste",
+    "itemsSoldToday": "Items Vandag Verkoop",
+    "topProductToday": "Topproduk Vandag",
+    "noSalesYet": "Nog geen verkope nie",
+    "lowStockItems": "Lae Voorraaditems",
+    "inventoryValue": "Voorraadwaarde",
+    "totalStockUnits": "Totale Voorraadeenhede",
+    "netProfitAllTime": "Netto Wins (Deurentyd)",
+    "totalRevenueAllTime": "Totale Inkomste (Deurentyd)",
+    "mostSoldItemAllTime": "Mees Verkoopte Item (Deurentyd)",
+    "topRevenueItemAllTime": "Top Inkomste-item (Deurentyd)",
+    "lowStockAlert": "op of onder herbestelpunt",
+    "tapToReview": "tik om voorraad te hersien"
+  },
+  "sales": {
+    "title": "Verkope",
+    "newSale": "Nuwe Verkoop",
+    "editSale": "Wysig Verkoop",
+    "customerName": "Kliëntnaam",
+    "item": "Item",
+    "quantity": "Hoeveelheid",
+    "unitPrice": "Eenheidsprys",
+    "total": "Totaal",
+    "paymentMode": "Betaalmetode",
+    "cash": "Kontant",
+    "credit": "Krediet",
+    "mobileMoney": "Selfoongeld",
+    "date": "Datum",
+    "receiptNo": "Kwitansienommer",
+    "soldBy": "Verkoop deur"
+  },
+  "purchases": {
+    "title": "Aankope",
+    "newPurchase": "Nuwe Aankoop",
+    "supplier": "Verskaffer",
+    "unitCost": "Eenheidskoste"
+  },
+  "inventory": {
+    "title": "Voorraad",
+    "addItem": "Voeg Item By",
+    "itemName": "Itemnaam",
+    "sku": "SKU",
+    "category": "Kategorie",
+    "quantity": "Hoeveelheid",
+    "unit": "Eenheid",
+    "costPrice": "Kosprys",
+    "sellingPrice": "Verkoopprys",
+    "reorderPoint": "Herbestelpunt",
+    "lowStock": "Lae Voorraad Waarskuwing"
+  },
+  "expenses": {
+    "title": "Uitgawes",
+    "newExpense": "Nuwe Uitgawe",
+    "category": "Kategorie",
+    "description": "Beskrywing",
+    "amount": "Bedrag"
+  },
+  "documents": {
+    "title": "Dokumente",
+    "invoices": "Fakture",
+    "quotations": "Kwotasies",
+    "newInvoice": "Nuwe Faktuur",
+    "newQuotation": "Nuwe Kwotasie",
+    "invoiceNo": "Faktuurnommer",
+    "quoteNo": "Kwotasienommer",
+    "customer": "Kliënt",
+    "dueDate": "Vervaldatum",
+    "status": "Status",
+    "draft": "Konsep",
+    "sent": "Gestuur",
+    "paid": "Betaal",
+    "expired": "Verval"
+  },
+  "reports": {
+    "title": "Verslae",
+    "salesReport": "Verkoopsverslag",
+    "purchasesReport": "Aankoopverslag",
+    "expensesReport": "Uitgaweverslag",
+    "profitLoss": "Wins & Verlies",
+    "dateRange": "Datumreeks",
+    "fromDate": "Vanaf",
+    "toDate": "Tot",
+    "generate": "Genereer Verslag",
+    "export": "Voer Uit"
+  },
+  "settings": {
+    "title": "Instellings",
+    "profile": "Profiel",
+    "business": "Besigheid",
+    "users": "Gebruikers",
+    "preferences": "Voorkeure",
+    "language": "Taal",
+    "theme": "Tema",
+    "light": "Lig",
+    "dark": "Donker",
+    "updateProfile": "Werk Profiel By",
+    "changePassword": "Verander Wagwoord"
+  },
+  "errors": {
+    "required": "Hierdie veld is verpligtend",
+    "invalidEmail": "Ongeldige e-posadres",
+    "passwordMismatch": "Wagwoorde stem nie ooreen nie",
+    "networkError": "Netwerkfout. Probeer asseblief weer.",
+    "unauthorized": "Ongemagtigde toegang",
+    "notFound": "Hulpbron nie gevind nie",
+    "serverError": "Bedienerfout. Probeer asseblief later weer."
+  },
+  "success": {
+    "saved": "Suksesvol gestoor",
+    "deleted": "Suksesvol verwyder",
+    "updated": "Suksesvol bygewerk",
+    "created": "Suksesvol geskep"
+  },
+  "landing": {
+    "brand": {
+      "name": "Moneytracer"
+    },
+    "nav": {
+      "features": "Kenmerke",
+      "download": "Laai app af",
+      "about": "Oor Ons",
+      "pricing": "Pryse",
+      "login": "Meld aan",
+      "getStarted": "Begin",
+      "faq": "VAV"
+    },
+    "hero": {
+      "title": "Geld in, geld uit — altyd sigbaar.",
+      "subtitle": "Moneytracer is die boekhou- en finansiële hulpmiddel vir klein besighede, gemeenskaplike spaargroepe, en persoonlike uitgawes. Volg verkope en voorraad, bestuur jou stokvel se bydraes, of bestuur jou eie begroting — alles vanaf een eenvoudige paneelbord.",
+      "trackBusiness": "Ek bestuur 'n besigheid",
+      "trackCommunity": "Ek bestuur 'n spaargroep",
+      "trackPersonal": "Ek volg my eie uitgawes",
+      "setupBusiness": "Stel my besigheid op",
+      "setupCommunity": "Stel my spaargroep op",
+      "setupPersonal": "Begin my uitgawes volg",
+      "haveAccount": "Ek het reeds 'n rekening",
+      "downloadApp": "Laai die Android-app af"
+    },
+    "features": {
+      "business": {
+        "title": "Alles wat 'n klein besigheid nodig het om sy geld te volg",
+        "subtitle": "Van die toonbank tot die balansstaat, hou Moneytracer jou verkope, voorraad, en kontantvloei ordelik sonder sigblaaie."
+      },
+      "community": {
+        "title": "Gebou vir stokvels, tafelbankiere, en omgaanskemas",
+        "subtitle": "Hou op om bydraes in 'n boekie te volg. Moneytracer gee jou groep 'n gedeelde, akkurate rekord wat elke lid kan vertrou."
+      },
+      "personal": {
+        "title": "Bestee verstandig, sonder sigblaaie",
+        "subtitle": "Log 'n uitgawe in sekondes, sien wat vandag veilig is om te bestee, en bou beter gewoontes oor tyd — op jou manier, of dit nou begrotings, gewoontes, of spaar saam met vriende is."
+      },
+      "pos": {
+        "title": "Verkoopspunt",
+        "text": "Vinnige multi-item-uitklaring met intydse voorraadverifikasie, gebou vir die toonbank."
+      },
+      "inventory": {
+        "title": "Voorraad",
+        "text": "Volg voorraadvlakke, voer produkte in groepe in, en kry lae-voorraad-waarskuwings voordat jy uitloop."
+      },
+      "invoices": {
+        "title": "Fakture & Kwotasies",
+        "text": "Stuur professionele fakture en kwotasies, en verander aanvaarde kwotasies in verkope."
+      },
+      "debtors": {
+        "title": "Debiteure & Krediteure",
+        "text": "Weet wie jou skuld en wie jy skuld, met een oogopslag."
+      },
+      "reports": {
+        "title": "Verslae",
+        "text": "Wins & verlies, finansiële opsommings, en voorraadwaardasie — altyd op datum."
+      },
+      "activity": {
+        "title": "Aktiwiteitlogboeke",
+        "text": "Volledige oudit-spoor van wie wat gedoen het, sodat niks ongesiens verbygaan nie."
+      },
+      "members": {
+        "title": "Lidbestuur",
+        "text": "Voeg lede by, wys mede-aantekenaars aan, en gee lede hul eie leestoegang."
+      },
+      "contributions": {
+        "title": "Bydraes",
+        "text": "Teken elke lid se spaarbydrae aan en sien die groep se totaal onmiddellik opdateer."
+      },
+      "payouts": {
+        "title": "Uitbetalings",
+        "text": "Volg omgaan- of dividend-uitbetalings regverdig, met 'n volledige geskiedenis per lid."
+      },
+      "loans": {
+        "title": "Groeplenings",
+        "text": "Gee lenings aan lede uit groepspaargeld en volg terugbetalings tot op die sent."
+      },
+      "groupSummary": {
+        "title": "Groepopsomming",
+        "text": "Een duidelike oorsig van totale spaargeld, uitstaande lenings, en groepgesondheid — vir elke vergadering."
+      },
+      "roles": {
+        "title": "Roluitgebaseerde Toegang",
+        "text": "Administrateurs en aantekenaars bestuur inskrywings; lede kan altyd hul eie rekords sien."
+      },
+      "expenseLog": {
+        "title": "Vinnige Uitgaweloglys",
+        "text": "Voeg 'n uitgawe in sekondes by — bedrag, kategorie, klaar. Geen sigblaaie, geen wrywing nie."
+      },
+      "budgets": {
+        "title": "Koevertbegrotings",
+        "text": "Stel 'n maandelikse begroting per kategorie en weet altyd wat vandag veilig is om te bestee."
+      },
+      "habits": {
+        "title": "Bestedingsgewoontes",
+        "text": "Merk uitgawes as noodsaaklik of impulsief en kyk hoe jou gewoontes week na week verbeter."
+      },
+      "goals": {
+        "title": "Spaardoelwitte",
+        "text": "Stel 'n doelwit, volg vordering, en bly gemotiveerd met 'n duidelike visuele wenstreep."
+      },
+      "challenges": {
+        "title": "Groepuitdagings",
+        "text": "Spaar saam met vriende na 'n gedeelde doelwit, met almal se vordering sigbaar."
+      },
+      "insights": {
+        "title": "Persoonlike Insigte",
+        "text": "Sien waarheen jou geld werklik gaan, en watter weke of kategorieë opkruip."
+      }
+    },
+    "accounts": {
+      "title": "Een rekening, op enige manier wat jy nodig het",
+      "subtitle": "Kies 'n besigheids-, gemeenskaps-, of persoonlike rekening wanneer jy registreer — die paneelbord, rolle, en verslae pas aan.",
+      "business": "Besigheidsrekeninge",
+      "businessText": "POS, voorraad, fakturering, en verslae vir winkels, handelaars, en diensbesighede van enige grootte.",
+      "community": "Gemeenskapsrekeninge",
+      "communityText": "Bydraes, uitbetalings, en groeplenings vir spaargroepe en gemeenskaplike finansiële kringe.",
+      "personal": "Persoonlike rekeninge",
+      "personalText": "Begrotings, gewoontes, en spaardoelwitte vir enigiemand wat verstandiger wil bestee, alleen of saam met vriende."
+    },
+    "about": {
+      "title": "Gebou vir die manier waarop geld werklik beweeg",
+      "description1": "Moneytracer het begin as 'n eenvoudige idee: die hulpmiddels wat 'n winkeleienaar, 'n spaargroep se tesourier, of iemand wat sy eie salaris begroot help, behoort nie 'n rekeningkundige graad of 'n sigblad te vereis nie. Of jy nou 'n hardewarewinkel bestuur, 'n stokvel se maandelikse bydraes bestuur, of net probeer sien waar jou geld heen gaan, gee Moneytracer jou een duidelike, eerlike rekord wat jy kan vertrou.",
+      "description2": "Ons het dit eerste vir Afrika-besighede en -gemeenskappe gebou — met multi-geldeenheid-ondersteuning regoor die vasteland, aflyn-vriendelike werkvloeie, en pryse wat sin maak vir 'n klein besigheid, nie 'n wêreldwye onderneming nie. Geen jargon, geen opgeblase kenmerke wat jy nooit sal gebruik nie — net die syfers wat saak maak, altyd op datum.",
+      "countries": "Afrika-lande wat ondersteun word",
+      "accountTypes": "Rekeningtipes — besigheid, gemeenskap, persoonlik",
+      "dashboard": "Paneelbord vir alles wat jy volg",
+      "simple": "Gebou om eenvoudig te wees",
+      "simpleText": "Geen opleiding nodig nie. As jy 'n foon kan gebruik, kan jy jou boeke op Moneytracer bestuur vanaf dag een.",
+      "protected": "Jou data, beskerm",
+      "protectedText": "Elke rekening is geïsoleer en beveilig, met 'n volledige aktiwiteitlogboek sodat jy altyd weet wie wat verander het.",
+      "africa": "Gemaak vir Afrika",
+      "africaText": "Plaaslike geldeenhede, plaaslike realiteite — ontwerp rondom hoe besighede en gemeenskappe hier werklik funksioneer."
+    },
+    "cta": {
+      "title": "Gereed om jou finansies in orde te kry?",
+      "subtitle": "Skep 'n rekening in minute. Geen sigblad nodig nie.",
+      "button": "Begin gratis",
+      "beta": "Beta",
+      "betaText": "Moneytracer is gratis om te gebruik vir die eerste 90 dae terwyl ons aktief ontwikkel. Gedurende hierdie fase kan jy daaglikse veranderinge, af en toe foute, of kort onderbrekings sien namate ons verbeterings uitrol. Ons sal pryseplanne aankondig lank voordat die betafase eindig."
+    },
+    "disclaimer": {
+      "title": "Vrywaring",
+      "text": "Moneytracer is tans in aktiewe ontwikkeling (beta). Gebruik van die Diens is onderworpe aan ons volledige Gebruiksvoorwaardes en Vrywaring, wat dataverlies, waarborgbeperkings, aanspreeklikheid, en geskilbeslegting dek. Lees asseblief die volledige voorwaardes voordat jy op die Diens staatmaak vir besigheids-, gemeenskaps-, of persoonlike finansiële rekords.",
+      "legalLink": "Lees die Volledige Gebruiksvoorwaardes & Vrywaring →",
+      "languages": "Beskikbaar in verskeie tale, insluitend Afrikaans."
+    },
+    "footer": {
+      "copyright": "Moneytracer.",
+      "login": "Meld aan",
+      "signup": "Registreer"
+    },
+    "availableInLanguages": "Beskikbaar in verskeie tale, insluitend Afrikaans."
+  }
+}
