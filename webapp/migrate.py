@@ -49,6 +49,14 @@ _MIGRATIONS = {
         # Existing tenants default to TZS (the app's original single-country
         # currency) and can update it via country selection or directly.
         ("currency", "VARCHAR(10)", "'TZS'"),
+        # Self-service account deletion — models.Account.pending_deletion et al.
+        # Added to the model but this self-heal entry was missing, so
+        # init_db.py's seed() crash-looped with UndefinedColumn on
+        # accounts.pending_deletion on any DB created before this feature.
+        ("pending_deletion", "BOOLEAN", "false"),
+        ("deletion_requested_at", "TIMESTAMP", None),
+        ("scheduled_purge_at", "TIMESTAMP", None),
+        ("deletion_requested_by", "VARCHAR(80)", "''"),
     ],
     "journal_entries": [
         # This table predates reversal/void support (only is_locked existed
