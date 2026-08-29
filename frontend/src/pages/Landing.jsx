@@ -61,9 +61,9 @@ export default function Landing() {
   const personalFeatures  = t('landing.features.personal',  { returnObjects: true })
 
   const ctaLabel = {
-    business:  t('landing.hero.trackBusiness'),
-    community: t('landing.hero.trackCommunity'),
-    personal:  t('landing.hero.trackPersonal'),
+    business:  t('landing.hero.setupBusiness'),
+    community: t('landing.hero.setupCommunity'),
+    personal:  t('landing.hero.setupPersonal'),
   }[track]
 
   useEffect(() => {
@@ -548,17 +548,17 @@ export default function Landing() {
             <Link to={`/register?track=${track}`} className="lg-btn-primary">
               ✦ {ctaLabel}
             </Link>
-            <Link to="/login" className="lg-btn-secondary">{t('landing.alreadyHaveAccount')}</Link>
+            <Link to="/login" className="lg-btn-secondary">{t('landing.hero.haveAccount')}</Link>
           </div>
 
           <Link to="/download" className="lg-app-download">
-            <span>⬇</span> {t('landing.downloadAndroid')}
+            <span>⬇</span> {t('landing.hero.downloadApp')}
           </Link>
 
           <div className="lg-hero-stats">
-            <StatPill value="54" label={t('landing.statCountries')} />
-            <StatPill value="3"  label={t('landing.statAccountTypes')} />
-            <StatPill value="1"  label={t('landing.statDashboard')} />
+            <StatPill value="54" label={t('landing.about.countries')} />
+            <StatPill value="3"  label={t('landing.about.accountTypes')} />
+            <StatPill value="1"  label={t('landing.about.dashboard')} />
             <StatPill value="∞"  label="Transactions tracked" />
           </div>
         </div>
