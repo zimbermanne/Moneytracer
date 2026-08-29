@@ -483,9 +483,21 @@ export default function Landing() {
 
         /* ── Language switcher overrides ── */
         .lg-page .language-switcher {
-          background: rgba(255,255,255,0.08);
-          border-color: rgba(255,255,255,0.18);
-          color: rgba(255,255,255,0.8);
+          background: #f59e0b;
+          border-color: #f59e0b;
+          color: #fff;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+          border-radius: 10px;
+          cursor: pointer;
+        }
+        .lg-page .language-switcher:hover {
+          background: #fbbf24;
+          border-color: #fbbf24;
+        }
+        .lg-page .language-switcher option {
+          background: #1a1d27;
+          color: #fff;
         }
 
         /* ── Responsive ── */
