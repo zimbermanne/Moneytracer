@@ -1518,6 +1518,13 @@ class LoginSession(Base):
     os = Column(String(60), default="")             # e.g. "Android 14", "iOS 17", "Windows 10"
     browser = Column(String(60), default="")        # e.g. "Chrome 126", "Safari 17"
     user_agent = Column(Text, default="")
+    accept_language = Column(String(100), default="")
 
-    event = Column(String(20), default="login")     # "login" or "demo_login"
+    # Optimization telemetry
+    screen_width = Column(Integer, nullable=True)
+    screen_height = Column(Integer, nullable=True)
+    is_pwa = Column(Boolean, default=False)
+    connection_type = Column(String(20), default="") # 4g, 3g, etc.
+
+    event = Column(String(20), default="login")     # "login", "logout", "failed_login"
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

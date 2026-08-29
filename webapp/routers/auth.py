@@ -99,8 +99,22 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
 def login(request: Request, response: Response, payload: LoginRequest, db: Session = Depends(get_db)):
+    from device_tracking import record_login_session
     user = authenticate_user(db, payload.username, payload.password)
+
+    client_info = {
+        "screen_width": payload.screen_width,
+        "screen_height": payload.screen_height,
+        "is_pwa": payload.is_pwa,
+        "connection_type": payload.connection_type,
+    }
+
     if not user:
+        # Record failed attempt for security audit
+        from collections import namedtuple
+        FakeUser = namedtuple("FakeUser", ["username_attempt"])
+        record_login_session(db, FakeUser(username_attempt=payload.username), request,
+                             event="failed_login", client_info=client_info)
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     # Include account_id in JWT token
@@ -111,7 +125,7 @@ def login(request: Request, response: Response, payload: LoginRequest, db: Sessi
     token = create_access_token(token_data)
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "login", "User logged in")
-    record_login_session(db, user, request, event="login")
+    record_login_session(db, user, request, event="login", client_info=client_info)
     return Token(access_token=token, user=user)
 
 

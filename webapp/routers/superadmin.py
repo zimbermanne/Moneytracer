@@ -123,9 +123,18 @@ def platform_stats(db: Session = Depends(get_db), superadmin: User = Depends(req
     active_now_threshold = now - timedelta(hours=1)
     active_now_count = (
         db.query(func.count(func.distinct(LoginSession.user_id)))
-        .filter(LoginSession.created_at >= active_now_count_threshold if 'active_now_count_threshold' in locals() else active_now_threshold)
+        .filter(LoginSession.created_at >= active_now_threshold)
         .scalar()
     )
+
+    # Device adoption (PWA vs Browser) - 30d
+    pwa_stats = (
+        db.query(LoginSession.is_pwa, func.count(LoginSession.id))
+        .filter(LoginSession.created_at >= since_30d)
+        .group_by(LoginSession.is_pwa)
+        .all()
+    )
+    pwa_breakdown = {("PWA" if is_pwa else "Browser"): count for is_pwa, count in pwa_stats}
 
     return {
         "accounts": {
@@ -139,6 +148,9 @@ def platform_stats(db: Session = Depends(get_db), superadmin: User = Depends(req
         "users": {
             "total": total_users,
             "active_last_hour": active_now_count or 0,
+        },
+        "devices": {
+            "pwa_adoption_30d": pwa_breakdown,
         },
         "leaderboard": leaderboard,
         "storage": storage_leaderboard,

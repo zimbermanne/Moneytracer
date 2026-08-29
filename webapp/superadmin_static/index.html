@@ -342,7 +342,7 @@
 
       <div class="card" style="overflow-x:auto;">
         <table>
-          <thead><tr><th>Time</th><th>User</th><th>Account</th><th>IP</th><th>Location</th><th>Device</th><th>OS</th><th>Browser</th></tr></thead>
+          <thead><tr><th>Time</th><th>User</th><th>Account</th><th>IP</th><th>Location</th><th>Device</th><th>OS</th><th>Browser</th><th>Resolution</th><th>PWA</th><th>Conn</th><th>Event</th></tr></thead>
           <tbody id="sessions-tbody"></tbody>
         </table>
         <div id="sessions-empty" class="empty-state hidden">No login sessions recorded yet.</div>
@@ -419,6 +419,10 @@
         <div class="card">
           <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Active Users (Last 1h)</div>
           <div id="insights-active" style="padding: 18px; font-size: 32px; font-weight: 700; text-align: center;"></div>
+        </div>
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">PWA Adoption (Last 30d)</div>
+          <div id="insights-pwa" style="padding: 18px;"></div>
         </div>
         <div class="card">
           <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Regional Distribution</div>
@@ -1333,6 +1337,7 @@ async function loadLoginSessions() {
     emptyEl.classList.toggle('hidden', rows.length > 0);
     tbody.innerHTML = rows.map(r => {
       const location = [r.city, r.region, r.country].filter(Boolean).join(', ') || '—';
+      const resolution = r.screen_width && r.screen_height ? `${r.screen_width}x${r.screen_height}` : '—';
       return `
       <tr>
         <td style="white-space:nowrap;">${new Date(r.created_at).toLocaleString()}</td>
@@ -1343,6 +1348,10 @@ async function loadLoginSessions() {
         <td>${escapeHtml(r.device_type || '—')}</td>
         <td>${escapeHtml(r.os || '—')}</td>
         <td>${escapeHtml(r.browser || '—')}</td>
+        <td>${escapeHtml(resolution)}</td>
+        <td>${r.is_pwa ? '✅' : '—'}</td>
+        <td>${escapeHtml(r.connection_type || '—')}</td>
+        <td><span class="badge ${r.event === 'failed_login' ? 'badge-suspended' : 'badge-active'}">${escapeHtml(r.event)}</span></td>
       </tr>
     `;
     }).join('');
@@ -1448,6 +1457,7 @@ async function loadInsights() {
   const activeEl = document.getElementById('insights-active');
   const regionsEl = document.getElementById('insights-regions');
   const signupsEl = document.getElementById('insights-recent-signups');
+  const pwaEl = document.getElementById('insights-pwa');
 
   plansEl.innerHTML = 'Loading…';
   lbEl.innerHTML = 'Loading…';
@@ -1455,6 +1465,7 @@ async function loadInsights() {
   activeEl.innerHTML = '…';
   regionsEl.innerHTML = 'Loading…';
   signupsEl.innerHTML = 'Loading…';
+  if(pwaEl) pwaEl.innerHTML = 'Loading…';
 
   try {
     const s = await api('/api/superadmin/stats');
@@ -1480,6 +1491,21 @@ async function loadInsights() {
     // Render Active Users
     activeEl.innerHTML = s.users.active_last_hour;
     activeEl.title = "Unique users with login activity in the last 60 minutes";
+
+    // Render PWA Adoption
+    if (pwaEl) {
+      const pwaData = s.devices.pwa_adoption_30d;
+      const pwaTotal = Object.values(pwaData).reduce((a, b) => a + b, 0);
+      pwaEl.innerHTML = Object.entries(pwaData).map(([label, count]) => {
+        const pct = pwaTotal > 0 ? (count / pwaTotal * 100).toFixed(1) : 0;
+        return `
+          <div style="margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between;">
+            <span>${label}</span>
+            <span style="font-weight: 600;">${count} (${pct}%)</span>
+          </div>
+        `;
+      }).join('') || '<div class="empty">No data.</div>';
+    }
 
     // Render Regions
     regionsEl.innerHTML = s.regions.map(r => `

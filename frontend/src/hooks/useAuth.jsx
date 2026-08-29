@@ -62,12 +62,20 @@ export function AuthProvider({ children }) {
   }, [isAuthenticated, user, fetchAccount])
 
   const login = useCallback(async (username, password) => {
+    // Collect non-PII client telemetry for UX optimization and security auditing
+    const telemetry = {
+      screen_width: window.screen.width,
+      screen_height: window.screen.height,
+      is_pwa: window.matchMedia('(display-mode: standalone)').matches,
+      connection_type: navigator.connection?.effectiveType || 'unknown',
+    }
+
     let res
     try {
       res = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, ...telemetry }),
         credentials: 'include',
       })
     } catch {

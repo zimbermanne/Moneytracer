@@ -52,6 +52,10 @@ class UserUpdate(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    screen_width: Optional[int] = None
+    screen_height: Optional[int] = None
+    is_pwa: Optional[bool] = False
+    connection_type: Optional[str] = ""
 
 
 class Token(BaseModel):
@@ -872,6 +876,11 @@ class LoginSessionOut(BaseModel):
     device_type: str
     os: str
     browser: str
+    accept_language: str
+    screen_width: Optional[int] = None
+    screen_height: Optional[int] = None
+    is_pwa: bool
+    connection_type: str
     event: str
     created_at: datetime
 

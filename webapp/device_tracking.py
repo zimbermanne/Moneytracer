@@ -151,20 +151,27 @@ def parse_user_agent(ua: str) -> dict:
     return {"device_type": device_type, "os": os_name, "browser": browser}
 
 
-def record_login_session(db: Session, user: User, request, event: str = "login") -> None:
+def record_login_session(db: Session, user: User, request, event: str = "login", client_info: dict = None) -> None:
     """Best-effort — swallow ALL exceptions so a tracking hiccup can never
     break login. Call this after authentication succeeds, before returning
-    the token."""
+    the token.
+
+    client_info (from LoginRequest) can include:
+      screen_width, screen_height, is_pwa, connection_type
+    """
     try:
         ip = get_client_ip(request)
         ua = request.headers.get("user-agent", "")
+        lang = request.headers.get("accept-language", "")[:100]
         device = parse_user_agent(ua)
         geo = geolocate_ip(ip)
+
+        c = client_info or {}
 
         entry = LoginSession(
             user_id=getattr(user, "id", None),
             account_id=getattr(user, "account_id", None),
-            username=getattr(user, "username", ""),
+            username=getattr(user, "username", getattr(user, "username_attempt", "")),
             ip_address=ip,
             city=geo["city"],
             region=geo["region"],
@@ -174,6 +181,11 @@ def record_login_session(db: Session, user: User, request, event: str = "login")
             os=device["os"],
             browser=device["browser"],
             user_agent=ua,
+            accept_language=lang,
+            screen_width=c.get("screen_width"),
+            screen_height=c.get("screen_height"),
+            is_pwa=c.get("is_pwa", False),
+            connection_type=c.get("connection_type", ""),
             event=event,
         )
         db.add(entry)
