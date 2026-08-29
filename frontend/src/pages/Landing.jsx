@@ -159,7 +159,7 @@ export default function Landing() {
         .lg-header-inner {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 18px 28px;
+          padding: 24px 32px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -183,13 +183,14 @@ export default function Landing() {
           font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
         }
         .lg-nav {
-          display: flex; align-items: center; gap: 32px;
+          display: flex; align-items: center; gap: 40px;
           font-size: 14px;
         }
         .lg-nav a {
           color: rgba(255,255,255,0.85);
           text-decoration: none;
           transition: color 0.15s;
+          font-weight: 500;
         }
         .lg-nav a:hover { color: #fff; }
         .lg-nav-login {
@@ -524,7 +525,9 @@ export default function Landing() {
             <a href="#pricing">{t('landing.navPricing')}</a>
             <Link to="/login" className="lg-nav-login">{t('landing.login')}</Link>
             <Link to="/register" className="lg-nav-cta">{t('landing.getStarted')}</Link>
-            <LanguageSwitcher />
+            <div style={{ marginLeft: '12px' }}>
+              <LanguageSwitcher />
+            </div>
           </nav>
         </div>
       </header>
