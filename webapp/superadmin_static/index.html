@@ -186,6 +186,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="accounts" onclick="switchTab('accounts')">Accounts</div>
       <div class="tab" data-tab="users" onclick="switchTab('users')">Users</div>
+      <div class="tab" data-tab="messages" onclick="switchTab('messages')">Messages <span id="messages-badge" class="badge badge-critical hidden" style="margin-left:4px;"></span></div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
       <div class="tab" data-tab="auditlog" onclick="switchTab('auditlog')">Superadmin Audit Log</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
@@ -251,6 +252,29 @@
           <tbody id="users-tbody"></tbody>
         </table>
         <div id="users-empty" class="empty-state hidden">No users match your search.</div>
+      </div>
+    </div>
+
+    <!-- MESSAGES TAB (support inbox: tenant threads to the superadmin) -->
+    <div id="tab-messages" class="hidden">
+      <div class="toolbar">
+        <select id="messages-status-filter" onchange="loadMessages()">
+          <option value="">All</option>
+          <option value="open" selected>Open</option>
+          <option value="closed">Closed</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted);">
+          <input type="checkbox" id="messages-unread-filter" onchange="loadMessages()" /> Unread only
+        </label>
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadMessages()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Account</th><th>Subject</th><th>Last message</th><th>Status</th><th>When</th><th></th></tr></thead>
+          <tbody id="messages-tbody"></tbody>
+        </table>
+        <div id="messages-empty" class="empty-state hidden">No messages.</div>
       </div>
     </div>
 
@@ -508,11 +532,12 @@ async function submitChangePassword() {
 }
 
 function switchTab(name) {
-  ['accounts','users','activity','auditlog','health','announcements'].forEach(t => {
+  ['accounts','users','messages','activity','auditlog','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
   if (name === 'users') loadUsers();
+  if (name === 'messages') loadMessages();
   if (name === 'activity') loadActivity();
   if (name === 'auditlog') loadAuditLog();
   if (name === 'health') loadHealth();
@@ -524,7 +549,21 @@ async function enterDashboard() {
   document.getElementById('whoami').textContent = currentUser ? `${currentUser.username} (superadmin)` : '';
   show('dashboard-screen');
   loadBanner();
+  refreshMessagesBadge();
   await loadAccounts();
+}
+
+async function refreshMessagesBadge() {
+  try {
+    const unread = await api('/api/superadmin/support/threads?unread_only=true');
+    const badge = document.getElementById('messages-badge');
+    if (unread.length > 0) {
+      badge.textContent = unread.length;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (e) { /* non-critical, ignore */ }
 }
 
 async function loadBanner() {
@@ -985,6 +1024,129 @@ async function toggleUserActiveGlobal(userId, activate) {
     await api(`/api/superadmin/users/${userId}/${activate ? 'activate' : 'deactivate'}`, { method: 'POST' });
     toast(activate ? 'User activated.' : 'User deactivated.', 'ok');
     loadUsers();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+let messageThreads = [];
+let expandedThreadId = null;
+let threadDetailCache = {};
+
+async function loadMessages() {
+  const tbody = document.getElementById('messages-tbody');
+  const emptyEl = document.getElementById('messages-empty');
+  const status = document.getElementById('messages-status-filter').value;
+  const unreadOnly = document.getElementById('messages-unread-filter').checked;
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (unreadOnly) params.set('unread_only', 'true');
+  try {
+    messageThreads = await api('/api/superadmin/support/threads?' + params.toString());
+    emptyEl.classList.toggle('hidden', messageThreads.length > 0);
+    renderMessageRows();
+    refreshMessagesBadge();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+function renderMessageRows() {
+  const tbody = document.getElementById('messages-tbody');
+  tbody.innerHTML = '';
+  messageThreads.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.innerHTML = `
+      <td>${escapeHtml(t.account_name || ('#' + t.account_id))}</td>
+      <td>${t.unread_by_superadmin ? '<strong>' : ''}${escapeHtml(t.subject)}${t.unread_by_superadmin ? ' <span class="badge badge-critical">new</span></strong>' : ''}</td>
+      <td style="color:var(--text-muted); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.last_message_preview)}</td>
+      <td><span class="badge ${t.status === 'closed' ? '' : 'badge-active'}">${t.status}</span></td>
+      <td style="white-space:nowrap;">${new Date(t.last_message_at).toLocaleString()}</td>
+      <td><button class="btn-outline btn-sm" onclick="event.stopPropagation(); toggleThreadDetail(${t.id})">${expandedThreadId === t.id ? 'Hide' : 'Open'}</button></td>
+    `;
+    tr.onclick = () => toggleThreadDetail(t.id);
+    tbody.appendChild(tr);
+
+    if (expandedThreadId === t.id) {
+      const detailTr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      td.className = 'users-panel';
+      td.innerHTML = renderThreadDetail(t.id);
+      detailTr.appendChild(td);
+      tbody.appendChild(detailTr);
+    }
+  });
+}
+
+async function toggleThreadDetail(threadId) {
+  if (expandedThreadId === threadId) {
+    expandedThreadId = null;
+    renderMessageRows();
+    return;
+  }
+  expandedThreadId = threadId;
+  renderMessageRows();
+  try {
+    threadDetailCache[threadId] = await api(`/api/superadmin/support/threads/${threadId}`);
+    renderMessageRows();
+    refreshMessagesBadge();
+  } catch (e) {
+    toast(e.message, 'err');
+    expandedThreadId = null;
+    renderMessageRows();
+  }
+}
+
+function renderThreadDetail(threadId) {
+  const t = threadDetailCache[threadId];
+  if (!t) return `<div class="empty">Loading…</div>`;
+  const bubbles = t.messages.map(m => `
+    <div style="margin-bottom:10px; display:flex; ${m.sender_is_superadmin ? 'justify-content:flex-end;' : ''}">
+      <div style="max-width:70%; padding:8px 12px; border-radius:12px; background:${m.sender_is_superadmin ? 'var(--accent)' : 'var(--surface-sunken)'}; color:${m.sender_is_superadmin ? '#fff' : 'inherit'};">
+        <div style="font-size:11px; opacity:0.75; margin-bottom:2px;">${escapeHtml(m.sender_username)} · ${new Date(m.created_at).toLocaleString()}</div>
+        <div style="white-space:pre-wrap;">${escapeHtml(m.body)}</div>
+      </div>
+    </div>
+  `).join('');
+  return `
+    <div style="max-width:640px;">
+      <div style="margin-bottom:12px;">${bubbles}</div>
+      <textarea id="reply-box-${threadId}" placeholder="Reply to this thread…" style="width:100%; min-height:70px; margin-bottom:8px;"></textarea>
+      <div class="action-row">
+        <button class="btn-primary btn-sm" onclick="sendThreadReply(${threadId})">Send reply</button>
+        ${t.status === 'closed'
+          ? '<span style="font-size:12px; color:var(--text-muted); align-self:center;">Closed — replying will reopen it.</span>'
+          : `<button class="btn-outline btn-sm" onclick="closeThread(${threadId})">Close thread</button>`}
+      </div>
+    </div>
+  `;
+}
+
+async function sendThreadReply(threadId) {
+  const box = document.getElementById(`reply-box-${threadId}`);
+  const body = box.value.trim();
+  if (!body) return;
+  try {
+    threadDetailCache[threadId] = await api(`/api/superadmin/support/threads/${threadId}/reply`, {
+      method: 'POST', body: JSON.stringify({ body }),
+    });
+    box.value = '';
+    toast('Reply sent.', 'ok');
+    await loadMessages();
+    expandedThreadId = threadId;
+    renderMessageRows();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function closeThread(threadId) {
+  try {
+    await api(`/api/superadmin/support/threads/${threadId}/close`, { method: 'POST' });
+    toast('Thread closed.', 'ok');
+    await loadMessages();
   } catch (e) {
     toast(e.message, 'err');
   }

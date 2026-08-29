@@ -853,6 +853,43 @@ class SuperadminAuditLogOut(BaseModel):
     created_at: datetime
 
 
+# ---------- Support messages (tenant <-> superadmin) ----------
+class SupportMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    sender_username: str
+    sender_is_superadmin: bool
+    body: str
+    created_at: datetime
+
+
+class SupportThreadCreate(BaseModel):
+    subject: str = ""
+    body: str
+
+
+class SupportMessageCreate(BaseModel):
+    body: str
+
+
+class SupportThreadOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    subject: str
+    status: str
+    unread_by_superadmin: bool
+    unread_by_tenant: bool
+    last_message_at: datetime
+    last_message_preview: str
+    created_at: datetime
+    messages: List[SupportMessageOut] = []
+
+
+class SuperadminSupportThreadOut(SupportThreadOut):
+    account_name: Optional[str] = None
+
+
 # ---------- Admin: user profile ----------
 class UserProfileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

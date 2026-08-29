@@ -628,6 +628,43 @@ class SuperadminAuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
+class SupportThread(Base):
+    """A tenant's message (or thread of messages) to the platform
+    superadmin — 'contact support' from the tenant side, a live inbox from
+    the superadmin console side. One thread per topic; each side can keep
+    replying. Deliberately not scoped to SCHEMA_BUSINESS (same reasoning
+    as ActivityLog/SuperadminAuditLog above): the superadmin, who has no
+    account_id, needs to read and write these across every tenant."""
+    __tablename__ = "support_threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    subject = Column(String(200), default="")
+    status = Column(String(20), default="open", index=True)  # 'open' | 'closed'
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by_username = Column(String(80), default="")
+    unread_by_superadmin = Column(Boolean, default=True)   # tenant sent the latest message
+    unread_by_tenant = Column(Boolean, default=False)      # superadmin sent the latest message
+    last_message_at = Column(DateTime, default=datetime.utcnow, index=True)
+    last_message_preview = Column(String(200), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SupportMessage(Base):
+    """One message within a SupportThread. sender_is_superadmin tells the
+    UI which side of the conversation to render it on, without needing to
+    join back to Users and compare roles for every message."""
+    __tablename__ = "support_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(Integer, ForeignKey("support_threads.id"), nullable=False, index=True)
+    sender_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    sender_username = Column(String(80), default="")
+    sender_is_superadmin = Column(Boolean, default=False)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class AnnouncementLevel(str, enum.Enum):
     info = "info"
     warning = "warning"

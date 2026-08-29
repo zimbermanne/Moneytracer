@@ -1,64 +1,33 @@
-# Moneytracer — v2.5 Scaffold
+# Superadmin Console
 
-This project was generated from `README2_5.md`. It implements the **"Currently Working (v2.5)"**
-feature set as a working FastAPI backend (`webapp/`) and a React + Vite frontend (`frontend/`),
-matching the project structure, sidebar design, and theme described in the README.
+Served same-origin from this backend at `/superadmin` — e.g.
+`https://adminwebappbackend-production.up.railway.app/superadmin`.
 
-## What's included
+This replaces the earlier standalone-static-site approach. That version had
+to be hosted on its own domain and needed CORS explicitly opened for it via
+`ALLOWED_ORIGINS` on the backend — which caused persistent "Failed to fetch"
+issues (wrong/missing origin, stale deploys, `file://` origin confusion).
 
-- **Backend** (`webapp/`): JWT auth with bcrypt, role-based access (Admin/Manager/Employee),
-  Inventory CRUD + batch import + low-stock alerts, POS multi-item checkout with stock
-  validation, Sales/Purchases/Expenses, Debtors/Creditors ledgers, Reports (P&L, financial
-  summary, debtors/creditors, inventory valuation, daily summary), Activity log, Backup
-  create/list/restore/upload/delete, and an optional AI agent router (`/api/agent/*`,
-  requires `ANTHROPIC_API_KEY`). SQLite is used by default (zero setup); set `DATABASE_URL`
-  for PostgreSQL in production.
-- **Frontend** (`frontend/`): React + Vite app with the Zoho-style collapsible grouped sidebar
-  (light theme, navy/gold/cream tokens), mobile hamburger drawer, JWT login, and pages for
-  Dashboard, POS, Inventory, Sales, Purchases, Expenses, Debtors, Creditors, Reports, and
-  Settings — all wired to the backend API.
+Serving it from the same backend it manages removes the cross-origin
+request entirely, so none of that applies anymore. Just open
+`<your-backend-url>/superadmin` directly — no separate hosting, no
+ALLOWED_ORIGINS entry needed for this tool specifically.
 
-## Quick start
+## What it talks to
 
-### 1. Backend
+- `routers/accounts.py` — per-tenant CRUD (list/view/suspend/activate/delete)
+- `routers/superadmin.py` — cross-account diagnostics: `/api/superadmin/stats`,
+  `/api/superadmin/activity` (the CRITICAL:-tagged cross-tenant feed), and
+  `/api/superadmin/health`
+- `POST /api/auth/impersonate/{user_id}` (in `routers/auth.py`) — 30-minute
+  "Login as" support token, logged to the target account's own activity log
 
-```bash
-cd webapp
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python init_db.py               # seeds default admin / admin123
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+Only `role == "superadmin"` can log in or call any of the above.
 
-API docs available at `http://localhost:8000/docs`.
+## "Login as" still needs one setting
 
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`. The Vite dev server proxies `/api/*` to `http://localhost:8000`
-(see `vite.config.js`; override with `VITE_API_URL` if your backend runs elsewhere).
-
-Default login: **admin / admin123** — change this immediately after first login
-(Settings → Change Password).
-
-## Not yet implemented
-
-The README's **Roadmap (v3.0+)** items — double-entry accounting, invoicing/quotes,
-customers/vendors as first-class entities, banking, purchase orders, advanced reports,
-documents, notifications, multi-tenant, mobile money webhooks — are scaffolding targets for
-the next phase and aren't built here. The `routers/` and `models.py` files are structured so
-each of those can be added as its own router + model set, per the README's "What to build"
-notes.
-
-## Project layout
-
-```
-webapp/      → FastAPI backend (see webapp/README references in main README)
-frontend/    → React + Vite frontend
-```
+Since the tenant-facing app is a genuinely different app/origin, "Login as"
+needs to know its URL to open a support session there. Click "Advanced:
+custom API URL" on the login screen and set the **Tenant app URL** field —
+this is the only cross-origin piece left, and it's just an outbound link
+(`window.open`), not a fetch, so it isn't subject to CORS at all.

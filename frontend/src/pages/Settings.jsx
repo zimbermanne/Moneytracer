@@ -6,6 +6,7 @@ import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import AppearanceSettings from '../components/AppearanceSettings.jsx'
+import SupportMessages from '../components/SupportMessages.jsx'
 
 export default function Settings() {
   const { user, logout } = useAuth()
@@ -188,6 +189,9 @@ export default function Settings() {
 
       {/* Appearance: theme mode, accent color */}
       <AppearanceSettings />
+
+      {/* Messages to support — not for superadmin, who reads these in the console instead */}
+      {!isSuperadmin && <SupportMessages />}
 
       {/* Legal & policies — opens the public /legal pages in a new tab */}
       <div className="card" style={{ marginTop: 20 }}>

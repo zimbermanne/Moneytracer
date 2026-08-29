@@ -24,12 +24,12 @@ from models import (
     Account, User, RoleEnum, AccountType, ActivityLog, SuperadminAuditLog,
     Sale, Purchase, Expense, Invoice, Quotation, PurchaseOrder,
     JournalEntry, FiscalPeriod, FiscalPeriodStatus, Reminder,
-    Announcement, AnnouncementLevel, InventoryItem,
+    Announcement, AnnouncementLevel, InventoryItem, SupportThread, SupportMessage,
 )
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
     RoleUpdate, AnnouncementCreate, AnnouncementOut, SuperadminAuditLogOut,
-    InventoryOut, SuperadminUserOut,
+    InventoryOut, SuperadminUserOut, SuperadminSupportThreadOut, SupportMessageCreate, SupportMessageOut,
 )
 from auth import require_superadmin
 from activity import log_activity_for_user, log_superadmin_action
@@ -154,6 +154,116 @@ def superadmin_audit_log(
     if until:
         q = q.filter(SuperadminAuditLog.created_at <= until)
     return q.order_by(SuperadminAuditLog.created_at.desc()).offset(offset).limit(limit).all()
+
+
+# ---------- Support inbox (tenant messages to the superadmin) ----------
+# Tenant side (create/list/reply to own threads) lives in routers/support.py.
+# This is the superadmin's inbox view across every account's threads.
+
+@router.get("/support/threads", response_model=List[SuperadminSupportThreadOut])
+def list_support_threads(
+    status: Optional[str] = Query(None, description="'open' or 'closed'; omit for all"),
+    unread_only: bool = Query(False),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    q = db.query(SupportThread)
+    if status:
+        q = q.filter(SupportThread.status == status)
+    if unread_only:
+        q = q.filter(SupportThread.unread_by_superadmin.is_(True))
+    threads = q.order_by(SupportThread.last_message_at.desc()).all()
+    account_ids = {t.account_id for t in threads}
+    names = dict(
+        db.query(Account.id, Account.name).filter(Account.id.in_(account_ids)).all()
+    ) if account_ids else {}
+    return [
+        SuperadminSupportThreadOut(**{c.name: getattr(t, c.name) for c in SupportThread.__table__.columns},
+                                    account_name=names.get(t.account_id))
+        for t in threads
+    ]
+
+
+@router.get("/support/threads/{thread_id}", response_model=SuperadminSupportThreadOut)
+def get_support_thread(thread_id: int, db: Session = Depends(get_db),
+                        superadmin: User = Depends(require_superadmin)):
+    thread = db.query(SupportThread).filter(SupportThread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    if thread.unread_by_superadmin:
+        thread.unread_by_superadmin = False
+        db.commit()
+    account = db.query(Account).filter(Account.id == thread.account_id).first()
+    messages = (
+        db.query(SupportMessage)
+        .filter(SupportMessage.thread_id == thread.id)
+        .order_by(SupportMessage.created_at.asc())
+        .all()
+    )
+    out = SuperadminSupportThreadOut(
+        **{c.name: getattr(thread, c.name) for c in SupportThread.__table__.columns},
+        account_name=account.name if account else None,
+    )
+    out.messages = [SupportMessageOut.model_validate(m) for m in messages]
+    return out
+
+
+@router.post("/support/threads/{thread_id}/reply", response_model=SuperadminSupportThreadOut)
+def reply_to_support_thread(thread_id: int, payload: SupportMessageCreate, db: Session = Depends(get_db),
+                             superadmin: User = Depends(require_superadmin)):
+    thread = db.query(SupportThread).filter(SupportThread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    body = payload.body.strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="Message can't be empty")
+    now = datetime.utcnow()
+    message = SupportMessage(
+        thread_id=thread.id,
+        sender_user_id=superadmin.id,
+        sender_username=superadmin.username,
+        sender_is_superadmin=True,
+        body=body,
+        created_at=now,
+    )
+    db.add(message)
+    thread.unread_by_tenant = True
+    thread.unread_by_superadmin = False
+    thread.last_message_at = now
+    thread.last_message_preview = body[:200]
+    db.commit()
+    log_superadmin_action(
+        db, superadmin, "support_reply", details=body[:120],
+        target_account_id=thread.account_id, target_label=f"thread #{thread.id}: {thread.subject}",
+    )
+    account = db.query(Account).filter(Account.id == thread.account_id).first()
+    messages = (
+        db.query(SupportMessage)
+        .filter(SupportMessage.thread_id == thread.id)
+        .order_by(SupportMessage.created_at.asc())
+        .all()
+    )
+    out = SuperadminSupportThreadOut(
+        **{c.name: getattr(thread, c.name) for c in SupportThread.__table__.columns},
+        account_name=account.name if account else None,
+    )
+    out.messages = [SupportMessageOut.model_validate(m) for m in messages]
+    return out
+
+
+@router.post("/support/threads/{thread_id}/close")
+def close_support_thread(thread_id: int, db: Session = Depends(get_db),
+                          superadmin: User = Depends(require_superadmin)):
+    thread = db.query(SupportThread).filter(SupportThread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    thread.status = "closed"
+    db.commit()
+    log_superadmin_action(
+        db, superadmin, "support_thread_close",
+        target_account_id=thread.account_id, target_label=f"thread #{thread.id}: {thread.subject}",
+    )
+    return {"detail": "Thread closed"}
 
 
 # ---------- System health / diagnostics ----------

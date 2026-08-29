@@ -1,6 +1,36 @@
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from models import ActivityLog, SuperadminAuditLog, User
+from sqlalchemy import func
+from typing import List, Optional
+from pydantic import BaseModel
+from datetime import datetime
 
+from database import get_db
+from auth import get_current_user
+from models import ActivityLog, User
+
+router = APIRouter(prefix="/api/activity", tags=["activity"])
+
+
+# ── Pydantic schemas ──────────────────────────────────────────────────────────
+
+class ActivityLogOut(BaseModel):
+    id: int
+    username: str
+    action: str
+    details: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ActivityLogCreate(BaseModel):
+    action: str
+    details: str = ""
+
+
+# ── Helper functions (used by other routers) ──────────────────────────────────
 
 def log_activity(db: Session, username: str, action: str, details: str = "", account_id: int = None):
     """Log an activity with optional account_id for multi-tenant scoping."""
@@ -15,29 +45,55 @@ def log_activity_for_user(db: Session, user: User, action: str, details: str = "
     log_activity(db, user.username, action, details, account_id)
 
 
-def log_superadmin_action(
-    db: Session,
-    superadmin: User,
-    action: str,
-    details: str = "",
-    target_account_id: int = None,
-    target_user_id: int = None,
-    target_label: str = "",
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@router.post("/log", status_code=200)
+def post_activity_log(
+    payload: ActivityLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Record a superadmin's action in the dedicated audit trail, separate
-    from the tenant-facing ActivityLog. Call this alongside (not instead
-    of) log_activity_for_user in superadmin.py — that call still gives the
-    affected tenant visibility in their own activity feed; this one gives
-    the platform owner a queryable-by-target record of what every
-    superadmin has done. See models.SuperadminAuditLog for why this
-    exists as its own table."""
-    entry = SuperadminAuditLog(
-        actor_username=superadmin.username,
-        action=action,
-        details=details,
-        target_account_id=target_account_id,
-        target_user_id=target_user_id,
-        target_label=target_label,
-    )
-    db.add(entry)
-    db.commit()
+    """Frontend-facing endpoint to log an activity action."""
+    log_activity_for_user(db, current_user, payload.action, payload.details)
+    return {"status": "logged"}
+
+
+@router.get("/", response_model=List[ActivityLogOut])
+def get_activity_logs(
+    limit: int = Query(500, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return recent activity logs for the current user's account."""
+    query = db.query(ActivityLog)
+    if current_user.account_id:
+        query = query.filter(ActivityLog.account_id == current_user.account_id)
+    logs = query.order_by(ActivityLog.created_at.desc()).limit(limit).all()
+    return logs
+
+
+@router.get("/stats")
+def get_activity_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return a summary of activity: total events, counts by user, and counts by action type."""
+    query = db.query(ActivityLog)
+    if current_user.account_id:
+        query = query.filter(ActivityLog.account_id == current_user.account_id)
+
+    by_action_rows = query.with_entities(
+        ActivityLog.action, func.count(ActivityLog.id).label("count")
+    ).group_by(ActivityLog.action).all()
+
+    by_user_rows = query.with_entities(
+        ActivityLog.username, func.count(ActivityLog.id).label("count")
+    ).group_by(ActivityLog.username).all()
+
+    total_events = sum(r.count for r in by_action_rows)
+
+    return {
+        "total_events": total_events,
+        "by_action": {r.action: r.count for r in by_action_rows},
+        "by_user": {r.username: r.count for r in by_user_rows},
+    }

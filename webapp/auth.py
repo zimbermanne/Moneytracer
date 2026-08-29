@@ -1,220 +1,316 @@
-import hashlib
 import os
-import secrets
-import warnings
-from datetime import datetime, timedelta
-from typing import Optional
-
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import uuid
+from jose import JWTError
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, RoleEnum
+from models import User, RoleEnum, Account, AccountType
+from schemas import (
+    UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate,
+    ForgotPasswordRequest, ResetPasswordConfirmRequest,
+)
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import importlib
+_auth = importlib.import_module('auth')
+hash_password = _auth.hash_password
+authenticate_user = _auth.authenticate_user
+create_access_token = _auth.create_access_token
+get_current_user = _auth.get_current_user
+require_admin = _auth.require_admin
+require_superadmin = _auth.require_superadmin
+set_auth_cookie = _auth.set_auth_cookie
+clear_auth_cookie = _auth.clear_auth_cookie
+create_password_reset_token = _auth.create_password_reset_token
+verify_password_reset_token = _auth.verify_password_reset_token
+from activity import log_activity_for_user, log_activity
+from rate_limit import limiter
+import email_utils
 
-_env_secret = os.getenv("SECRET_KEY")
-if _env_secret:
-    SECRET_KEY = _env_secret
-else:
-    # No hardcoded fallback — that would mean every deployment without the env
-    # var set signs tokens with a value visible in the public repo, letting
-    # anyone forge valid logins. Instead, generate a random key for this
-    # process. Tokens won't survive a restart until SECRET_KEY is actually
-    # set in the environment (do this in Railway/production!).
-    SECRET_KEY = secrets.token_hex(32)
-    warnings.warn(
-        "SECRET_KEY is not set in the environment — using a random key for "
-        "this process only. All existing sessions will be invalidated on "
-        "every restart. Set SECRET_KEY as a persistent environment variable "
-        "before relying on this in production.",
-        RuntimeWarning,
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=UserOut)
+@limiter.limit("10/hour")
+def register(request: Request, payload: UserCreate, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == payload.username).first():
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    account_type = payload.account_type or AccountType.business
+
+    if account_type == AccountType.community:
+        # Community groups skip the business fields entirely — the community
+        # onboarding wizard (POST /api/community/setup) fills in the group's
+        # own details afterwards.
+        account = Account(
+            account_type=AccountType.community,
+            name=f"{payload.full_name or payload.username}'s Group",
+            owner_full_name=payload.full_name or payload.username,
+            email=payload.email or "",
+            onboarding_completed=False,
+        )
+    elif account_type == AccountType.personal:
+        # Personal spending accounts have no business/community setup wizard —
+        # categories and budgets are created on the fly from the dashboard, so
+        # these go straight through onboarding.
+        account = Account(
+            account_type=AccountType.personal,
+            name=f"{payload.full_name or payload.username}'s Personal Account",
+            owner_full_name=payload.full_name or payload.username,
+            email=payload.email or "",
+            onboarding_completed=True,
+        )
+    else:
+        # Create a new account for self-service registration. It starts
+        # un-onboarded so the new admin is walked through the setup wizard
+        # (business basics, branding, tax/invoicing defaults) before landing
+        # on the dashboard.
+        account = Account(
+            account_type=AccountType.business,
+            name=f"{payload.full_name}'s Business",
+            owner_full_name=payload.full_name or payload.username,
+            business_type="retail",
+            email=payload.email or "",
+            onboarding_completed=False,
+        )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
+
+    user = User(
+        username=payload.username,
+        full_name=payload.full_name or "",
+        email=payload.email or "",
+        hashed_password=hash_password(payload.password),
+        role=RoleEnum.admin,  # The person who creates an account is its admin/treasurer
+        account_id=account.id,
     )
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# auto_error=False: don't 401 immediately when there's no Authorization header —
-# get_current_user below falls back to the httpOnly cookie in that case, so a
-# browser session (cookie-based) and an API client (header-based) both work.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
-
-# Name of the httpOnly cookie set on login, used by the browser frontend
-# instead of storing the token in sessionStorage (which is readable by any
-# injected script — see the XSS discussion this migration addresses).
-ACCESS_TOKEN_COOKIE = "mt_access_token"
-
-# Cross-site cookies (frontend and API on different Railway subdomains)
-# require Secure + SameSite=None — but Secure cookies are rejected by browsers
-# over plain HTTP, which breaks local dev (http://localhost). Set
-# COOKIE_SECURE=false only for local development.
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() != "false"
-COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    log_activity_for_user(db, user, "register", f"New {account_type.value} account created: {account.name}")
+    return user
 
 
-def _truncate(password: str) -> str:
-    # bcrypt only uses the first 72 bytes; truncate explicitly so behavior
-    # is consistent across bcrypt versions (4.1+ raises instead of truncating).
-    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+@router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
+def login(request: Request, response: Response, payload: LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_user(db, payload.username, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Include account_id in JWT token
+    token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0}
+    if user.account_id:
+        token_data["account_id"] = user.account_id
+    
+    token = create_access_token(token_data)
+    set_auth_cookie(response, token)
+    log_activity_for_user(db, user, "login", "User logged in")
+    return Token(access_token=token, user=user)
 
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(_truncate(plain), hashed)
+@router.post("/logout")
+def logout(response: Response):
+    """Clear the httpOnly auth cookie. The frontend also drops any local
+    auth state it's holding; this just ensures the browser stops sending
+    the cookie on subsequent requests."""
+    clear_auth_cookie(response)
+    return {"detail": "Logged out"}
 
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(_truncate(password))
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
-def create_access_token(data: dict, expires_minutes: Optional[int] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+@router.post("/demo-login", response_model=Token)
+@limiter.limit("20/hour")
+def demo_login(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Instant login as a read-friendly demo account — no credentials required."""
+    user = db.query(User).filter(User.username == "demo").first()
+    if not user:
+        # Lazily create it if init_db hasn't run yet / fresh DB
+        # Create a demo account first
+        demo_account = Account(
+            name="Demo Business",
+            owner_full_name="Demo Owner",
+            business_type="retail",
+            email="demo@moneytracer.africa",
+            phone="+255123456789",
+            onboarding_completed=True,  # demo skips the wizard
+        )
+        db.add(demo_account)
+        db.commit()
+        db.refresh(demo_account)
+        
+        user = User(
+            username="demo",
+            full_name="Demo User",
+            email="demo@moneytracer.africa",
+            hashed_password=hash_password(uuid.uuid4().hex),  # unguessable, unused
+            role=RoleEnum.manager,
+            is_demo=True,
+            account_id=demo_account.id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0}
+    if user.account_id:
+        token_data["account_id"] = user.account_id
+    
+    token = create_access_token(token_data)
+    set_auth_cookie(response, token)
+    log_activity_for_user(db, user, "demo_login", "Demo account accessed")
+    return Token(access_token=token, user=user)
 
 
-PASSWORD_RESET_EXPIRE_MINUTES = 30
+@router.put("/change-password")
+@limiter.limit("10/minute")
+def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    verify_password = _auth.verify_password
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail="The demo account's password cannot be changed")
+    if not verify_password(payload.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    log_activity_for_user(db, current_user, "change_password", "Password changed")
+    return {"detail": "Password updated successfully"}
 
 
-def create_password_reset_token(user: "User") -> str:
-    """Short-lived, single-purpose token for the forgot-password flow.
-
-    Deliberately separate from create_access_token: it carries "purpose":
-    "password_reset" so it can never be accepted by get_current_user as a
-    login token, even if someone tried to reuse it that way. It also embeds
-    the user's current token_version and hashed_password, so the token is
-    automatically invalidated the moment the password actually changes
-    (either via this same flow or any other route) — a leaked/old reset
-    link can't be replayed after it's been used once.
-    """
-    expire = datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)
-    to_encode = {
-        "sub": user.username,
-        "purpose": "password_reset",
-        "tv": user.token_version,
-        # Bind the token to the current password hash so it can't be
-        # replayed after a successful reset (or any other password change).
-        "pwv": hashlib.sha256(user.hashed_password.encode()).hexdigest()[:16],
-        "exp": expire,
-    }
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def verify_password_reset_token(token: str, db) -> "User":
-    """Decodes a password-reset token and returns the matching User, or
-    raises JWTError/ValueError if it's invalid, expired, wrong-purpose, or
-    already used (password changed since it was issued)."""
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    if payload.get("purpose") != "password_reset":
-        raise ValueError("Not a password reset token")
-    username = payload.get("sub")
+@router.post("/reset-password/{username}")
+@limiter.limit("10/minute")
+def reset_password(
+    request: Request,
+    username: str,
+    new_password: str = "changeme123",
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise ValueError("User not found")
-    if user.token_version != payload.get("tv"):
-        raise ValueError("Token no longer valid")
-    current_pwv = hashlib.sha256(user.hashed_password.encode()).hexdigest()[:16]
-    if current_pwv != payload.get("pwv"):
-        raise ValueError("Token already used")
-    return user
+        raise HTTPException(status_code=404, detail="User not found")
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+    log_activity_for_user(db, admin, "reset_password", f"Reset password for {username}")
+    return {"detail": f"Password reset for {username}"}
 
 
-def set_auth_cookie(response, token: str, expires_minutes: Optional[int] = None):
-    """Set the httpOnly auth cookie on a login response. SameSite=None + Secure
-    because the frontend and API are on different subdomains (cross-site) —
-    both are required together for the browser to send it cross-origin."""
-    response.set_cookie(
-        key=ACCESS_TOKEN_COOKIE,
-        value=token,
-        max_age=(expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES) * 60,
-        httponly=True,
-        secure=COOKIE_SECURE,
-        samesite=COOKIE_SAMESITE,
-        path="/",
-    )
+# ---- Self-service forgot-password (distinct from the admin-only reset
+# above): a locked-out user recovers their own account via an emailed,
+# short-lived link — no admin involved. ----
+
+_FORGOT_PASSWORD_GENERIC_RESPONSE = {
+    "detail": "If an account matches, password reset instructions have been sent to its email address."
+}
 
 
-def clear_auth_cookie(response):
-    response.delete_cookie(key=ACCESS_TOKEN_COOKIE, path="/")
+@router.post("/forgot-password")
+@limiter.limit("5/hour")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Always returns the same generic message whether or not the account
+    exists, and whether or not the account has an email on file — so this
+    endpoint can't be used to enumerate registered usernames/emails."""
+    identifier = payload.username_or_email.strip()
+    user = db.query(User).filter(
+        (User.username == identifier) | (User.email == identifier)
+    ).first()
 
-
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not verify_password(password, user.hashed_password):
-        return None
-    return user
-
-
-async def get_current_user(
-    request: Request,
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    # Prefer the Authorization header (API clients, tools, Postman, etc.);
-    # fall back to the httpOnly cookie set on login (the browser frontend).
-    if not token:
-        token = request.cookies.get(ACCESS_TOKEN_COOKIE)
-    if not token:
-        raise credentials_exception
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    user = db.query(User).filter(User.username == username).first()
-    if user is None or not user.is_active:
-        raise credentials_exception
-
-    # Force-logout check: a superadmin bumping token_version (see
-    # routers/superadmin.py force_logout_user/force_logout_account)
-    # invalidates every token issued before that point, even though JWTs are
-    # otherwise stateless. Tokens minted before this feature shipped have no
-    # "tv" claim — treat that as version 0, matching the column's default,
-    # so existing sessions aren't broken by the deploy.
-    token_version = payload.get("tv", 0)
-    if token_version != (user.token_version or 0):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session has been revoked. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Check if user's account is suspended (unless they're a superadmin)
-    if user.role != RoleEnum.superadmin and user.account_id:
-        from models import Account
-        account = db.query(Account).filter(Account.id == user.account_id).first()
-        if account and account.is_suspended:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is suspended. Please contact support."
+    if user and not user.is_demo and user.email:
+        token = create_password_reset_token(user)
+        reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+        try:
+            email_utils.send_plain_email(
+                to_email=user.email,
+                subject="Reset your Moneytracer password",
+                body=(
+                    f"Hi {user.full_name or user.username},\n\n"
+                    "We received a request to reset your Moneytracer password. "
+                    f"Click the link below to choose a new one — it expires in 30 minutes:\n\n"
+                    f"{reset_url}\n\n"
+                    "If you didn't request this, you can safely ignore this email; "
+                    "your password will not be changed.\n\n"
+                    "— Moneytracer"
+                ),
             )
-    
-    return user
+        except RuntimeError:
+            # SMTP not configured on this deployment. Don't leak that detail
+            # to the caller (same generic response either way) — but do
+            # surface it in server logs so it's visible to whoever's running
+            # the deployment.
+            print(f"[forgot-password] Email not sent for user '{user.username}': SMTP not configured.")
+
+    return _FORGOT_PASSWORD_GENERIC_RESPONSE
 
 
-def require_roles(*roles: RoleEnum):
-    def checker(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return user
-    return checker
+@router.post("/reset-password-confirm")
+@limiter.limit("10/hour")
+def reset_password_confirm(request: Request, payload: ResetPasswordConfirmRequest, db: Session = Depends(get_db)):
+    try:
+        user = verify_password_reset_token(payload.token, db)
+    except (JWTError, ValueError):
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired. Please request a new one.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    log_activity_for_user(db, user, "reset_password_self_service", "Password reset via emailed link")
+    return {"detail": "Password updated successfully. You can now log in with your new password."}
 
 
-require_admin = require_roles(RoleEnum.admin)
-require_manager_up = require_roles(RoleEnum.admin, RoleEnum.manager)
-require_superadmin = require_roles(RoleEnum.superadmin)
+IMPERSONATION_MINUTES = 30
 
 
-def require_account_user(user: User = Depends(get_current_user)) -> User:
-    """Ensure user belongs to an account (not a superadmin without account)."""
-    if user.role != RoleEnum.superadmin and not user.account_id:
-        raise HTTPException(status_code=403, detail="User must belong to an account")
-    return user
+@router.post("/impersonate/{user_id}", response_model=Token)
+def impersonate(user_id: int, db: Session = Depends(get_db),
+                 superadmin: User = Depends(require_superadmin)):
+    """Issue a short-lived token that logs in AS the target user — the
+    'Login as' support tool. Deliberately narrow:
+    - 30 minutes only, regardless of the platform's normal token lifetime.
+    - Can't target another superadmin (no lateral platform-access escalation
+      via a support tool — a superadmin who needs another superadmin's
+      access has a different problem to solve, not this one).
+    - Can't target an inactive user (nothing to support there).
+    - Always logged to the TARGET account's activity log, not just a
+      superadmin-side log — the account owner should be able to see that
+      support accessed their account, when, and as whom.
+    The token is otherwise indistinguishable from the user's own login token
+    (same 'sub'/'role'/'account_id' shape) so it works everywhere in the app
+    without special-casing — the short expiry and the audit trail are what
+    make this safe, not a different code path at request time.
+    """
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.role == RoleEnum.superadmin:
+        raise HTTPException(status_code=403, detail="Cannot impersonate a superadmin")
+    if not target.is_active:
+        raise HTTPException(status_code=400, detail="User is inactive")
+
+    token_data = {
+        "sub": target.username, "role": target.role.value,
+        "impersonated_by": superadmin.username, "tv": target.token_version or 0,
+    }
+    if target.account_id:
+        token_data["account_id"] = target.account_id
+
+    token = create_access_token(token_data, expires_minutes=IMPERSONATION_MINUTES)
+
+    log_activity(
+        db, username=target.username,
+        action="CRITICAL: superadmin_impersonation",
+        details=f"{superadmin.username} started a support session as {target.username} "
+                f"(expires in {IMPERSONATION_MINUTES} min)",
+        account_id=target.account_id,
+    )
+    return Token(access_token=token, user=target)
