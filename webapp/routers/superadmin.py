@@ -52,51 +52,98 @@ def platform_stats(db: Session = Depends(get_db), superadmin: User = Depends(req
     total_accounts = db.query(Account).count()
     active_accounts = db.query(Account).filter(Account.is_suspended.is_(False)).count()
     suspended_accounts = total_accounts - active_accounts
-    business_accounts = db.query(Account).filter(Account.account_type == AccountType.business).count()
-    community_accounts = total_accounts - business_accounts
+
+    # Plan breakdown
+    plans = db.query(Account.plan, func.count(Account.id)).group_by(Account.plan).all()
+    plan_breakdown = {p or "free": count for p, count in plans}
 
     signups_7d = db.query(Account).filter(Account.created_at >= since_7d).count()
     signups_30d = db.query(Account).filter(Account.created_at >= since_30d).count()
 
     total_users = db.query(User).filter(User.role != RoleEnum.superadmin).count()
-    active_users = db.query(User).filter(User.role != RoleEnum.superadmin, User.is_active.is_(True)).count()
 
-    # Transaction volume — a rough proxy for how much real usage is
-    # happening platform-wide, not just how many accounts exist.
-    def _count_today(model, date_col):
-        return db.query(model).filter(date_col >= today_start).count()
+    # Transaction leaderboard (Top 10 accounts by total transaction count)
+    # We combine Sale, Purchase, Expense, Invoice
+    def _get_counts(model):
+        return db.query(model.account_id, func.count(model.id).label("cnt")).group_by(model.account_id).subquery()
 
-    transactions_today = (
-        _count_today(Sale, Sale.created_at)
-        + _count_today(Purchase, Purchase.created_at)
-        + _count_today(Expense, Expense.created_at)
-        + _count_today(Invoice, Invoice.created_at)
+    s_counts = _get_counts(Sale)
+    p_counts = _get_counts(Purchase)
+    e_counts = _get_counts(Expense)
+    i_counts = _get_counts(Invoice)
+
+    combined_counts = (
+        db.query(Account.id, Account.name,
+                 (func.coalesce(s_counts.c.cnt, 0) +
+                  func.coalesce(p_counts.c.cnt, 0) +
+                  func.coalesce(e_counts.c.cnt, 0) +
+                  func.coalesce(i_counts.c.cnt, 0)).label("total_tx"))
+        .outerjoin(s_counts, Account.id == s_counts.c.account_id)
+        .outerjoin(p_counts, Account.id == p_counts.c.account_id)
+        .outerjoin(e_counts, Account.id == e_counts.c.account_id)
+        .outerjoin(i_counts, Account.id == i_counts.c.account_id)
+        .order_by(text("total_tx DESC"))
+        .limit(10)
+        .all()
     )
+    leaderboard = [{"id": r[0], "name": r[1], "transactions": r[2]} for r in combined_counts]
 
-    open_periods = db.query(FiscalPeriod).filter(FiscalPeriod.status == FiscalPeriodStatus.open).count()
-    closed_periods = db.query(FiscalPeriod).filter(FiscalPeriod.status == FiscalPeriodStatus.closed).count()
+    # Storage usage leaderboard
+    storage_leaderboard = (
+        db.query(Account.id, Account.name, func.sum(Attachment.file_size).label("total_bytes"))
+        .join(Attachment, Account.id == Attachment.account_id)
+        .group_by(Account.id, Account.name)
+        .order_by(text("total_bytes DESC"))
+        .limit(10)
+        .all()
+    )
+    storage_leaderboard = [{"id": r[0], "name": r[1], "bytes": r[2]} for r in storage_leaderboard]
+
+    # Regional breakdown (Top 10 regions)
+    regions = (
+        db.query(Account.region, func.count(Account.id))
+        .filter(Account.region != "")
+        .group_by(Account.region)
+        .order_by(func.count(Account.id).desc())
+        .limit(10)
+        .all()
+    )
+    regional_breakdown = [{"region": r[0], "count": r[1]} for r in regions]
+
+    # Recent signups
+    recent_signups = (
+        db.query(Account.id, Account.name, Account.created_at)
+        .order_by(Account.created_at.desc())
+        .limit(5)
+        .all()
+    )
+    recent_signups_data = [{"id": r[0], "name": r[1], "created_at": r[2]} for r in recent_signups]
+
+    # Recently active users (last 1 hour)
+    active_now_threshold = now - timedelta(hours=1)
+    active_now_count = (
+        db.query(func.count(func.distinct(LoginSession.user_id)))
+        .filter(LoginSession.created_at >= active_now_count_threshold if 'active_now_count_threshold' in locals() else active_now_threshold)
+        .scalar()
+    )
 
     return {
         "accounts": {
             "total": total_accounts,
             "active": active_accounts,
             "suspended": suspended_accounts,
-            "business": business_accounts,
-            "community": community_accounts,
+            "plans": plan_breakdown,
             "signups_last_7_days": signups_7d,
             "signups_last_30_days": signups_30d,
         },
         "users": {
             "total": total_users,
-            "active": active_users,
+            "active_last_hour": active_now_count or 0,
         },
-        "activity": {
-            "transactions_today": transactions_today,
-        },
-        "ledger": {
-            "fiscal_periods_open": open_periods,
-            "fiscal_periods_closed": closed_periods,
-        },
+        "leaderboard": leaderboard,
+        "storage": storage_leaderboard,
+        "regions": regional_breakdown,
+        "recent_signups": recent_signups_data,
     }
 
 
@@ -487,6 +534,32 @@ def export_accounts(db: Session = Depends(get_db), superadmin: User = Depends(re
     log_activity_for_user(db, superadmin, "export_accounts", f"Exported {len(rows)} account(s) to CSV")
     log_superadmin_action(db, superadmin, "export_accounts", details=f"Exported {len(rows)} account(s)")
     return _csv_response(rows, "accounts_export.csv")
+
+
+@router.get("/users/export")
+def export_all_users(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
+    users = db.query(User).filter(User.is_demo == False).all()  # noqa: E712
+    account_ids = {u.account_id for u in users if u.account_id}
+    names = dict(
+        db.query(Account.id, Account.name).filter(Account.id.in_(account_ids)).all()
+    ) if account_ids else {}
+
+    rows = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role.value if u.role else "",
+            "account_id": u.account_id,
+            "account_name": names.get(u.account_id) or "",
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else "",
+        }
+        for u in users
+    ]
+    log_superadmin_action(db, superadmin, "export_users", details=f"Exported {len(rows)} users")
+    return _csv_response(rows, "users_export.csv")
 
 
 @router.get("/accounts/{account_id}", response_model=AccountAdminOut)

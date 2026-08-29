@@ -192,6 +192,7 @@
       <div class="tab" data-tab="sessions" onclick="switchTab('sessions')">Devices &amp; Locations</div>
       <div class="tab" data-tab="auditlog" onclick="switchTab('auditlog')">Superadmin Audit Log</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
+      <div class="tab" data-tab="insights" onclick="switchTab('insights')">Platform Insights</div>
       <div class="tab" data-tab="announcements" onclick="switchTab('announcements')">Announcements</div>
     </div>
 
@@ -257,6 +258,7 @@
       <div class="toolbar">
         <input id="users-search-box" placeholder="Search by username, name, or email…" oninput="loadUsers()" />
         <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="exportUsersCsv()">⇩ Export CSV</button>
         <button class="btn-outline btn-sm" onclick="loadUsers()">↻ Refresh</button>
       </div>
       <div class="card" style="overflow-x:auto;">
@@ -399,6 +401,41 @@
           <tbody id="announcements-tbody"></tbody>
         </table>
         <div id="announcements-empty" class="empty-state hidden">No announcements yet.</div>
+      </div>
+    </div>
+
+    <!-- PLATFORM INSIGHTS TAB -->
+    <div id="tab-insights" class="hidden">
+      <div class="toolbar">
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="loadInsights()">↻ Refresh</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Plan Breakdown</div>
+          <div id="insights-plans" style="padding: 18px;"></div>
+        </div>
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Active Users (Last 1h)</div>
+          <div id="insights-active" style="padding: 18px; font-size: 32px; font-weight: 700; text-align: center;"></div>
+        </div>
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Regional Distribution</div>
+          <div id="insights-regions" style="padding: 18px;"></div>
+        </div>
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Transaction Leaderboard (All-time)</div>
+          <div id="insights-leaderboard" style="padding: 18px;"></div>
+        </div>
+        <div class="card">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Recent Signups (Last 5)</div>
+          <div id="insights-recent-signups" style="padding: 18px;"></div>
+        </div>
+        <div class="card" style="grid-column: 1 / -1;">
+          <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600;">Storage Usage (Attachments)</div>
+          <div id="insights-storage" style="padding: 18px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -585,9 +622,11 @@ async function submitChangePassword() {
 }
 
 function switchTab(name) {
-  ['accounts','trash','users','messages','activity','sessions','auditlog','health','announcements'].forEach(t => {
-    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
-    document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
+  ['accounts','trash','users','messages','activity','sessions','auditlog','health','insights','announcements'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== name);
+    const tabEl = document.querySelector(`.tab[data-tab="${t}"]`);
+    if (tabEl) tabEl.classList.toggle('active', t === name);
   });
   if (name === 'trash') loadTrash();
   if (name === 'users') loadUsers();
@@ -596,6 +635,7 @@ function switchTab(name) {
   if (name === 'sessions') { loadLoginSessions(); loadLoginSessionStats(); }
   if (name === 'auditlog') loadAuditLog();
   if (name === 'health') loadHealth();
+  if (name === 'insights') loadInsights();
   if (name === 'announcements') loadAnnouncements();
 }
 
@@ -860,6 +900,7 @@ async function downloadCsv(path, filename) {
 }
 
 function exportAccountsCsv() { downloadCsv('/api/superadmin/accounts/export', 'accounts_export.csv'); }
+function exportUsersCsv() { downloadCsv('/api/superadmin/users/export', 'users_export.csv'); }
 function exportActivityCsv() { downloadCsv('/api/superadmin/activity/export?critical_only=true', 'activity_export.csv'); }
 function exportLoginSessionsCsv() { downloadCsv('/api/superadmin/login-sessions/export', 'login_sessions_export.csv'); }
 
@@ -1395,6 +1436,104 @@ async function loadAnnouncements() {
         </td>
       </tr>
     `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadInsights() {
+  const plansEl = document.getElementById('insights-plans');
+  const lbEl = document.getElementById('insights-leaderboard');
+  const storageEl = document.getElementById('insights-storage');
+  const activeEl = document.getElementById('insights-active');
+  const regionsEl = document.getElementById('insights-regions');
+  const signupsEl = document.getElementById('insights-recent-signups');
+
+  plansEl.innerHTML = 'Loading…';
+  lbEl.innerHTML = 'Loading…';
+  storageEl.innerHTML = 'Loading…';
+  activeEl.innerHTML = '…';
+  regionsEl.innerHTML = 'Loading…';
+  signupsEl.innerHTML = 'Loading…';
+
+  try {
+    const s = await api('/api/superadmin/stats');
+
+    // Render Plans
+    const planEntries = Object.entries(s.accounts.plans).sort((a,b) => b[1] - a[1]);
+    const total = s.accounts.total;
+    plansEl.innerHTML = planEntries.map(([plan, count]) => {
+      const pct = total > 0 ? (count / total * 100).toFixed(1) : 0;
+      return `
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+            <span style="text-transform: capitalize; font-weight: 600;">${plan}</span>
+            <span>${count} (${pct}%)</span>
+          </div>
+          <div style="height: 8px; background: var(--surface-sunken); border-radius: 4px; overflow: hidden;">
+            <div style="height: 100%; width: ${pct}%; background: var(--accent);"></div>
+          </div>
+        </div>
+      `;
+    }).join('') || '<div class="empty">No plan data yet.</div>';
+
+    // Render Active Users
+    activeEl.innerHTML = s.users.active_last_hour;
+    activeEl.title = "Unique users with login activity in the last 60 minutes";
+
+    // Render Regions
+    regionsEl.innerHTML = s.regions.map(r => `
+      <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+        <span>${escapeHtml(r.region)}</span>
+        <span style="font-weight: 600;">${r.count}</span>
+      </div>
+    `).join('') || '<div class="empty">No regional data yet.</div>';
+
+    // Render Recent Signups
+    signupsEl.innerHTML = s.recent_signups.map(r => `
+      <div style="margin-bottom: 8px; font-size: 13px;">
+        <strong>${escapeHtml(r.name)}</strong> <span style="color:var(--text-faint);">#${r.id}</span>
+        <div style="color:var(--text-faint); font-size: 11px;">${new Date(r.created_at).toLocaleString()}</div>
+      </div>
+    `).join('') || '<div class="empty">No recent signups.</div>';
+
+    // Render Leaderboard
+    lbEl.innerHTML = `
+      <table style="font-size: 13px;">
+        <thead><tr><th>Account</th><th style="text-align:right;">TX Count</th></tr></thead>
+        <tbody>
+          ${s.leaderboard.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.name)}</strong> <span style="color:var(--text-faint);">#${row.id}</span></td>
+              <td style="text-align:right;">${row.transactions.toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` || '<div class="empty">No transaction data yet.</div>';
+
+    // Render Storage
+    const formatSize = (bytes) => {
+      if (!bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+    storageEl.innerHTML = `
+      <table>
+        <thead><tr><th>Account</th><th style="text-align:right;">Usage</th></tr></thead>
+        <tbody>
+          ${s.storage.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.name)}</strong> <span style="color:var(--text-faint);">#${row.id}</span></td>
+              <td style="text-align:right;">${formatSize(row.bytes)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` || '<div class="empty">No storage data yet.</div>';
+
   } catch (e) {
     toast(e.message, 'err');
   }
