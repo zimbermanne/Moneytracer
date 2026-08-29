@@ -27,6 +27,7 @@ import Login from './pages/Login.jsx'
 
 const Download = lazy(() => import('./pages/Download.jsx'))
 const Legal = lazy(() => import('./pages/Legal.jsx'))
+const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const Register = lazy(() => import('./pages/Register.jsx'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
@@ -223,6 +224,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/download" element={<Download />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/legal/:doc" element={<Legal />} />
           <Route path="/login" element={<Login />} />
