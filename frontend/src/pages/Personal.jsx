@@ -86,51 +86,97 @@ function OverviewTab({ api }) {
   }, []) // eslint-disable-line
 
   if (error) return <div className="error-text">{error}</div>
-  if (!data) return <div>Loading…</div>
+  if (!data) return <div className="spinner-block">Loading your financial profile…</div>
 
   const totalVikobaLoans = (data.vikoba_memberships || []).reduce((sum, m) => sum + m.active_loan_balance, 0)
   const totalAssets = data.total_assets_value + data.total_owed_by_debtors
   const totalLiabilities = data.total_bank_debt + data.total_owed_to_creditors + totalVikobaLoans
   const netWorth = totalAssets - totalLiabilities
 
-  const cards = [
-    { label: 'Total Assets', value: totalAssets, sub: `(Includes ${money(data.total_owed_by_debtors)} receivables)` },
-    { label: 'Bank & Social Debt', value: data.total_bank_debt + totalVikobaLoans, sub: `(Social: ${money(totalVikobaLoans)})`, tone: 'red' },
-    { label: 'Owed to Creditors', value: data.total_owed_to_creditors, tone: 'red' },
-    { label: 'Net Worth', value: netWorth, tone: netWorth >= 0 ? 'green' : 'red', bold: true },
-    { label: 'Expenses (MTD)', value: data.expenses_this_month, sub: 'Month-to-date outflows' },
-  ]
+  const cashFlow = data.inflow_this_month - data.expenses_this_month
 
   return (
-    <div>
-      <div className="card-grid" style={{ marginBottom: 24 }}>
-        {cards.map((c) => (
-          <div key={c.label} className="card home-kpi-card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{c.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: c.tone === 'red' ? 'var(--danger)' : c.tone === 'green' ? 'var(--success)' : 'inherit' }}>
-                {money(c.value)}
-              </div>
-            </div>
-            {c.sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{c.sub}</div>}
+    <div className="overview-tab">
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
+        {/* Net Worth & Health Card */}
+        <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--surface)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Net Worth</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: netWorth >= 0 ? 'var(--success)' : 'var(--danger)', marginBottom: 4 }}>
+            {money(netWorth)}
           </div>
-        ))}
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Across {money(totalAssets)} in assets and {money(totalLiabilities)} in liabilities.
+          </div>
+
+          <div style={{ marginTop: 24, padding: '16px 0', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>Emergency Fund Progress</span>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>{Math.round(data.savings_goal_progress || 0)}%</span>
+            </div>
+            <div style={{ height: 8, background: 'var(--surface-sunken)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${data.savings_goal_progress || 0}%`, background: 'var(--accent)', transition: 'width 1s ease' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Cash Flow Card */}
+        <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Monthly Pulse (MTD)</div>
+
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Inflow</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>+{money(data.inflow_this_month)}</div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Outflow</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--danger)' }}>-{money(data.expenses_this_month)}</div>
+          </div>
+
+          <div style={{ marginTop: 'auto', padding: '10px 12px', background: cashFlow >= 0 ? 'var(--success-bg)' : 'var(--danger-bg)', borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>Net Cash Flow</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+              {cashFlow >= 0 ? '+' : ''}{money(cashFlow)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-grid">
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Fixed Assets</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{money(data.total_assets_value)}</div>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Receivables</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{money(data.total_owed_by_debtors)}</div>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Bank Debt</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--danger)' }}>{money(data.total_bank_debt)}</div>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Social Debt</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--danger)' }}>{money(totalVikobaLoans)}</div>
+        </div>
       </div>
 
       {data.vikoba_memberships.length > 0 && (
-        <>
-          <h3>Vikoba Memberships</h3>
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>Social Savings Status</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{data.vikoba_memberships.length} Groups</div>
+          </div>
           <Table
             columns={[
-              { key: 'group_name', header: 'Group' },
-              { key: 'group_role', header: 'Role' },
+              { key: 'group_name', header: 'Group Name' },
+              { key: 'is_operated', header: 'Type', render: (r) => <span className="badge" style={{ background: r.is_operated ? 'var(--info-bg)' : 'var(--surface-sunken)', color: r.is_operated ? 'var(--info)' : 'var(--text-muted)' }}>{r.is_operated ? 'Platform Group' : 'Private Note'}</span> },
               { key: 'total_contributed', header: 'Contributed', render: (r) => money(r.total_contributed) },
-              { key: 'active_loan_balance', header: 'Loan Balance', render: (r) => money(r.active_loan_balance) },
+              { key: 'active_loan_balance', header: 'Loan Balance', render: (r) => <span style={{ color: r.active_loan_balance > 0 ? 'var(--danger)' : 'inherit', fontWeight: r.active_loan_balance > 0 ? 600 : 400 }}>{money(r.active_loan_balance)}</span> },
             ]}
             rows={data.vikoba_memberships}
-            emptyText="Not a member of any Vikoba group yet."
           />
-        </>
+        </div>
       )}
     </div>
   )
@@ -515,76 +561,91 @@ function SavingsTab({ api }) {
 
 // ---------- Social Savings (Vikoba memberships) ----------
 
+// ---------- Social Savings (Unifying Operated & Informal) ----------
+
 function SocialSavingsTab({ api }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const load = () => {
     api.get('/personal/overview').then(setData).catch((e) => setError(e.message))
-  }, []) // eslint-disable-line
+  }
+
+  useEffect(() => { load() }, []) // eslint-disable-line
 
   if (error) return <div className="error-text">{error}</div>
-  if (!data) return <div>Loading…</div>
+  if (!data) return <div className="spinner-block">Loading social savings…</div>
 
   return (
-    <div>
-      <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid var(--accent)' }}>
-        <h3 style={{ marginTop: 0 }}>Social Obligations Tracker</h3>
+    <div className="social-savings-tab">
+      <div className="card" style={{ marginBottom: 24, borderLeft: '4px solid var(--accent)', background: 'var(--surface)' }}>
+        <h3 style={{ marginTop: 0 }}>Group Obligations Tracker</h3>
         <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          Tracking your active participation in community lending and group savings.
+          Keep track of your contributions and loans across all your community groups.
         </p>
       </div>
 
-      <Table
-        columns={[
-          { key: 'group_name', header: 'Group' },
-          { key: 'group_role', header: 'Your Role' },
-          { key: 'total_contributed', header: 'Total Shares/Paid', render: (r) => money(r.total_contributed) },
-          {
-            key: 'active_loan_balance',
-            header: 'Loan Balance',
-            render: (r) => (
-              <span style={r.active_loan_balance > 0 ? { color: 'var(--danger)', fontWeight: 600 } : {}}>
-                {money(r.active_loan_balance)}
-              </span>
-            )
-          },
-          {
-            key: 'status',
-            header: 'Health',
-            render: (r) => (
-              <span className="badge badge-active" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
-                On Track
-              </span>
-            )
-          }
-        ]}
-        rows={data.vikoba_memberships}
-        emptyText="Not a member of any Vikoba group yet."
-      />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 32 }}>
+        {data.vikoba_memberships.map((group) => (
+          <div key={group.group_id + (group.is_operated ? '-op' : '-inf')} className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>{group.group_name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{group.is_operated ? 'Platform Group' : 'Private Profile'}</div>
+              </div>
+              <span className={`badge ${group.is_operated ? 'badge-active' : ''}`} style={{ fontSize: 10 }}>{group.group_role}</span>
+            </div>
 
-      <div style={{ marginTop: 24, fontSize: 13, color: 'var(--text-muted)', background: 'rgba(0,0,0,0.03)', padding: 16, borderRadius: 8 }}>
-        <strong>Pro Tip:</strong> To join a new group or manage group settings, contact your group treasurer.
-        Obligations are automatically calculated based on group cycle frequency.
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Shares/Contributed</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{money(group.total_contributed)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Active Loan</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: group.active_loan_balance > 0 ? 'var(--danger)' : 'inherit' }}>
+                  {money(group.active_loan_balance)}
+                </div>
+              </div>
+            </div>
+
+            {!group.is_operated && (
+              <div style={{ fontSize: 12, padding: '8px 10px', background: 'var(--surface-sunken)', borderRadius: 6, color: 'var(--text-muted)' }}>
+                Manual updates only. See list below to edit.
+              </div>
+            )}
+
+            {group.is_operated && (
+              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+                Synced with group ledger.
+              </div>
+            )}
+          </div>
+        ))}
+        {data.vikoba_memberships.length === 0 && (
+          <div className="card" style={{ padding: 40, textAlign: 'center', gridColumn: '1 / -1' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🤝</div>
+            <div style={{ fontWeight: 600 }}>No social savings groups yet.</div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Add your informal groups below to start tracking.</p>
+          </div>
+        )}
       </div>
 
-      <SavingsSchemeProfiles api={api} />
+      <SavingsSchemeProfiles api={api} onUpdate={load} />
     </div>
   )
 }
 
-// ---------- Savings Scheme Profiles ----------
-// Lightweight, informal records ("I'm part of a Vikoba called X") — not
-// operated groups. No treasurer, no logins, no real contribution ledger.
-// Deliberately kept visually and functionally separate from the table
-// above, which tracks actual operated-group membership.
-
-function SavingsSchemeProfiles({ api }) {
+function SavingsSchemeProfiles({ api, onUpdate }) {
   const [profiles, setProfiles] = useState([])
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState({ name: '', group_type: '', contribution_amount: '', cycle_frequency: 'monthly', member_names: '', notes: '' })
+  const [form, setForm] = useState({
+    name: '', group_type: '', contribution_amount: '',
+    cycle_frequency: 'monthly', total_contributed: '0',
+    active_loan_balance: '0', member_names: '', notes: ''
+  })
   const [saving, setSaving] = useState(false)
 
   const load = () => api.get('/personal/savings-schemes').then(setProfiles).catch((e) => setError(e.message))
@@ -592,7 +653,11 @@ function SavingsSchemeProfiles({ api }) {
 
   const openNew = () => {
     setEditingId(null)
-    setForm({ name: '', group_type: '', contribution_amount: '', cycle_frequency: 'monthly', member_names: '', notes: '' })
+    setForm({
+      name: '', group_type: '', contribution_amount: '',
+      cycle_frequency: 'monthly', total_contributed: '0',
+      active_loan_balance: '0', member_names: '', notes: ''
+    })
     setOpen(true)
   }
 
@@ -600,7 +665,10 @@ function SavingsSchemeProfiles({ api }) {
     setEditingId(p.id)
     setForm({
       name: p.name, group_type: p.group_type || '',
-      contribution_amount: p.contribution_amount ?? '', cycle_frequency: p.cycle_frequency || 'monthly',
+      contribution_amount: p.contribution_amount ?? '',
+      cycle_frequency: p.cycle_frequency || 'monthly',
+      total_contributed: String(p.total_contributed || 0),
+      active_loan_balance: String(p.active_loan_balance || 0),
       member_names: p.member_names || '', notes: p.notes || '',
     })
     setOpen(true)
@@ -616,6 +684,8 @@ function SavingsSchemeProfiles({ api }) {
         group_type: form.group_type,
         contribution_amount: form.contribution_amount === '' ? null : Number(form.contribution_amount),
         cycle_frequency: form.cycle_frequency,
+        total_contributed: Number(form.total_contributed) || 0,
+        active_loan_balance: Number(form.active_loan_balance) || 0,
         member_names: form.member_names,
         notes: form.notes,
       }
@@ -626,6 +696,7 @@ function SavingsSchemeProfiles({ api }) {
       }
       setOpen(false)
       load()
+      if (onUpdate) onUpdate()
     } catch (e) {
       setError(e.message)
     } finally {
@@ -634,86 +705,108 @@ function SavingsSchemeProfiles({ api }) {
   }
 
   const remove = async (id) => {
+    if (!confirm('Are you sure you want to remove this profile?')) return
     try {
       await api.del(`/personal/savings-schemes/${id}`)
       load()
+      if (onUpdate) onUpdate()
     } catch (e) {
       setError(e.message)
     }
   }
 
   return (
-    <div style={{ marginTop: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+    <div style={{ marginTop: 40 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h3 style={{ marginBottom: 4 }}>Savings Scheme Profiles</h3>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 0, maxWidth: 480 }}>
-            Informal notes about schemes you're part of — not an operated group ledger.
-            No treasurer, no logins, just a record of what exists.
+          <h3 style={{ margin: 0 }}>Private Group Profiles</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+            Manage manual records for groups not yet using the platform ledger.
           </p>
         </div>
-        <button className="btn btn-outline" onClick={openNew}>+ Add Scheme</button>
+        <button className="btn btn-primary" onClick={openNew}>+ Add Private Group</button>
       </div>
 
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
-      {profiles.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
-          No savings scheme profiles yet.
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {profiles.map((p) => (
-            <div key={p.id} className="card" style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                  {p.group_type && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.group_type}</div>}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12 }} onClick={() => openEdit(p)}>Edit</button>
-                  <button className="btn btn-outline" style={{ padding: '2px 10px', fontSize: 12, color: 'var(--danger)' }} onClick={() => remove(p.id)}>Delete</button>
-                </div>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <Table
+          columns={[
+            { key: 'name', header: 'Name', render: (p) => <strong>{p.name}</strong> },
+            { key: 'group_type', header: 'Type' },
+            { key: 'contribution', header: 'Commitment', render: (p) => p.contribution_amount ? `${money(p.contribution_amount)} / ${p.cycle_frequency}` : 'Flexible' },
+            { key: 'total_contributed', header: 'Total Saved', render: (p) => money(p.total_contributed) },
+            { key: 'active_loan_balance', header: 'Loan', render: (p) => <span style={p.active_loan_balance > 0 ? { color: 'var(--danger)', fontWeight: 600 } : {}}>{money(p.active_loan_balance)}</span> },
+            { key: 'actions', header: '', stopRowClick: true, render: (p) => (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-outline btn-sm" onClick={() => openEdit(p)}>Edit</button>
+                <button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)' }} onClick={() => remove(p.id)}>Remove</button>
               </div>
-              <div style={{ fontSize: 13, marginTop: 8, color: 'var(--text-muted)' }}>
-                {p.contribution_amount ? `${money(p.contribution_amount)} / ${p.cycle_frequency}` : 'No fixed contribution set'}
-              </div>
-              {p.member_names && <div style={{ fontSize: 12, marginTop: 6 }}>Members: {p.member_names}</div>}
-              {p.notes && <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-muted)' }}>{p.notes}</div>}
-            </div>
-          ))}
-        </div>
-      )}
+            ) },
+          ]}
+          rows={profiles}
+          emptyText="No private group profiles recorded."
+        />
+      </div>
 
       {open && (
         <Modal
-          title={editingId ? 'Edit Savings Scheme' : 'Add Savings Scheme'}
+          title={editingId ? 'Edit Private Group Profile' : 'Add Private Group Profile'}
           onClose={() => setOpen(false)}
           footer={
             <>
               <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={save} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? 'Saving…' : 'Save Profile'}
               </button>
             </>
           }
         >
-          <label>Name</label>
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mama Group VICOBA" />
-          <label>Type (optional)</label>
-          <input value={form.group_type} onChange={(e) => setForm({ ...form, group_type: e.target.value })} placeholder="e.g. VICOBA, Chama, Stokvel" />
-          <label>Contribution Amount (optional)</label>
-          <input type="number" value={form.contribution_amount} onChange={(e) => setForm({ ...form, contribution_amount: e.target.value })} />
-          <label>Cycle Frequency</label>
-          <select value={form.cycle_frequency} onChange={(e) => setForm({ ...form, cycle_frequency: e.target.value })}>
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Biweekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-          <label>Members (optional, freeform)</label>
-          <input value={form.member_names} onChange={(e) => setForm({ ...form, member_names: e.target.value })} placeholder="e.g. Amina, John, Fatuma" />
-          <label>Notes (optional)</label>
-          <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="span-2" style={{ gridColumn: '1 / -1' }}>
+              <label>Group Name</label>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mama Group VICOBA" />
+            </div>
+
+            <div>
+              <label>Category (Type)</label>
+              <input value={form.group_type} onChange={(e) => setForm({ ...form, group_type: e.target.value })} placeholder="e.g. VICOBA, Chama" />
+            </div>
+
+            <div>
+              <label>Cycle Frequency</label>
+              <select value={form.cycle_frequency} onChange={(e) => setForm({ ...form, cycle_frequency: e.target.value })}>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Commitment Amount</label>
+              <input type="number" value={form.contribution_amount} onChange={(e) => setForm({ ...form, contribution_amount: e.target.value })} />
+            </div>
+
+            <div>
+              <label>Total Saved to Date</label>
+              <input type="number" value={form.total_contributed} onChange={(e) => setForm({ ...form, total_contributed: e.target.value })} />
+            </div>
+
+            <div>
+              <label>Current Loan Balance</label>
+              <input type="number" value={form.active_loan_balance} onChange={(e) => setForm({ ...form, active_loan_balance: e.target.value })} />
+            </div>
+
+            <div className="span-2" style={{ gridColumn: '1 / -1' }}>
+              <label>Members (optional, freeform)</label>
+              <input value={form.member_names} onChange={(e) => setForm({ ...form, member_names: e.target.value })} placeholder="e.g. Amina, John, Fatuma" />
+            </div>
+
+            <div className="span-2" style={{ gridColumn: '1 / -1' }}>
+              <label>Private Notes</label>
+              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Escalation history, payout date, etc." />
+            </div>
+          </div>
         </Modal>
       )}
     </div>

@@ -612,11 +612,19 @@ def personal_overview(db: Session = Depends(get_db), user: User = Depends(requir
         ).all()
     )
 
-    # Vikoba memberships: GroupMember rows tied to THIS user, regardless of
-    # which (community-type) account owns the group they belong to — this
-    # is the bridge that lets a personal user see groups they don't own.
-    memberships = db.query(GroupMember).filter(GroupMember.user_id == user.id).all()
+    # Inflow: simplified for now as total revenue from Sales
+    from models import Sale
+    inflow_this_month = sum(
+        s.total for s in db.query(Sale).filter(
+            Sale.account_id == account_id, Sale.created_at >= month_start
+        ).all()
+    )
+
+    # Vikoba memberships: combined view of real groups and informal profiles
     vikoba_summaries = []
+
+    # 1. Real operated groups
+    memberships = db.query(GroupMember).filter(GroupMember.user_id == user.id).all()
     for m in memberships:
         group = db.query(SavingsGroup).filter(SavingsGroup.id == m.group_id).first()
         if not group:
@@ -631,7 +639,31 @@ def personal_overview(db: Session = Depends(get_db), user: User = Depends(requir
             group_id=group.id, group_name=group.name, group_role=m.group_role,
             total_contributed=total_contributed,
             active_loan_balance=active_loan.balance if active_loan else 0,
+            is_operated=True
         ))
+
+    # 2. Informal profiles (manually tracked)
+    profiles = db.query(SavingsSchemeProfile).filter(SavingsSchemeProfile.account_id == account_id).all()
+    for p in profiles:
+        vikoba_summaries.append(VikobaMembershipSummary(
+            group_id=p.id, group_name=p.name, group_role="Participant",
+            total_contributed=p.total_contributed,
+            active_loan_balance=p.active_loan_balance,
+            is_operated=False
+        ))
+
+    # Savings Goal progress (Emergency Fund)
+    savings_goal_progress = None
+    goal_group = db.query(SpendingGroup).filter(
+        SpendingGroup.created_by_account_id == account_id,
+        SpendingGroup.name == "Emergency Fund"
+    ).first()
+    if goal_group:
+        contributions = db.query(SpendingGroupContribution).filter(
+            SpendingGroupContribution.group_id == goal_group.id
+        ).all()
+        total_saved = sum(c.amount for c in contributions)
+        savings_goal_progress = (total_saved / goal_group.goal_amount * 100) if goal_group.goal_amount else 0
 
     return PersonalOverview(
         total_assets_value=total_assets,
@@ -639,5 +671,7 @@ def personal_overview(db: Session = Depends(get_db), user: User = Depends(requir
         total_owed_to_creditors=total_creditors,
         total_owed_by_debtors=total_debtors,
         expenses_this_month=expenses_this_month,
+        inflow_this_month=inflow_this_month,
         vikoba_memberships=vikoba_summaries,
+        savings_goal_progress=savings_goal_progress
     )

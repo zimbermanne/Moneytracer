@@ -453,6 +453,9 @@ class VikobaMembershipSummary(BaseModel):
     group_role: str
     total_contributed: float
     active_loan_balance: float
+    is_operated: bool = True  # True if it's a real group on the platform
+    next_contribution_date: Optional[datetime] = None
+    next_contribution_amount: Optional[float] = None
 
 
 class PersonalOverview(BaseModel):
@@ -461,7 +464,9 @@ class PersonalOverview(BaseModel):
     total_owed_to_creditors: float
     total_owed_by_debtors: float
     expenses_this_month: float
+    inflow_this_month: float = 0
     vikoba_memberships: List[VikobaMembershipSummary]
+    savings_goal_progress: Optional[float] = None
 
 
 # ---------- Assets ----------
@@ -1423,6 +1428,8 @@ class SavingsSchemeProfileCreate(BaseModel):
     group_type: str = ""
     contribution_amount: Optional[float] = None
     cycle_frequency: str = "monthly"
+    total_contributed: Optional[float] = 0
+    active_loan_balance: Optional[float] = 0
     member_names: str = ""
     notes: str = ""
 
@@ -1432,6 +1439,8 @@ class SavingsSchemeProfileUpdate(BaseModel):
     group_type: Optional[str] = None
     contribution_amount: Optional[float] = None
     cycle_frequency: Optional[str] = None
+    total_contributed: Optional[float] = None
+    active_loan_balance: Optional[float] = None
     member_names: Optional[str] = None
     notes: Optional[str] = None
 
@@ -1443,6 +1452,8 @@ class SavingsSchemeProfileOut(BaseModel):
     group_type: str
     contribution_amount: Optional[float]
     cycle_frequency: str
+    total_contributed: float
+    active_loan_balance: float
     member_names: str
     notes: str
     created_at: datetime

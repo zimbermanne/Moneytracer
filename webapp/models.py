@@ -1014,6 +1014,11 @@ class SavingsSchemeProfile(Base):
     group_type = Column(String(50), default="")  # free-text cultural label (VICOBA, Vibati, Chama, Stokvel, Susu...)
     contribution_amount = Column(Float, nullable=True)
     cycle_frequency = Column(Enum(CycleFrequency), default=CycleFrequency.monthly)
+
+    # Manual tracking fields for informal schemes
+    total_contributed = Column(Float, default=0)
+    active_loan_balance = Column(Float, default=0)
+
     member_names = Column(Text, default="")  # freeform, comma or newline separated — not real member rows
     notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
