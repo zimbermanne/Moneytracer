@@ -867,21 +867,21 @@ class LoginSessionOut(BaseModel):
     id: int
     user_id: Optional[int] = None
     account_id: Optional[int] = None
-    username: str
-    ip_address: str
-    city: str
-    region: str
-    country: str
-    isp: str
-    device_type: str
-    os: str
-    browser: str
-    accept_language: str
+    username: Optional[str] = ""
+    ip_address: Optional[str] = ""
+    city: Optional[str] = ""
+    region: Optional[str] = ""
+    country: Optional[str] = ""
+    isp: Optional[str] = ""
+    device_type: Optional[str] = ""
+    os: Optional[str] = ""
+    browser: Optional[str] = ""
+    accept_language: Optional[str] = ""
     screen_width: Optional[int] = None
     screen_height: Optional[int] = None
-    is_pwa: bool
-    connection_type: str
-    event: str
+    is_pwa: bool = False
+    connection_type: Optional[str] = ""
+    event: Optional[str] = "login"
     created_at: datetime
 
 

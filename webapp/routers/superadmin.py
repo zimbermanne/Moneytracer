@@ -25,7 +25,7 @@ from models import (
     Sale, Purchase, Expense, Invoice, Quotation, PurchaseOrder,
     JournalEntry, FiscalPeriod, FiscalPeriodStatus, Reminder,
     Announcement, AnnouncementLevel, InventoryItem, SupportThread, SupportMessage,
-    LoginSession,
+    LoginSession, Attachment,
 )
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
@@ -63,7 +63,6 @@ def platform_stats(db: Session = Depends(get_db), superadmin: User = Depends(req
     total_users = db.query(User).filter(User.role != RoleEnum.superadmin).count()
 
     # Transaction leaderboard (Top 10 accounts by total transaction count)
-    # We combine Sale, Purchase, Expense, Invoice
     def _get_counts(model):
         return db.query(model.account_id, func.count(model.id).label("cnt")).group_by(model.account_id).subquery()
 
@@ -186,10 +185,6 @@ def platform_activity(
 
 
 # ---------- Superadmin audit log ----------
-# Distinct from /activity above: that's the tenant-facing feed (what
-# happened inside each account). This is "what has each superadmin done,
-# and to whom" — see models.SuperadminAuditLog for why it's a separate
-# table rather than reusing ActivityLog.
 
 @router.get("/audit-log", response_model=List[SuperadminAuditLogOut])
 def superadmin_audit_log(
@@ -218,10 +213,6 @@ def superadmin_audit_log(
 
 
 # ---------- Login sessions (IP / location / device, for UX optimization) ----------
-# Populated by device_tracking.record_login_session() on every login/demo-login
-# (see routers/auth.py). Best-effort telemetry — geolocation and UA parsing
-# can legitimately come back blank; that's not a bug, just an unresolvable IP
-# or unusual client. Never used for auth decisions.
 
 @router.get("/login-sessions", response_model=List[LoginSessionOut])
 def list_login_sessions(
@@ -300,10 +291,6 @@ def login_session_device_stats(
     db: Session = Depends(get_db),
     superadmin: User = Depends(require_superadmin),
 ):
-    """Aggregate breakdown for optimization decisions: what share of logins
-    are mobile vs desktop, which browsers/OSes actually need support, and
-    which countries have the most traffic. Not per-user detail — see
-    /login-sessions for that."""
     since = since or (datetime.utcnow() - timedelta(days=30))
     base = db.query(LoginSession).filter(LoginSession.created_at >= since)
     total = base.count()
@@ -329,8 +316,6 @@ def login_session_device_stats(
 
 
 # ---------- Support inbox (tenant messages to the superadmin) ----------
-# Tenant side (create/list/reply to own threads) lives in routers/support.py.
-# This is the superadmin's inbox view across every account's threads.
 
 @router.get("/support/threads", response_model=List[SuperadminSupportThreadOut])
 def list_support_threads(
@@ -470,9 +455,6 @@ def health(db: Session = Depends(get_db), superadmin: User = Depends(require_sup
     scheduler_healthy = None
     if heartbeat:
         minutes_since = (datetime.utcnow() - heartbeat.created_at).total_seconds() / 60
-        # The job runs every 24h — flag it unhealthy if it's gone quiet for
-        # much longer than that (missed run / crashed process), not on every
-        # minor scheduling jitter.
         scheduler_healthy = minutes_since < 26 * 60
 
     table_counts = {
@@ -502,10 +484,6 @@ def health(db: Session = Depends(get_db), superadmin: User = Depends(require_sup
 
 
 # ---------- Plan / internal notes ----------
-# Deliberately separate from routers/accounts.py's update_account (which
-# handles the tenant-editable fields) — plan and admin_notes are the two
-# fields a tenant admin must never be able to set themselves (see
-# AccountUpdate's comment and update_my_account's is_suspended-style block).
 
 def _csv_response(rows: List[dict], filename: str) -> StreamingResponse:
     buf = io.StringIO()
@@ -523,10 +501,6 @@ def _csv_response(rows: List[dict], filename: str) -> StreamingResponse:
 
 @router.get("/accounts/export")
 def export_accounts(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):
-    """Registered before /accounts/{account_id} — FastAPI/Starlette matches
-    routes in registration order, and a GET on a static path like "export"
-    would otherwise be swallowed by the {account_id} path param (and 422
-    on int-parsing "export" as an id)."""
     accounts = db.query(Account).order_by(Account.created_at.desc()).all()
     rows = [
         {
@@ -577,9 +551,6 @@ def export_all_users(db: Session = Depends(get_db), superadmin: User = Depends(r
 @router.get("/accounts/{account_id}", response_model=AccountAdminOut)
 def get_account_admin_view(account_id: int, db: Session = Depends(get_db),
                             superadmin: User = Depends(require_superadmin)):
-    """Same as GET /api/accounts/{id} but also includes admin_notes — kept as
-    a separate endpoint/schema so admin_notes can never leak onto a
-    tenant-facing response by accident."""
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -590,10 +561,6 @@ def get_account_admin_view(account_id: int, db: Session = Depends(get_db),
 @router.get("/accounts/{account_id}/items", response_model=List[InventoryOut])
 def get_account_items(account_id: int, db: Session = Depends(get_db),
                        superadmin: User = Depends(require_superadmin)):
-    """What this tenant actually sells — their inventory catalog, for the
-    'Items' panel on the superadmin Accounts tab. Read-only; not logged to
-    the audit trail (viewing isn't a tenant-affecting action, same as
-    get_account_admin_view above)."""
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -634,9 +601,6 @@ def update_notes(account_id: int, payload: NotesUpdate, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="Account not found")
     account.admin_notes = payload.admin_notes
     db.commit()
-    # Not logged with the note contents — internal notes may contain
-    # sensitive support context that doesn't belong duplicated into the
-    # activity feed shown elsewhere in the console.
     log_activity_for_user(db, superadmin, "account_notes_update", f"Updated internal notes for {account.name}")
     log_superadmin_action(
         db, superadmin, "account_notes_update",
@@ -675,7 +639,7 @@ def bulk_activate(payload: BulkAccountIds, db: Session = Depends(get_db),
     for account in accounts:
         account.is_suspended = False
     db.commit()
-    log_activity_for_user(db, superadmin, "bulk_account_activate", f"Bulk-activated {len(found_ids)} account(s)")
+    log_activity_for_user(db, superadmin, "bulk_account_activate", f"Bulk-activated {len(found_ids)} account(s) ")
     for aid in found_ids:
         log_superadmin_action(db, superadmin, "account_activate", target_account_id=aid)
     missing = set(payload.account_ids) - found_ids
@@ -687,9 +651,6 @@ def bulk_activate(payload: BulkAccountIds, db: Session = Depends(get_db),
 @router.post("/accounts/{account_id}/force-logout")
 def force_logout_account(account_id: int, db: Session = Depends(get_db),
                           superadmin: User = Depends(require_superadmin)):
-    """Invalidate every outstanding session for every user under this
-    account, without suspending it — e.g. after a suspected compromised
-    password, or before a bulk password reset."""
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -722,10 +683,6 @@ def force_logout_user(user_id: int, db: Session = Depends(get_db),
 
 
 # ---------- Superadmin user management (cross-account) ----------
-# routers/users.py's endpoints are gated on require_admin, which is scoped to
-# managing users within one's own account — a superadmin (who typically has
-# no account_id) can't use them. These give the superadmin console the same
-# capabilities across any account.
 
 @router.get("/users", response_model=List[SuperadminUserOut])
 def list_all_users(
@@ -734,10 +691,6 @@ def list_all_users(
     db: Session = Depends(get_db),
     superadmin: User = Depends(require_superadmin),
 ):
-    """Every user on the platform, across every account, in one flat list —
-    routers/users.py's GET / is gated to require_manager_up (admin/manager
-    only, no superadmin) so it 403s here; this is the console's actual
-    source for the Users tab."""
     query = db.query(User).filter(User.is_demo == False)  # noqa: E712
     if account_id is not None:
         query = query.filter(User.account_id == account_id)
@@ -828,7 +781,7 @@ def superadmin_reset_password(user_id: int, payload: SuperadminPasswordReset,
     if user.is_demo:
         raise HTTPException(status_code=403, detail="Cannot reset the demo account's password")
     user.hashed_password = hash_password(payload.new_password)
-    user.token_version = (user.token_version or 0) + 1  # old password's sessions shouldn't outlive the reset
+    user.token_version = (user.token_version or 0) + 1
     db.commit()
     log_activity_for_user(db, superadmin, "superadmin_reset_password", f"Reset password for {user.username}")
     log_superadmin_action(
@@ -842,8 +795,8 @@ def superadmin_reset_password(user_id: int, payload: SuperadminPasswordReset,
 
 @router.get("/activity/export")
 def export_activity(
-    since: Optional[datetime] = Query(None, description="Only entries at/after this timestamp"),
-    until: Optional[datetime] = Query(None, description="Only entries at/before this timestamp"),
+    since: Optional[datetime] = Query(None),
+    until: Optional[datetime] = Query(None),
     critical_only: bool = Query(False),
     account_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -908,16 +861,10 @@ def export_audit_log(
         }
         for e in entries
     ]
-    # Deliberately not self-logged into SuperadminAuditLog — exporting the
-    # audit log itself isn't a tenant-affecting action, and self-logging
-    # every read of this endpoint would just add noise to itself.
     return _csv_response(rows, "superadmin_audit_log_export.csv")
 
 
 # ---------- Platform announcements ----------
-# Broadcast banners shown to every tenant user (maintenance windows, new
-# features). GET /api/public/announcement/active (routers/public.py) is the
-# unauthenticated read side every logged-in tenant app polls.
 
 @router.get("/announcements", response_model=List[AnnouncementOut])
 def list_announcements(db: Session = Depends(get_db), superadmin: User = Depends(require_superadmin)):

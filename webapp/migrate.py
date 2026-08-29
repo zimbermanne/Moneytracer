@@ -68,6 +68,13 @@ _MIGRATIONS = {
         ("is_voided", "BOOLEAN", "false"),
         ("reversed_entry_id", "INTEGER", None),
     ],
+    "login_sessions": [
+        ("accept_language", "VARCHAR(100)", "''"),
+        ("screen_width", "INTEGER", "NULL"),
+        ("screen_height", "INTEGER", "NULL"),
+        ("is_pwa", "BOOLEAN", "false"),
+        ("connection_type", "VARCHAR(20)", "''"),
+    ],
 }
 
 # (schema, table) -> list of (column_name, DDL type, default SQL literal or None)

@@ -184,8 +184,8 @@ def record_login_session(db: Session, user: User, request, event: str = "login",
             accept_language=lang,
             screen_width=c.get("screen_width"),
             screen_height=c.get("screen_height"),
-            is_pwa=c.get("is_pwa", False),
-            connection_type=c.get("connection_type", ""),
+            is_pwa=bool(c.get("is_pwa")),
+            connection_type=str(c.get("connection_type") or ""),
             event=event,
         )
         db.add(entry)
