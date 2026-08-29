@@ -61,9 +61,9 @@ export default function Landing() {
   const personalFeatures  = t('landing.features.personal',  { returnObjects: true })
 
   const ctaLabel = {
-    business:  t('landing.hero.setupBusiness'),
-    community: t('landing.hero.setupCommunity'),
-    personal:  t('landing.hero.setupPersonal'),
+    business:  t('landing.ctaBusiness'),
+    community: t('landing.ctaCommunity'),
+    personal:  t('landing.ctaPersonal'),
   }[track]
 
   useEffect(() => {
@@ -517,13 +517,13 @@ export default function Landing() {
             <span className="lg-brand-name">Moneytracer</span>
           </Link>
           <nav className="lg-nav">
-            <a href="#features">{t('landing.nav.features')}</a>
-            <Link to="/download">{t('landing.nav.download')}</Link>
-            <Link to="/faq">{t('landing.nav.faq')}</Link>
-            <a href="#about">{t('landing.nav.about')}</a>
-            <a href="#pricing">{t('landing.nav.pricing')}</a>
-            <Link to="/login" className="lg-nav-login">{t('landing.nav.login')}</Link>
-            <Link to="/register" className="lg-nav-cta">{t('landing.nav.getStarted')}</Link>
+            <a href="#features">{t('landing.navFeatures')}</a>
+            <Link to="/download">{t('landing.navDownload')}</Link>
+            <Link to="/faq">FAQ</Link>
+            <a href="#about">{t('landing.navAbout')}</a>
+            <a href="#pricing">{t('landing.navPricing')}</a>
+            <Link to="/login" className="lg-nav-login">{t('landing.login')}</Link>
+            <Link to="/register" className="lg-nav-cta">{t('landing.getStarted')}</Link>
             <LanguageSwitcher />
           </nav>
         </div>
@@ -537,18 +537,18 @@ export default function Landing() {
             Now in Beta — Free during launch
           </div>
 
-          <h1>{t('landing.hero.title')}</h1>
-          <p className="lg-hero-sub">{t('landing.hero.subtitle')}</p>
+          <h1>{t('landing.heroTitle')}</h1>
+          <p className="lg-hero-sub">{t('landing.heroSub')}</p>
 
           <div className="lg-track-switch">
             <button className={track === 'business'  ? 'active' : ''} onClick={() => setTrack('business')}>
-              {t('landing.hero.trackBusiness')}
+              {t('landing.trackBusiness')}
             </button>
             <button className={track === 'community' ? 'active' : ''} onClick={() => setTrack('community')}>
-              {t('landing.hero.trackCommunity')}
+              {t('landing.trackCommunity')}
             </button>
             <button className={track === 'personal'  ? 'active' : ''} onClick={() => setTrack('personal')}>
-              {t('landing.hero.trackPersonal')}
+              {t('landing.trackPersonal')}
             </button>
           </div>
 
@@ -556,17 +556,17 @@ export default function Landing() {
             <Link to={`/register?track=${track}`} className="lg-btn-primary">
               + {ctaLabel}
             </Link>
-            <Link to="/login" className="lg-btn-secondary">{t('landing.hero.haveAccount')}</Link>
+            <Link to="/login" className="lg-btn-secondary">{t('landing.alreadyHaveAccount')}</Link>
           </div>
 
           <Link to="/download" className="lg-app-download">
-            <span>⬇</span> {t('landing.hero.downloadApp')}
+            <span>⬇</span> {t('landing.downloadAndroid')}
           </Link>
 
           <div className="lg-hero-stats">
-            <StatPill value="54" label={t('landing.about.countries')} />
-            <StatPill value="3"  label={t('landing.about.accountTypes')} />
-            <StatPill value="1"  label={t('landing.about.dashboard')} />
+            <StatPill value="54" label={t('landing.statCountries')} />
+            <StatPill value="3"  label={t('landing.statAccountTypes')} />
+            <StatPill value="1"  label={t('landing.statDashboard')} />
             <StatPill value="∞"  label="Transactions tracked" />
           </div>
         </div>
@@ -575,67 +575,46 @@ export default function Landing() {
       {/* ── Features section ── */}
       {track === 'business' && (
         <section id="features" className="lg-section">
-          <h2>{t('landing.features.business.title')}</h2>
-          <p className="lg-section-sub">{t('landing.features.business.subtitle')}</p>
-          <FeatureGrid features={[
-            { icon: "🛒", title: t('landing.features.pos.title'), text: t('landing.features.pos.text') },
-            { icon: "📦", title: t('landing.features.inventory.title'), text: t('landing.features.inventory.text') },
-            { icon: "📄", title: t('landing.features.invoices.title'), text: t('landing.features.invoices.text') },
-            { icon: "🤝", title: t('landing.features.debtors.title'), text: t('landing.features.debtors.text') },
-            { icon: "📈", title: t('landing.features.reports.title'), text: t('landing.features.reports.text') },
-            { icon: "🕒", title: t('landing.features.activity.title'), text: t('landing.features.activity.text') }
-          ]} />
+          <h2>{t('landing.businessFeaturesTitle')}</h2>
+          <p className="lg-section-sub">{t('landing.businessFeaturesSub')}</p>
+          <FeatureGrid features={t('landing.businessFeatures', { returnObjects: true })} />
         </section>
       )}
       {track === 'community' && (
         <section id="community" className="lg-section">
-          <h2>{t('landing.features.community.title')}</h2>
-          <p className="lg-section-sub">{t('landing.features.community.subtitle')}</p>
-          <FeatureGrid features={[
-            { icon: "👥", title: t('landing.features.members.title'), text: t('landing.features.members.text') },
-            { icon: "💰", title: t('landing.features.contributions.title'), text: t('landing.features.contributions.text') },
-            { icon: "🎁", title: t('landing.features.payouts.title'), text: t('landing.features.payouts.text') },
-            { icon: "🏦", title: t('landing.features.loans.title'), text: t('landing.features.loans.text') },
-            { icon: "📋", title: t('landing.features.groupSummary.title'), text: t('landing.features.groupSummary.text') },
-            { icon: "🔑", title: t('landing.features.roles.title'), text: t('landing.features.roles.text') }
-          ]} />
+          <h2>{t('landing.communityFeaturesTitle')}</h2>
+          <p className="lg-section-sub">{t('landing.communityFeaturesSub')}</p>
+          <FeatureGrid features={t('landing.communityFeatures', { returnObjects: true })} />
         </section>
       )}
       {track === 'personal' && (
         <section id="personal" className="lg-section">
-          <h2>{t('landing.features.personal.title')}</h2>
-          <p className="lg-section-sub">{t('landing.features.personal.subtitle')}</p>
-          <FeatureGrid features={[
-            { icon: "📝", title: t('landing.features.expenseLog.title'), text: t('landing.features.expenseLog.text') },
-            { icon: "✉️", title: t('landing.features.budgets.title'), text: t('landing.features.budgets.text') },
-            { icon: "📉", title: t('landing.features.habits.title'), text: t('landing.features.habits.text') },
-            { icon: "🎯", title: t('landing.features.goals.title'), text: t('landing.features.goals.text') },
-            { icon: "🏆", title: t('landing.features.challenges.title'), text: t('landing.features.challenges.text') },
-            { icon: "🧠", title: t('landing.features.insights.title'), text: t('landing.features.insights.text') }
-          ]} />
+          <h2>{t('landing.personalFeaturesTitle')}</h2>
+          <p className="lg-section-sub">{t('landing.personalFeaturesSub')}</p>
+          <FeatureGrid features={t('landing.personalFeatures', { returnObjects: true })} />
         </section>
       )}
 
       {/* ── One account, three worlds ── */}
       <section className="lg-section lg-section-alt lg-section-full" style={{ padding: '80px 28px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h2>{t('landing.accounts.title')}</h2>
-          <p className="lg-section-sub">{t('landing.accounts.subtitle')}</p>
+          <h2>{t('landing.oneAccountTitle')}</h2>
+          <p className="lg-section-sub">{t('landing.oneAccountSub')}</p>
           <div className="lg-grid-3">
             <GlassCard className="lg-feature-card">
               <div className="lg-feature-icon">🏪</div>
-              <div className="lg-feature-title">{t('landing.accounts.business')}</div>
-              <div className="lg-feature-text">{t('landing.accounts.businessText')}</div>
+              <div className="lg-feature-title">{t('landing.accountBusinessTitle')}</div>
+              <div className="lg-feature-text">{t('landing.accountBusinessText')}</div>
             </GlassCard>
             <GlassCard className="lg-feature-card" style={{ border: '1px solid rgba(124,92,252,0.45)', background: 'rgba(124,92,252,0.12)' }}>
               <div className="lg-feature-icon">🌿</div>
-              <div className="lg-feature-title">{t('landing.accounts.community')}</div>
-              <div className="lg-feature-text">{t('landing.accounts.communityText')}</div>
+              <div className="lg-feature-title">{t('landing.accountCommunityTitle')}</div>
+              <div className="lg-feature-text">{t('landing.accountCommunityText')}</div>
             </GlassCard>
             <GlassCard className="lg-feature-card">
               <div className="lg-feature-icon">👛</div>
-              <div className="lg-feature-title">{t('landing.accounts.personal')}</div>
-              <div className="lg-feature-text">{t('landing.accounts.personalText')}</div>
+              <div className="lg-feature-title">{t('landing.accountPersonalTitle')}</div>
+              <div className="lg-feature-text">{t('landing.accountPersonalText')}</div>
             </GlassCard>
           </div>
         </div>
@@ -645,39 +624,39 @@ export default function Landing() {
       <section id="about" className="lg-section">
         <div className="lg-about-grid">
           <div className="lg-about-copy">
-            <h2 style={{ textAlign: 'left' }}>{t('landing.about.title')}</h2>
-            <p>{t('landing.about.description1')}</p>
-            <p>{t('landing.about.description2')}</p>
+            <h2 style={{ textAlign: 'left' }}>{t('landing.aboutTitle')}</h2>
+            <p>{t('landing.aboutP1')}</p>
+            <p>{t('landing.aboutP2')}</p>
             <div className="lg-about-stats">
               <div>
                 <div className="lg-about-stat-value">54</div>
-                <div className="lg-about-stat-label">{t('landing.about.countries')}</div>
+                <div className="lg-about-stat-label">{t('landing.statCountries')}</div>
               </div>
               <div>
                 <div className="lg-about-stat-value">3</div>
-                <div className="lg-about-stat-label">{t('landing.about.accountTypes')}</div>
+                <div className="lg-about-stat-label">{t('landing.statAccountTypes')}</div>
               </div>
               <div>
                 <div className="lg-about-stat-value">1</div>
-                <div className="lg-about-stat-label">{t('landing.about.dashboard')}</div>
+                <div className="lg-about-stat-label">{t('landing.statDashboard')}</div>
               </div>
             </div>
           </div>
           <div className="lg-about-values">
             <GlassCard className="lg-about-value-card">
               <div className="lg-feature-icon">🎯</div>
-              <div className="lg-feature-title">{t('landing.about.simple')}</div>
-              <div className="lg-feature-text">{t('landing.about.simpleText')}</div>
+              <div className="lg-feature-title">{t('landing.valueSimpleTitle')}</div>
+              <div className="lg-feature-text">{t('landing.valueSimpleText')}</div>
             </GlassCard>
             <GlassCard className="lg-about-value-card">
               <div className="lg-feature-icon">🔒</div>
-              <div className="lg-feature-title">{t('landing.about.protected')}</div>
-              <div className="lg-feature-text">{t('landing.about.protectedText')}</div>
+              <div className="lg-feature-title">{t('landing.valueDataTitle')}</div>
+              <div className="lg-feature-text">{t('landing.valueDataText')}</div>
             </GlassCard>
             <GlassCard className="lg-about-value-card">
               <div className="lg-feature-icon">🌍</div>
-              <div className="lg-feature-title">{t('landing.about.africa')}</div>
-              <div className="lg-feature-text">{t('landing.about.africaText')}</div>
+              <div className="lg-feature-title">{t('landing.valueAfricaTitle')}</div>
+              <div className="lg-feature-text">{t('landing.valueAfricaText')}</div>
             </GlassCard>
           </div>
         </div>
@@ -686,35 +665,35 @@ export default function Landing() {
       {/* ── Pricing / CTA ── */}
       <section id="pricing" className="lg-section lg-section-alt lg-cta-band lg-section-full" style={{ padding: '100px 28px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h2>{t('landing.cta.title')}</h2>
-          <p className="lg-section-sub">{t('landing.cta.subtitle')}</p>
+          <h2>{t('landing.pricingTitle')}</h2>
+          <p className="lg-section-sub">{t('landing.pricingSub')}</p>
           <Link to={`/register?track=${track}`} className="lg-btn-primary" style={{ display: 'inline-flex' }}>
-            ✦ {t('landing.cta.button')}
+            + {t('landing.getStartedFree')}
           </Link>
           <GlassCard className="lg-beta-notice">
-            <div className="lg-beta-badge">{t('landing.cta.beta')}</div>
-            <p>{t('landing.cta.betaText')}</p>
+            <div className="lg-beta-badge">{t('landing.betaBadge')}</div>
+            <p>{t('landing.betaNoticeP1')} <strong style={{ color: '#fff' }}>{t('landing.betaNoticeDays')}</strong> {t('landing.betaNoticeP2')}</p>
           </GlassCard>
         </div>
       </section>
 
       {/* ── Disclaimer ── */}
       <section className="lg-section lg-disclaimer">
-        <h2>{t('landing.disclaimer.title')}</h2>
+        <h2>{t('landing.disclaimerTitle')}</h2>
         <div className="lg-disclaimer-text">
-          <p>{t('landing.disclaimer.text')}</p>
-          <Link to="/legal" className="lg-legal-link">{t('landing.disclaimer.legalLink')}</Link>
-          <p className="lg-disclaimer-note">{t('landing.disclaimer.languages')}</p>
+          <p>{t('landing.disclaimerText')}</p>
+          <Link to="/legal" className="lg-legal-link">{t('landing.readFullTerms')}</Link>
+          <p className="lg-disclaimer-note">{t('landing.availableInLanguages')}</p>
         </div>
       </section>
 
       {/* ── Footer ── */}
       <footer className="lg-footer">
-        <div>{t('landing.footer.copyright', { year: new Date().getFullYear() })}</div>
+        <div>© {new Date().getFullYear()} {t('landing.copyright')}</div>
         <div className="lg-footer-links">
           <Link to="/faq">FAQ</Link>
-          <Link to="/login">{t('landing.footer.login')}</Link>
-          <Link to="/register">{t('landing.footer.signup')}</Link>
+          <Link to="/login">{t('landing.logInLink')}</Link>
+          <Link to="/register">{t('landing.signUpLink')}</Link>
           <Link to="/legal/tos">Terms of Service</Link>
           <Link to="/legal/privacy">Privacy Policy</Link>
           <Link to="/legal/refund">Refund Policy</Link>
