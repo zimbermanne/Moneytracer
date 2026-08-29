@@ -84,14 +84,26 @@ export default function Landing() {
           font-family: var(--font-body);
           color: #fff;
           overflow-x: hidden;
-          background: #0a0a1a;
+          background: #0a0a1a url('../assets/hero-bg.jpg') no-repeat center center fixed;
+          background-size: cover;
+          position: relative;
+        }
+
+        /* ── Gradient Overlay ── */
+        .lg-page::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(88, 28, 135, 0.4) 0%, rgba(249, 115, 22, 0.3) 100%);
+          z-index: 1;
+          pointer-events: none;
         }
 
         /* ── Animated blob backdrop ── */
         .lg-blobs {
           position: fixed;
           inset: 0;
-          z-index: 0;
+          z-index: 2;
           pointer-events: none;
           overflow: hidden;
         }
@@ -99,7 +111,7 @@ export default function Landing() {
           position: absolute;
           border-radius: 50%;
           filter: blur(80px);
-          opacity: 0.55;
+          opacity: 0.25;
           animation: lg-drift 18s ease-in-out infinite alternate;
         }
         .lg-blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, #6c3bfa, #3b1fa8); top: -150px; left: -100px; animation-duration: 20s; }
@@ -160,45 +172,45 @@ export default function Landing() {
           color: #fff;
         }
         .lg-brand-mark {
-          width: 36px; height: 36px;
+          width: 38px; height: 38px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: #f59e0b;
           display: flex; align-items: center; justify-content: center;
-          font-weight: 900; font-size: 18px; color: #fff;
-          box-shadow: 0 4px 16px rgba(124,92,252,0.5);
+          font-weight: 900; font-size: 20px; color: #fff;
+          box-shadow: 0 4px 12px rgba(245,158,11,0.3);
         }
         .lg-brand-name {
-          font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+          font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
         }
         .lg-nav {
-          display: flex; align-items: center; gap: 28px;
+          display: flex; align-items: center; gap: 32px;
           font-size: 14px;
         }
         .lg-nav a {
-          color: rgba(255,255,255,0.75);
+          color: rgba(255,255,255,0.85);
           text-decoration: none;
           transition: color 0.15s;
         }
         .lg-nav a:hover { color: #fff; }
         .lg-nav-login {
-          color: rgba(255,255,255,0.9) !important;
+          color: #fff !important;
           font-weight: 600;
         }
         .lg-nav-cta {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6) !important;
+          background: #f59e0b !important;
           color: #fff !important;
-          padding: 9px 20px;
+          padding: 10px 24px;
           border-radius: 12px;
           font-weight: 700;
-          box-shadow: 0 4px 20px rgba(124,92,252,0.45);
-          transition: opacity 0.15s, transform 0.15s !important;
+          box-shadow: 0 4px 14px rgba(245,158,11,0.4);
+          transition: transform 0.15s !important;
         }
-        .lg-nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+        .lg-nav-cta:hover { transform: translateY(-1px); background: #fbbf24 !important; }
 
         /* ── Hero ── */
         .lg-hero {
           position: relative;
-          z-index: 1;
+          z-index: 10;
           min-height: 100vh;
           display: flex;
           align-items: center;
@@ -206,103 +218,100 @@ export default function Landing() {
           text-align: center;
           padding: 120px 24px 80px;
         }
-        .lg-hero-inner { max-width: 780px; margin: 0 auto; }
+        .lg-hero-inner { max-width: 840px; margin: 0 auto; }
         .lg-hero-badge {
           display: inline-flex; align-items: center; gap: 8px;
-          background: rgba(124,92,252,0.2);
-          border: 1px solid rgba(124,92,252,0.4);
+          background: rgba(124, 58, 237, 0.25);
+          border: 1px solid rgba(139, 92, 246, 0.4);
           border-radius: 999px;
-          padding: 6px 16px;
-          font-size: 13px; font-weight: 600; color: #c4aaff;
-          margin-bottom: 28px;
+          padding: 6px 18px;
+          font-size: 13px; font-weight: 600; color: #d8b4fe;
+          margin-bottom: 32px;
         }
         .lg-hero-badge-dot {
           width: 7px; height: 7px; border-radius: 50%;
-          background: #7c5cfc;
-          box-shadow: 0 0 8px #7c5cfc;
-          animation: lg-pulse 2s infinite;
+          background: #8b5cf6;
+          box-shadow: 0 0 10px #8b5cf6;
         }
-        @keyframes lg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.3)} }
 
         .lg-hero h1 {
-          font-size: clamp(2.4rem, 6vw, 4.2rem);
-          font-weight: 900;
+          font-family: var(--font-display);
+          font-size: clamp(2.8rem, 7vw, 4.8rem);
+          font-weight: 700;
           line-height: 1.1;
-          margin: 0 0 24px;
-          background: linear-gradient(135deg, #fff 30%, rgba(180,160,255,0.85) 70%, #7cf4ff);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          margin: 0 0 28px;
+          color: #fff;
           letter-spacing: -1px;
         }
         .lg-hero-sub {
-          font-size: clamp(1rem, 2vw, 1.2rem);
-          color: rgba(255,255,255,0.65);
-          line-height: 1.7;
-          margin: 0 auto 40px;
-          max-width: 580px;
+          font-size: clamp(1.1rem, 2.2vw, 1.3rem);
+          color: rgba(255,255,255,0.8);
+          line-height: 1.6;
+          margin: 0 auto 48px;
+          max-width: 680px;
         }
 
         /* ── Track switch ── */
         .lg-track-switch {
           display: inline-flex;
           background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.14);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 999px;
-          padding: 5px;
-          margin-bottom: 36px;
+          padding: 6px;
+          margin-bottom: 40px;
+          backdrop-filter: blur(8px);
         }
         .lg-track-switch button {
           border: none;
           background: transparent;
-          padding: 10px 22px;
+          padding: 12px 24px;
           border-radius: 999px;
-          font-size: 13px; font-weight: 600;
-          color: rgba(255,255,255,0.55);
+          font-size: 14px; font-weight: 600;
+          color: rgba(255,255,255,0.6);
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: all 0.2s ease;
         }
         .lg-track-switch button.active {
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          background: #f59e0b;
           color: #fff;
-          box-shadow: 0 4px 16px rgba(124,92,252,0.45);
+          box-shadow: 0 4px 12px rgba(245,158,11,0.4);
         }
 
         /* ── CTA buttons ── */
         .lg-hero-actions {
           display: flex; align-items: center; justify-content: center;
-          gap: 16px; flex-wrap: wrap; margin-bottom: 28px;
+          gap: 20px; flex-wrap: wrap; margin-bottom: 40px;
         }
         .lg-btn-primary {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: linear-gradient(135deg, #7c5cfc, #3b82f6);
+          display: inline-flex; align-items: center; gap: 10px;
+          background: #f59e0b;
           color: #fff;
           text-decoration: none;
-          font-weight: 700; font-size: 16px;
-          padding: 14px 32px;
+          font-weight: 700; font-size: 18px;
+          padding: 16px 36px;
           border-radius: 14px;
-          box-shadow: 0 6px 28px rgba(124,92,252,0.45);
-          transition: transform 0.15s, box-shadow 0.15s;
+          box-shadow: 0 6px 20px rgba(245,158,11,0.4);
+          transition: transform 0.15s, background 0.15s;
         }
         .lg-btn-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 36px rgba(124,92,252,0.55);
+          background: #fbbf24;
           color: #fff;
         }
         .lg-btn-secondary {
           display: inline-flex; align-items: center;
           background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.2);
-          color: rgba(255,255,255,0.85);
+          border: 1px solid rgba(255,255,255,0.25);
+          color: #fff;
           text-decoration: none;
-          font-weight: 600; font-size: 15px;
-          padding: 14px 28px;
+          font-weight: 600; font-size: 16px;
+          padding: 16px 32px;
           border-radius: 14px;
-          transition: background 0.15s, color 0.15s;
+          transition: background 0.15s;
+          backdrop-filter: blur(4px);
         }
         .lg-btn-secondary:hover {
-          background: rgba(255,255,255,0.14);
-          color: #fff;
+          background: rgba(255,255,255,0.15);
         }
 
         /* ── Android download pill ── */
@@ -334,8 +343,7 @@ export default function Landing() {
         }
         .lg-stat-value {
           font-size: 2rem; font-weight: 900;
-          background: linear-gradient(135deg, #fff, #b4a0ff);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+          color: #fff;
           line-height: 1;
         }
         .lg-stat-label {
@@ -546,7 +554,7 @@ export default function Landing() {
 
           <div className="lg-hero-actions">
             <Link to={`/register?track=${track}`} className="lg-btn-primary">
-              ✦ {ctaLabel}
+              + {ctaLabel}
             </Link>
             <Link to="/login" className="lg-btn-secondary">{t('landing.hero.haveAccount')}</Link>
           </div>
