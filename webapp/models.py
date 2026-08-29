@@ -1490,3 +1490,34 @@ class Budget(Base):
     created_by = Column(String(80), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LoginSession(Base):
+    """One row per login (or demo-login) — IP, best-effort geolocation, and
+    parsed device/browser/OS from the User-Agent header. Purely additive
+    telemetry for the superadmin console: understanding where users log in
+    from and what devices/browsers they use, to prioritize mobile-vs-desktop
+    work, browser compat, and regional performance (e.g. slow connections in
+    a particular country). Never used for auth decisions — a lookup failure
+    here must never block or affect login itself (see device_tracking.py).
+    """
+    __tablename__ = "login_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    username = Column(String(80), index=True)
+
+    ip_address = Column(String(64), default="")
+    city = Column(String(120), default="")
+    region = Column(String(120), default="")
+    country = Column(String(120), default="")
+    isp = Column(String(200), default="")
+
+    device_type = Column(String(20), default="")   # mobile / tablet / desktop / bot / unknown
+    os = Column(String(60), default="")             # e.g. "Android 14", "iOS 17", "Windows 10"
+    browser = Column(String(60), default="")        # e.g. "Chrome 126", "Safari 17"
+    user_agent = Column(Text, default="")
+
+    event = Column(String(20), default="login")     # "login" or "demo_login"
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

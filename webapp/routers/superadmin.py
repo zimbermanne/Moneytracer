@@ -25,11 +25,13 @@ from models import (
     Sale, Purchase, Expense, Invoice, Quotation, PurchaseOrder,
     JournalEntry, FiscalPeriod, FiscalPeriodStatus, Reminder,
     Announcement, AnnouncementLevel, InventoryItem, SupportThread, SupportMessage,
+    LoginSession,
 )
 from schemas import (
     ActivityOut, AccountAdminOut, PlanUpdate, NotesUpdate, BulkAccountIds,
     RoleUpdate, AnnouncementCreate, AnnouncementOut, SuperadminAuditLogOut,
     InventoryOut, SuperadminUserOut, SuperadminSupportThreadOut, SupportMessageCreate, SupportMessageOut,
+    LoginSessionOut,
 )
 from auth import require_superadmin
 from activity import log_activity_for_user, log_superadmin_action
@@ -154,6 +156,117 @@ def superadmin_audit_log(
     if until:
         q = q.filter(SuperadminAuditLog.created_at <= until)
     return q.order_by(SuperadminAuditLog.created_at.desc()).offset(offset).limit(limit).all()
+
+
+# ---------- Login sessions (IP / location / device, for UX optimization) ----------
+# Populated by device_tracking.record_login_session() on every login/demo-login
+# (see routers/auth.py). Best-effort telemetry — geolocation and UA parsing
+# can legitimately come back blank; that's not a bug, just an unresolvable IP
+# or unusual client. Never used for auth decisions.
+
+@router.get("/login-sessions", response_model=List[LoginSessionOut])
+def list_login_sessions(
+    username: Optional[str] = Query(None, description="Substring match on username"),
+    account_id: Optional[int] = Query(None),
+    device_type: Optional[str] = Query(None, description="mobile / tablet / desktop / bot"),
+    country: Optional[str] = Query(None, description="Substring match on country"),
+    since: Optional[datetime] = Query(None),
+    until: Optional[datetime] = Query(None),
+    limit: int = Query(200, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    q = db.query(LoginSession)
+    if username:
+        q = q.filter(LoginSession.username.ilike(f"%{username}%"))
+    if account_id is not None:
+        q = q.filter(LoginSession.account_id == account_id)
+    if device_type:
+        q = q.filter(LoginSession.device_type == device_type)
+    if country:
+        q = q.filter(LoginSession.country.ilike(f"%{country}%"))
+    if since:
+        q = q.filter(LoginSession.created_at >= since)
+    if until:
+        q = q.filter(LoginSession.created_at <= until)
+    return q.order_by(LoginSession.created_at.desc()).offset(offset).limit(limit).all()
+
+
+@router.get("/login-sessions/export")
+def export_login_sessions(
+    since: Optional[datetime] = Query(None),
+    until: Optional[datetime] = Query(None),
+    account_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    q = db.query(LoginSession)
+    if since:
+        q = q.filter(LoginSession.created_at >= since)
+    if until:
+        q = q.filter(LoginSession.created_at <= until)
+    if account_id is not None:
+        q = q.filter(LoginSession.account_id == account_id)
+    entries = q.order_by(LoginSession.created_at.desc()).limit(20000).all()
+    rows = [
+        {
+            "id": e.id,
+            "username": e.username,
+            "account_id": e.account_id,
+            "ip_address": e.ip_address,
+            "city": e.city,
+            "region": e.region,
+            "country": e.country,
+            "isp": e.isp,
+            "device_type": e.device_type,
+            "os": e.os,
+            "browser": e.browser,
+            "event": e.event,
+            "created_at": e.created_at.isoformat() if e.created_at else "",
+        }
+        for e in entries
+    ]
+    log_superadmin_action(
+        db, superadmin, "export_login_sessions",
+        details=f"Exported {len(rows)} login session entries to CSV",
+        target_account_id=account_id,
+    )
+    return _csv_response(rows, "login_sessions_export.csv")
+
+
+@router.get("/login-sessions/device-stats")
+def login_session_device_stats(
+    since: Optional[datetime] = Query(None, description="Defaults to the last 30 days"),
+    db: Session = Depends(get_db),
+    superadmin: User = Depends(require_superadmin),
+):
+    """Aggregate breakdown for optimization decisions: what share of logins
+    are mobile vs desktop, which browsers/OSes actually need support, and
+    which countries have the most traffic. Not per-user detail — see
+    /login-sessions for that."""
+    since = since or (datetime.utcnow() - timedelta(days=30))
+    base = db.query(LoginSession).filter(LoginSession.created_at >= since)
+    total = base.count()
+
+    def _breakdown(column):
+        rows = (
+            db.query(column, func.count(LoginSession.id))
+            .filter(LoginSession.created_at >= since)
+            .group_by(column)
+            .order_by(func.count(LoginSession.id).desc())
+            .all()
+        )
+        return [{"value": val or "unknown", "count": count} for val, count in rows]
+
+    return {
+        "since": since,
+        "total_logins": total,
+        "by_device_type": _breakdown(LoginSession.device_type),
+        "by_os": _breakdown(LoginSession.os),
+        "by_browser": _breakdown(LoginSession.browser),
+        "by_country": _breakdown(LoginSession.country),
+    }
 
 
 # ---------- Support inbox (tenant messages to the superadmin) ----------

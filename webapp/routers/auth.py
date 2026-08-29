@@ -26,6 +26,7 @@ create_password_reset_token = _auth.create_password_reset_token
 verify_password_reset_token = _auth.verify_password_reset_token
 from activity import log_activity_for_user, log_activity
 from rate_limit import limiter
+from device_tracking import record_login_session
 import email_utils
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
@@ -110,6 +111,7 @@ def login(request: Request, response: Response, payload: LoginRequest, db: Sessi
     token = create_access_token(token_data)
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "login", "User logged in")
+    record_login_session(db, user, request, event="login")
     return Token(access_token=token, user=user)
 
 
@@ -167,6 +169,7 @@ def demo_login(request: Request, response: Response, db: Session = Depends(get_d
     token = create_access_token(token_data)
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "demo_login", "Demo account accessed")
+    record_login_session(db, user, request, event="demo_login")
     return Token(access_token=token, user=user)
 
 

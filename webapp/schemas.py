@@ -858,6 +858,24 @@ class ActivityOut(BaseModel):
     created_at: datetime
 
 
+class LoginSessionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: Optional[int] = None
+    account_id: Optional[int] = None
+    username: str
+    ip_address: str
+    city: str
+    region: str
+    country: str
+    isp: str
+    device_type: str
+    os: str
+    browser: str
+    event: str
+    created_at: datetime
+
+
 class SuperadminAuditLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

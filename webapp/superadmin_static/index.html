@@ -189,6 +189,7 @@
       <div class="tab" data-tab="users" onclick="switchTab('users')">Users</div>
       <div class="tab" data-tab="messages" onclick="switchTab('messages')">Messages <span id="messages-badge" class="badge badge-critical hidden" style="margin-left:4px;"></span></div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">Critical Activity</div>
+      <div class="tab" data-tab="sessions" onclick="switchTab('sessions')">Devices &amp; Locations</div>
       <div class="tab" data-tab="auditlog" onclick="switchTab('auditlog')">Superadmin Audit Log</div>
       <div class="tab" data-tab="health" onclick="switchTab('health')">System Health</div>
       <div class="tab" data-tab="announcements" onclick="switchTab('announcements')">Announcements</div>
@@ -308,6 +309,41 @@
           <tbody id="activity-tbody"></tbody>
         </table>
         <div id="activity-empty" class="empty-state hidden">No critical events. That's good.</div>
+      </div>
+    </div>
+
+    <!-- DEVICES & LOCATIONS TAB (login IP / geolocation / device breakdown) -->
+    <div id="tab-sessions" class="hidden">
+      <div class="warn-note">Captured on every login/demo-login: IP, best-effort city/country lookup, and device/browser/OS parsed from the User-Agent. Use the breakdown below to prioritize mobile vs desktop work and browser support; use the table to look up a specific user or account.</div>
+
+      <div class="stat-grid" id="sessions-stats">
+        <div class="stat-card"><div class="label">Logins (30d)</div><div class="value" id="sessions-stat-total">—</div></div>
+        <div class="stat-card"><div class="label">Top device type</div><div class="value" id="sessions-stat-device" style="font-size:16px;">—</div></div>
+        <div class="stat-card"><div class="label">Top browser</div><div class="value" id="sessions-stat-browser" style="font-size:16px;">—</div></div>
+        <div class="stat-card"><div class="label">Top country</div><div class="value" id="sessions-stat-country" style="font-size:16px;">—</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input id="sessions-username-filter" placeholder="Filter by username…" oninput="loadLoginSessions()" />
+        <input id="sessions-account-filter" placeholder="Filter by account ID…" oninput="loadLoginSessions()" />
+        <select id="sessions-device-filter" onchange="loadLoginSessions()">
+          <option value="">All devices</option>
+          <option value="desktop">Desktop</option>
+          <option value="mobile">Mobile</option>
+          <option value="tablet">Tablet</option>
+          <option value="bot">Bot</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn-outline btn-sm" onclick="exportLoginSessionsCsv()">⇩ Export CSV</button>
+        <button class="btn-outline btn-sm" onclick="loadLoginSessions(); loadLoginSessionStats();">↻ Refresh</button>
+      </div>
+
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Time</th><th>User</th><th>Account</th><th>IP</th><th>Location</th><th>Device</th><th>OS</th><th>Browser</th></tr></thead>
+          <tbody id="sessions-tbody"></tbody>
+        </table>
+        <div id="sessions-empty" class="empty-state hidden">No login sessions recorded yet.</div>
       </div>
     </div>
 
@@ -549,7 +585,7 @@ async function submitChangePassword() {
 }
 
 function switchTab(name) {
-  ['accounts','trash','users','messages','activity','auditlog','health','announcements'].forEach(t => {
+  ['accounts','trash','users','messages','activity','sessions','auditlog','health','announcements'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     document.querySelector(`.tab[data-tab="${t}"]`).classList.toggle('active', t === name);
   });
@@ -557,6 +593,7 @@ function switchTab(name) {
   if (name === 'users') loadUsers();
   if (name === 'messages') loadMessages();
   if (name === 'activity') loadActivity();
+  if (name === 'sessions') { loadLoginSessions(); loadLoginSessionStats(); }
   if (name === 'auditlog') loadAuditLog();
   if (name === 'health') loadHealth();
   if (name === 'announcements') loadAnnouncements();
@@ -824,6 +861,7 @@ async function downloadCsv(path, filename) {
 
 function exportAccountsCsv() { downloadCsv('/api/superadmin/accounts/export', 'accounts_export.csv'); }
 function exportActivityCsv() { downloadCsv('/api/superadmin/activity/export?critical_only=true', 'activity_export.csv'); }
+function exportLoginSessionsCsv() { downloadCsv('/api/superadmin/login-sessions/export', 'login_sessions_export.csv'); }
 
 function renderUsersPanel(accountId) {
   const users = accountUsersCache[accountId];
@@ -1234,6 +1272,52 @@ async function loadActivity() {
         <td>${escapeHtml(r.details || '')}</td>
       </tr>
     `).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadLoginSessions() {
+  const tbody = document.getElementById('sessions-tbody');
+  const emptyEl = document.getElementById('sessions-empty');
+  const username = document.getElementById('sessions-username-filter').value.trim();
+  const accountId = document.getElementById('sessions-account-filter').value.trim();
+  const deviceType = document.getElementById('sessions-device-filter').value;
+  const params = new URLSearchParams({ limit: '200' });
+  if (username) params.set('username', username);
+  if (accountId) params.set('account_id', accountId);
+  if (deviceType) params.set('device_type', deviceType);
+  try {
+    const rows = await api('/api/superadmin/login-sessions?' + params.toString());
+    emptyEl.classList.toggle('hidden', rows.length > 0);
+    tbody.innerHTML = rows.map(r => {
+      const location = [r.city, r.region, r.country].filter(Boolean).join(', ') || '—';
+      return `
+      <tr>
+        <td style="white-space:nowrap;">${new Date(r.created_at).toLocaleString()}</td>
+        <td>${escapeHtml(r.username || '—')}</td>
+        <td>${r.account_id != null ? escapeHtml(String(r.account_id)) : '—'}</td>
+        <td style="white-space:nowrap;">${escapeHtml(r.ip_address || '—')}</td>
+        <td>${escapeHtml(location)}</td>
+        <td>${escapeHtml(r.device_type || '—')}</td>
+        <td>${escapeHtml(r.os || '—')}</td>
+        <td>${escapeHtml(r.browser || '—')}</td>
+      </tr>
+    `;
+    }).join('');
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+}
+
+async function loadLoginSessionStats() {
+  try {
+    const stats = await api('/api/superadmin/login-sessions/device-stats');
+    document.getElementById('sessions-stat-total').textContent = stats.total_logins;
+    const top = (list) => (list && list.length) ? `${list[0].value} (${list[0].count})` : '—';
+    document.getElementById('sessions-stat-device').textContent = top(stats.by_device_type);
+    document.getElementById('sessions-stat-browser').textContent = top(stats.by_browser);
+    document.getElementById('sessions-stat-country').textContent = top(stats.by_country);
   } catch (e) {
     toast(e.message, 'err');
   }
