@@ -83,6 +83,7 @@ class CompleteProfileRequest(BaseModel):
 
 class QuickSignupRequest(BaseModel):
     fingerprint_hash: str
+    account_type: Optional[AccountType] = AccountType.business
     screen_width: Optional[int] = None
     screen_height: Optional[int] = None
     is_pwa: Optional[bool] = False

@@ -11,7 +11,7 @@ const TRACK_COPY = {
 }
 
 export default function Register() {
-  const { login, user } = useAuth()
+  const { login, quickSignup, user } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const track = ['business', 'community', 'personal'].includes(searchParams.get('track'))
@@ -26,10 +26,24 @@ export default function Register() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [quickBusy, setQuickBusy] = useState(false)
 
   if (user) {
     navigate('/app', { replace: true })
     return null
+  }
+
+  const handleQuickStart = async () => {
+    setError('')
+    setQuickBusy(true)
+    try {
+      await quickSignup(track)
+      navigate('/app', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setQuickBusy(false)
+    }
   }
 
   const submit = async (e) => {
@@ -79,7 +93,28 @@ export default function Register() {
     <div className="login-screen">
       <div className="login-card">
         <h1>{copy.heading}</h1>
-        <div className="sub">{copy.sub}</div>
+        <div className="sub" style={{ marginBottom: 24 }}>{copy.sub}</div>
+
+        <button
+          className="btn btn-outline"
+          style={{ width: '100%', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px' }}
+          onClick={handleQuickStart}
+          disabled={busy || quickBusy}
+        >
+          {quickBusy ? 'Setting up...' : (
+            <>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <span>Quick Start (Skip form)</span>
+            </>
+          )}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, opacity: 0.4 }}>
+          <div style={{ flex: 1, height: 1, background: 'currentColor' }} />
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Or fill in your details</div>
+          <div style={{ flex: 1, height: 1, background: 'currentColor' }} />
+        </div>
+
         <form onSubmit={submit}>
           <div className="form-row">
             <label>Full Name</label>

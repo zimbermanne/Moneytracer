@@ -7,7 +7,7 @@ import PlatformBanner from '../components/PlatformBanner.jsx'
 import logoMark from '../assets/logo-mark.png'
 
 export default function Login() {
-  const { login, loginAsDemo, user } = useAuth()
+  const { login, loginAsDemo, quickSignup, user } = useAuth()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [username, setUsername] = useState('')
@@ -15,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [demoBusy, setDemoBusy] = useState(false)
+  const [quickBusy, setQuickBusy] = useState(false)
 
   if (user) {
     navigate('/app', { replace: true })
@@ -45,6 +46,19 @@ export default function Login() {
       setError(err.message)
     } finally {
       setDemoBusy(false)
+    }
+  }
+
+  const handleQuickStart = async () => {
+    setError('')
+    setQuickBusy(true)
+    try {
+      await quickSignup('business')
+      navigate('/app', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setQuickBusy(false)
     }
   }
 
@@ -92,6 +106,20 @@ export default function Login() {
 
           <button className="btn btn-outline" style={{ width: '100%' }} onClick={tryDemo} disabled={demoBusy}>
             {demoBusy ? t('auth.loadingDemo') : t('auth.continueAsDemo')}
+          </button>
+
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+            onClick={handleQuickStart}
+            disabled={quickBusy}
+          >
+            {quickBusy ? 'Setting up...' : (
+              <>
+                <span style={{ fontSize: 18 }}>⚡</span>
+                <span>Start New Account Instantly</span>
+              </>
+            )}
           </button>
 
           <div style={{ marginTop: 20, fontSize: 13, textAlign: 'center', color: 'var(--text-muted)' }}>

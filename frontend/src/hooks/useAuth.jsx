@@ -125,7 +125,7 @@ export function AuthProvider({ children }) {
     return data.user
   }, [fetchAccount])
 
-  const quickSignup = useCallback(async () => {
+  const quickSignup = useCallback(async (accountType = 'business') => {
     // Generate a best-effort device fingerprint so the backend can recognize
     // this device if it scans the same QR twice.
     const parts = [
@@ -156,6 +156,7 @@ export function AuthProvider({ children }) {
 
     const payload = {
       fingerprint_hash: fingerprintHash,
+      account_type: accountType,
       screen_width: window.screen.width,
       screen_height: window.screen.height,
       is_pwa: window.matchMedia('(display-mode: standalone)').matches,

@@ -239,13 +239,19 @@ def quick_signup(request: Request, response: Response, payload: QuickSignupReque
         )
 
     # 3. Create a fresh account and admin user
+    account_type = payload.account_type or AccountType.business
+
+    # Personal accounts skip onboarding, others don't
+    onboarding_completed = (account_type == AccountType.personal)
+
     account = Account(
-        account_type=AccountType.business,
-        name="New Business",
+        account_type=account_type,
+        name="New Business" if account_type == AccountType.business else
+             ("New Group" if account_type == AccountType.community else "Personal Account"),
         owner_full_name="",
         business_type="retail",
         email="",
-        onboarding_completed=False,
+        onboarding_completed=onboarding_completed,
     )
     db.add(account)
     db.commit()
