@@ -247,13 +247,16 @@ def quick_signup(request: Request, response: Response, db: Session = Depends(get
 
 
 @router.get("/quick-signup/qr")
-def quick_signup_qr(admin: User = Depends(require_admin)):
+@limiter.limit("60/minute")
+def quick_signup_qr(request: Request):
     """PNG of a QR code that, when scanned, opens the quick-signup landing
     page on the frontend (which immediately calls POST /quick-signup and
-    drops the scanner straight into a new logged-in account). Admin-only —
-    this is meant to be printed/displayed by a business, not exposed publicly,
-    since anyone who reaches the URL directly gets the same result anyway
-    (the value is just having a scannable code, not a secret)."""
+    drops the scanner straight into a new logged-in account). Public/no-auth
+    on purpose: the target URL isn't a secret (anyone who reaches it directly
+    gets the same result), and it needs to be embeddable on the public
+    landing page for anonymous visitors, not just inside Settings for
+    already-logged-in admins. Rate-limited per-IP since it's unauthenticated;
+    generation is cheap (no DB writes) and the image is safe to cache."""
     import qrcode
 
     target_url = f"{FRONTEND_URL}{QUICK_SIGNUP_PATH}"
@@ -262,7 +265,9 @@ def quick_signup_qr(admin: User = Depends(require_admin)):
     img.save(buf, format="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png", headers={
-        "Cache-Control": "no-store",
+        # Deterministic for a given FRONTEND_URL, no per-request/per-user
+        # state, so client/CDN caching is safe and reduces load.
+        "Cache-Control": "public, max-age=3600",
         "Content-Disposition": "inline; filename=moneytracer-quick-signup-qr.png",
     })
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import { apiUrl } from '../api-config.js'
 
 /* ── Animated blob background ─────────────────────────────────────────────── */
 function BlobBackground() {
@@ -329,6 +330,35 @@ export default function Landing() {
         }
         .lg-app-download:hover { background: rgba(255,255,255,0.14); color: #fff; }
 
+        /* ── Scan-to-signup QR (hero) ── */
+        .lg-hero-qr {
+          display: inline-flex;
+          align-items: center;
+          gap: 14px;
+          margin-top: 20px;
+          padding: 12px 18px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .lg-hero-qr img {
+          border-radius: 8px;
+          background: #fff;
+          padding: 4px;
+          display: block;
+        }
+        .lg-hero-qr-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          text-align: left;
+        }
+        .lg-hero-qr-text strong { color: #fff; font-size: 14px; }
+        .lg-hero-qr-text span { color: rgba(255, 255, 255, 0.65); font-size: 12px; }
+        @media (max-width: 640px) {
+          .lg-hero-qr { margin-left: auto; margin-right: auto; }
+        }
+
         /* ── Floating stat pills (hero) ── */
         .lg-hero-stats {
           display: flex; justify-content: center; gap: 16px;
@@ -577,6 +607,20 @@ export default function Landing() {
           <Link to="/download" className="lg-app-download">
             <span>⬇</span> {t('landing.downloadAndroid')}
           </Link>
+
+          <div className="lg-hero-qr">
+            <img
+              src={apiUrl('/api/auth/quick-signup/qr')}
+              alt="Scan to create a Moneytracer account instantly"
+              width={96}
+              height={96}
+              loading="lazy"
+            />
+            <div className="lg-hero-qr-text">
+              <strong>{t('landing.scanToStart', 'Scan to start instantly')}</strong>
+              <span>{t('landing.scanToStartSub', 'No form — add your details afterwards.')}</span>
+            </div>
+          </div>
 
           <div className="lg-hero-stats">
             <StatPill value="54" label={t('landing.statCountries')} />
