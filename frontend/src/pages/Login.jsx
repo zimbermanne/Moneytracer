@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { apiUrl } from '../api-config.js'
 import PasswordInput from '../components/PasswordInput.jsx'
 import PlatformBanner from '../components/PlatformBanner.jsx'
 import logoMark from '../assets/logo-mark.png'
@@ -75,6 +76,17 @@ export default function Login() {
         <div className="login-brand">
           <img src={logoMark} alt="Moneytracer" className="login-brand-mark" />
           <div className="login-brand-name">Moneytracer</div>
+        </div>
+
+        <div className="login-card" style={{ textAlign: 'center', marginBottom: 24, padding: '20px' }}>
+          <div style={{ marginBottom: 16, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
+            Scan to sign in or start instantly
+          </div>
+          <img
+            src={apiUrl('/api/auth/quick-signup/qr')}
+            alt="Scan to sign in"
+            style={{ width: 140, height: 140, background: '#fff', padding: 8, borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+          />
         </div>
 
         <div className="login-card">

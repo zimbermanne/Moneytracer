@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { apiUrl } from '../api-config.js'
+import logoMark from '../assets/logo-mark.png'
 
 /* ── Animated blob background ─────────────────────────────────────────────── */
 function BlobBackground() {
@@ -332,29 +333,39 @@ export default function Landing() {
 
         /* ── Scan-to-signup QR (hero) ── */
         .lg-hero-qr {
-          display: inline-flex;
+          display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 14px;
-          margin-top: 20px;
-          padding: 12px 18px;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          gap: 16px;
+          margin: 0 auto 48px;
+          padding: 24px;
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          width: fit-content;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .lg-hero-logo {
+          width: 80px;
+          height: 80px;
+          margin-bottom: 8px;
         }
         .lg-hero-qr img {
-          border-radius: 8px;
+          border-radius: 12px;
           background: #fff;
-          padding: 4px;
+          padding: 8px;
           display: block;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         .lg-hero-qr-text {
           display: flex;
           flex-direction: column;
-          gap: 2px;
-          text-align: left;
+          gap: 4px;
+          text-align: center;
         }
-        .lg-hero-qr-text strong { color: #fff; font-size: 14px; }
-        .lg-hero-qr-text span { color: rgba(255, 255, 255, 0.65); font-size: 12px; }
+        .lg-hero-qr-text strong { color: #fff; font-size: 16px; letter-spacing: -0.2px; }
+        .lg-hero-qr-text span { color: rgba(255, 255, 255, 0.7); font-size: 13px; }
         @media (max-width: 640px) {
           .lg-hero-qr { margin-left: auto; margin-right: auto; }
         }
@@ -582,6 +593,21 @@ export default function Landing() {
             Now in Beta — Free during launch
           </div>
 
+          <div className="lg-hero-qr">
+            <img src={logoMark} alt="Moneytracer" className="lg-hero-logo" />
+            <img
+              src={apiUrl('/api/auth/quick-signup/qr')}
+              alt="Scan to create a Moneytracer account instantly"
+              width={160}
+              height={160}
+              loading="lazy"
+            />
+            <div className="lg-hero-qr-text">
+              <strong>{t('landing.scanToStart', 'Scan to start instantly')}</strong>
+              <span>{t('landing.scanToStartSub', 'No form — add your details afterwards.')}</span>
+            </div>
+          </div>
+
           <h1>{t('landing.heroTitle')}</h1>
           <p className="lg-hero-sub">{t('landing.heroSub')}</p>
 
@@ -607,20 +633,6 @@ export default function Landing() {
           <Link to="/download" className="lg-app-download">
             <span>⬇</span> {t('landing.downloadAndroid')}
           </Link>
-
-          <div className="lg-hero-qr">
-            <img
-              src={apiUrl('/api/auth/quick-signup/qr')}
-              alt="Scan to create a Moneytracer account instantly"
-              width={96}
-              height={96}
-              loading="lazy"
-            />
-            <div className="lg-hero-qr-text">
-              <strong>{t('landing.scanToStart', 'Scan to start instantly')}</strong>
-              <span>{t('landing.scanToStartSub', 'No form — add your details afterwards.')}</span>
-            </div>
-          </div>
 
           <div className="lg-hero-stats">
             <StatPill value="54" label={t('landing.statCountries')} />
