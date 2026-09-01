@@ -118,6 +118,49 @@ export function AuthProvider({ children }) {
     return data.user
   }, [fetchAccount])
 
+  const quickSignup = useCallback(async () => {
+    let res
+    try {
+      res = await fetch(apiUrl('/api/auth/quick-signup'), { method: 'POST', credentials: 'include' })
+    } catch {
+      throw new Error('Could not reach the server. Check your connection or the API configuration.')
+    }
+    if (!res.ok) {
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Quick signup failed')
+      }
+      throw new Error(`Quick signup failed (${res.status}) — the server returned an unexpected response. The API URL may be misconfigured.`)
+    }
+    const data = await res.json()
+    setIsAuthenticated(true)
+    setUser(data.user)
+    await fetchAccount(data.user)
+    return data.user
+  }, [fetchAccount])
+
+  const completeProfile = useCallback(async (payload) => {
+    let res
+    try {
+      res = await fetch(apiUrl('/api/auth/complete-profile'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      })
+    } catch {
+      throw new Error('Could not reach the server. Check your connection or the API configuration.')
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || 'Could not save your details')
+    }
+    const data = await res.json()
+    setUser(data)
+    return data
+  }, [])
+
   const logout = useCallback(() => {
     if (isAuthenticated) {
       // Record the logout for the audit trail, then clear the server-side
@@ -138,7 +181,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated, user, loading, login, loginAsDemo, logout,
+      isAuthenticated, user, loading, login, loginAsDemo, quickSignup, completeProfile, logout,
       account, accountLoading, setAccount, refreshAccount,
     }}>
       {children}

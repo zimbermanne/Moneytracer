@@ -1,13 +1,17 @@
+import io
 import os
+import secrets
 import uuid
+from datetime import datetime, timedelta
 from jose import JWTError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, RoleEnum, Account, AccountType
+from models import User, RoleEnum, Account, AccountType, ActivityLog
 from schemas import (
     UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate,
-    ForgotPasswordRequest, ResetPasswordConfirmRequest,
+    ForgotPasswordRequest, ResetPasswordConfirmRequest, CompleteProfileRequest,
 )
 from auth import (
     hash_password, authenticate_user, create_access_token,
@@ -19,6 +23,15 @@ from rate_limit import limiter
 import email_utils
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
+QUICK_SIGNUP_PATH = "/quick-signup"
+# Platform-wide ceiling on how many free accounts the QR shortcut can mint in
+# a rolling 24h window — the per-IP "30/hour" limiter below stops one scanner
+# from looping the endpoint, but doesn't stop the *link itself* (shared,
+# screenshotted, or bot-driven from many IPs) from being used to spin up junk
+# tenants indefinitely. This is a coarse, cheap backstop on top of that, not
+# a replacement for it. Configurable via env since "normal" volume varies a
+# lot by how many businesses are actually displaying the code.
+QUICK_SIGNUP_DAILY_CAP = int(os.getenv("QUICK_SIGNUP_DAILY_CAP", "200"))
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -158,6 +171,132 @@ def demo_login(request: Request, response: Response, db: Session = Depends(get_d
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "demo_login", "Demo account accessed")
     return Token(access_token=token, user=user)
+
+
+def _generate_unique_username(db: Session, prefix: str = "qr") -> str:
+    """8 random hex chars is ~4 billion combinations — collisions are
+    astronomically unlikely, but we still check to be safe rather than rely
+    on the DB's unique constraint alone (which would surface as an opaque
+    500 instead of quietly retrying)."""
+    for _ in range(5):
+        candidate = f"{prefix}_{secrets.token_hex(4)}"
+        if not db.query(User).filter(User.username == candidate).first():
+            return candidate
+    # Vanishingly unlikely, but fall back to something longer rather than loop forever.
+    return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+@router.post("/quick-signup", response_model=Token)
+@limiter.limit("30/hour")
+def quick_signup(request: Request, response: Response, db: Session = Depends(get_db)):
+    """One-tap account creation for the 'scan a QR code to sign up' shortcut.
+
+    No form to fill in: a brand-new business account and admin user are
+    created on the spot with a random username/password, the user is logged
+    in immediately (same cookie as a normal login), and `profile_incomplete`
+    is set so the frontend keeps prompting them to fill in their real name,
+    email, and business details via PUT /api/auth/complete-profile whenever
+    they're ready. Every scan of the same QR code creates a distinct account
+    — this is a signup shortcut, not a way to log back into an existing one.
+    """
+    since = datetime.utcnow() - timedelta(hours=24)
+    recent_count = db.query(ActivityLog).filter(
+        ActivityLog.action == "quick_signup", ActivityLog.created_at >= since,
+    ).count()
+    if recent_count >= QUICK_SIGNUP_DAILY_CAP:
+        raise HTTPException(
+            status_code=429,
+            detail="Quick sign-up is temporarily unavailable — too many accounts have been created "
+                   "via QR/barcode in the last 24 hours. Please use the regular sign-up form, or try again later.",
+        )
+
+    account = Account(
+        account_type=AccountType.business,
+        name="New Business",
+        owner_full_name="",
+        business_type="retail",
+        email="",
+        onboarding_completed=False,
+    )
+    db.add(account)
+    db.commit()
+    db.refresh(account)
+
+    username = _generate_unique_username(db)
+    # Random, never shown to the user — they set a real password once they
+    # complete their profile. Until then they can only get back in from the
+    # same browser (session cookie) or by scanning a fresh QR (new account).
+    user = User(
+        username=username,
+        full_name="",
+        email="",
+        hashed_password=hash_password(secrets.token_urlsafe(24)),
+        role=RoleEnum.admin,
+        account_id=account.id,
+        profile_incomplete=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0, "account_id": account.id}
+    token = create_access_token(token_data)
+    set_auth_cookie(response, token)
+    log_activity_for_user(db, user, "quick_signup", "Account created via QR/barcode quick signup")
+    return Token(access_token=token, user=user)
+
+
+@router.get("/quick-signup/qr")
+def quick_signup_qr(admin: User = Depends(require_admin)):
+    """PNG of a QR code that, when scanned, opens the quick-signup landing
+    page on the frontend (which immediately calls POST /quick-signup and
+    drops the scanner straight into a new logged-in account). Admin-only —
+    this is meant to be printed/displayed by a business, not exposed publicly,
+    since anyone who reaches the URL directly gets the same result anyway
+    (the value is just having a scannable code, not a secret)."""
+    import qrcode
+
+    target_url = f"{FRONTEND_URL}{QUICK_SIGNUP_PATH}"
+    img = qrcode.make(target_url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png", headers={
+        "Cache-Control": "no-store",
+        "Content-Disposition": "inline; filename=moneytracer-quick-signup-qr.png",
+    })
+
+
+@router.put("/complete-profile", response_model=UserOut)
+@limiter.limit("20/hour")
+def complete_profile(
+    request: Request,
+    payload: CompleteProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lets a quick-signup user (or anyone, really) fill in the details that
+    were skipped at signup. Clears profile_incomplete once they've provided
+    at least a name and an email — that's the bar for 'no longer anonymous',
+    username/password stay whatever they were unless explicitly changed."""
+    if payload.new_username and payload.new_username != current_user.username:
+        if db.query(User).filter(User.username == payload.new_username).first():
+            raise HTTPException(status_code=400, detail="Username already exists")
+        current_user.username = payload.new_username
+    if payload.new_password:
+        current_user.hashed_password = hash_password(payload.new_password)
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    if payload.email is not None:
+        current_user.email = payload.email
+
+    if current_user.full_name and current_user.email:
+        current_user.profile_incomplete = False
+
+    db.commit()
+    db.refresh(current_user)
+    log_activity_for_user(db, current_user, "complete_profile", "Completed profile details")
+    return current_user
 
 
 @router.put("/change-password")

@@ -101,7 +101,11 @@
     "loadingDemo": "Loading demo…",
     "dontHaveAccount": "Don't have an account?",
     "createOne": "Create one",
-    "tagline": "Payroll, compliance, and books — handled quietly."
+    "tagline": "Payroll, compliance, and books — handled quietly.",
+    "quickSignupSettingUp": "Setting up your account…",
+    "quickSignupSubtitle": "You'll be able to add your name and business details afterwards.",
+    "quickSignupFailedTitle": "Something went wrong",
+    "backToLogin": "Back to login"
   },
   "onboarding": {
     "title": "Setup Your Business",
