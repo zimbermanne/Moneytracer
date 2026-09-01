@@ -882,6 +882,7 @@ class PaymentRequest(BaseModel):
 class ActivityOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    account_id: Optional[int] = None
     username: str
     action: str
     details: str
