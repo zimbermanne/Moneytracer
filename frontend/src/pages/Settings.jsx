@@ -9,7 +9,7 @@ import AppearanceSettings from '../components/AppearanceSettings.jsx'
 import SupportMessages from '../components/SupportMessages.jsx'
 
 export default function Settings() {
-  const { user, logout } = useAuth()
+  const { user, logout, completeProfile } = useAuth()
   const api = useApi()
   const isAdmin = user?.role === 'admin'
   const isSuperadmin = user?.role === 'superadmin'
@@ -19,6 +19,40 @@ export default function Settings() {
   const [newPwd, setNewPwd] = useState('')
   const [pwdMsg, setPwdMsg] = useState('')
   const [pwdErr, setPwdErr] = useState('')
+
+  // My Profile — editable when the account was created via the QR/barcode
+  // quick-signup shortcut and still has no real username/name/email on file.
+  const [profileForm, setProfileForm] = useState({ full_name: '', email: '', new_username: '' })
+  const [profileMsg, setProfileMsg] = useState('')
+  const [profileErr, setProfileErr] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  useEffect(() => {
+    if (user?.profile_incomplete) {
+      setProfileForm({ full_name: user.full_name || '', email: user.email || '', new_username: user.username || '' })
+    }
+  }, [user?.profile_incomplete]) // eslint-disable-line
+
+  const saveProfile = async (e) => {
+    e.preventDefault(); setProfileErr(''); setProfileMsg(''); setProfileSaving(true)
+    try {
+      await completeProfile(profileForm)
+      setProfileMsg('Profile saved.')
+    } catch (e) { setProfileErr(e.message) } finally { setProfileSaving(false) }
+  }
+
+  // Sign-up QR code — admins only, lets a business display/print a scannable
+  // shortcut for new users to auto-create an account (POST /auth/quick-signup).
+  const [qrUrl, setQrUrl] = useState(null)
+  const [qrErr, setQrErr] = useState('')
+  useEffect(() => {
+    if (!isAdmin || isSuperadmin) return
+    let objectUrl
+    api.get('/auth/quick-signup/qr')
+      .then((res) => res.blob())
+      .then((blob) => { objectUrl = URL.createObjectURL(blob); setQrUrl(objectUrl) })
+      .catch((e) => setQrErr(e.message))
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [isAdmin, isSuperadmin]) // eslint-disable-line
 
   // Account settings (for regular admins)
   const [account, setAccount] = useState(null)
@@ -146,9 +180,31 @@ export default function Settings() {
         {/* Profile card */}
         <div className="card" style={{ flex: 1, minWidth: 280 }}>
           <h3 style={{ marginTop: 0 }}>My Profile</h3>
-          <div className="form-row"><label>Username</label><input value={user?.username || ''} disabled /></div>
-          <div className="form-row"><label>Full Name</label><input value={user?.full_name || ''} disabled /></div>
-          <div className="form-row"><label>Role</label><input value={user?.role || ''} disabled /></div>
+          {user?.profile_incomplete ? (
+            <>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+                This account was created via the sign-up QR code. Add your details below —
+                you can also pick a memorable username to log in with next time.
+              </div>
+              <form onSubmit={saveProfile}>
+                <div className="form-row"><label>Full Name</label>
+                  <input value={profileForm.full_name} onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })} required /></div>
+                <div className="form-row"><label>Email</label>
+                  <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} required /></div>
+                <div className="form-row"><label>Username</label>
+                  <input value={profileForm.new_username} onChange={(e) => setProfileForm({ ...profileForm, new_username: e.target.value })} required /></div>
+                {profileErr && <div className="error-text">{profileErr}</div>}
+                {profileMsg && <div style={{ color:'var(--success)', fontSize:13, marginBottom:8 }}>{profileMsg}</div>}
+                <button className="btn btn-primary" disabled={profileSaving}>{profileSaving ? 'Saving…' : 'Save Profile'}</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="form-row"><label>Username</label><input value={user?.username || ''} disabled /></div>
+              <div className="form-row"><label>Full Name</label><input value={user?.full_name || ''} disabled /></div>
+              <div className="form-row"><label>Role</label><input value={user?.role || ''} disabled /></div>
+            </>
+          )}
           <button className="btn btn-danger" onClick={logout} style={{ marginTop: 8 }}>
             🚪 Log Out
           </button>
@@ -192,6 +248,26 @@ export default function Settings() {
 
       {/* Messages to support — not for superadmin, who reads these in the console instead */}
       {!isSuperadmin && <SupportMessages />}
+
+      {/* Sign-up QR code — lets walk-in customers/staff scan and get a live
+          account instantly instead of filling in the registration form. */}
+      {isAdmin && !isSuperadmin && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <h3 style={{ marginTop: 0 }}>📱 Sign-up QR Code</h3>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+            Print or display this code. Anyone who scans it gets a live Moneytracer account
+            instantly — no form to fill in — and can add their name, email, and business
+            details afterwards from Settings.
+          </div>
+          {qrErr && <div className="error-text">{qrErr}</div>}
+          {qrUrl && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+              <img src={qrUrl} alt="Sign-up QR code" width={200} height={200} style={{ background: '#fff', padding: 8, borderRadius: 8 }} />
+              <a className="btn btn-outline" href={qrUrl} download="moneytracer-quick-signup-qr.png">⬇ Download</a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Legal & policies — opens the public /legal pages in a new tab */}
       <div className="card" style={{ marginTop: 20 }}>

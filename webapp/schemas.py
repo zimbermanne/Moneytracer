@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     account_id: Optional[int] = None
     is_active: bool
     is_demo: bool
+    profile_incomplete: bool = False
     created_at: datetime
 
 
@@ -67,6 +68,17 @@ class Token(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+
+class CompleteProfileRequest(BaseModel):
+    """Fills in real details for an account created via the QR/barcode
+    quick-signup shortcut, which starts with a random username/password and
+    no name/email. All fields optional so the user can save progressively;
+    profile_incomplete only clears once full_name and email are both set."""
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    new_username: Optional[str] = None
+    new_password: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):

@@ -169,6 +169,12 @@ class User(Base):
     # The login token embeds the value at issue-time as "tv"; get_current_user
     # rejects any token whose "tv" doesn't match the current column value.
     token_version = Column(Integer, default=0)
+    # True for accounts created via the QR/barcode quick-signup shortcut
+    # (POST /api/auth/quick-signup) — they get a random username/password and
+    # skip the registration form entirely, so the frontend uses this flag to
+    # keep nudging them to fill in their real name, email, and business
+    # details until they do. Cleared the first time they save that info.
+    profile_incomplete = Column(Boolean, default=False)
 
     account = relationship("Account", back_populates="users")
 
