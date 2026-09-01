@@ -28,7 +28,10 @@ export function AuthProvider({ children }) {
     setAccountError(null)
     try {
       const res = await fetch(apiUrl('/api/accounts/my-account'), { credentials: 'include' })
-      if (!res.ok) throw new Error('Could not load account details')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || `Could not load account details (Status ${res.status})`)
+      }
       setAccount(await res.json())
     } catch (err) {
       setAccount(null)
@@ -140,7 +143,15 @@ export function AuthProvider({ children }) {
       const hashArray = Array.from(new Uint8Array(hashBuffer))
       fingerprintHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
     } else {
-      fingerprintHash = btoa(fingerprintStr).slice(0, 64)
+      // Fallback for non-secure contexts (http) or older browsers: a simple
+      // non-cryptographic hash that handles non-ASCII characters.
+      let hash = 0
+      for (let i = 0; i < fingerprintStr.length; i++) {
+        const char = fingerprintStr.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // Convert to 32bit integer
+      }
+      fingerprintHash = Math.abs(hash).toString(16) + '-' + btoa(unescape(encodeURIComponent(fingerprintStr.slice(0, 32)))).replace(/=/g, '')
     }
 
     const payload = {

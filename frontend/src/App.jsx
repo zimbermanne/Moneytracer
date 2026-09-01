@@ -176,11 +176,26 @@ function PrivateRoutes() {
     if (accountError) {
       return (
         <div className="login-screen">
-          <div className="login-card" style={{ textAlign: 'center', maxWidth: 400 }}>
-            <h1>Something went wrong</h1>
-            <div className="error-text" style={{ margin: '16px 0' }}>{accountError}</div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={refreshAccount}>Retry</button>
+          <div className="login-orb login-orb-shadow login-orb-1" />
+          <div className="login-orb login-orb-shadow login-orb-2" />
+          <div className="login-card" style={{ textAlign: 'center', maxWidth: 440, position: 'relative', zIndex: 10 }}>
+            <h1 style={{ color: 'var(--danger-text, #c00)' }}>Something went wrong</h1>
+            <div className="sub" style={{ margin: '8px 0 20px' }}>
+              We couldn't prepare your account. This is usually due to a connection issue or an expired session.
+            </div>
+            <div className="error-text" style={{
+              margin: '16px 0',
+              padding: 12,
+              background: 'rgba(255,0,0,0.05)',
+              borderRadius: 8,
+              fontSize: 13,
+              fontFamily: 'monospace',
+              wordBreak: 'break-all'
+            }}>
+              {accountError}
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={refreshAccount}>Retry</button>
               <button className="btn btn-outline" style={{ flex: 1 }} onClick={logout}>Logout</button>
             </div>
           </div>

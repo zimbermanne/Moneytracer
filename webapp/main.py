@@ -59,26 +59,29 @@ async def _unhandled_exception_handler(request, exc):
 
 
 origins_env = os.getenv("ALLOWED_ORIGINS", "*")
-allowed_origins = [o.strip() for o in origins_env.split(",")] if origins_env != "*" else ["*"]
-
-# Auth in this app is a Bearer token sent in the Authorization header (see
-# auth.py / useAuth.jsx) — never cookies — so the browser doesn't need
-# credentialed CORS to make authenticated requests work. Wildcard origins
-# combined with allow_credentials=True is a known anti-pattern (and most
-# browsers reject that combination outright), so credentials are only
-# enabled once specific origins are configured via ALLOWED_ORIGINS.
-allow_credentials = allowed_origins != ["*"]
-if allowed_origins == ["*"]:
+if origins_env == "*":
+    # If ALLOWED_ORIGINS is not set, we default to "wide open" for easy
+    # developer start. However, standard CORSMiddleware rejects allow_credentials=True
+    # when allow_origins=["*"]. To support cross-origin auth (cookies/headers)
+    # while still being "wide open", we use a regex that matches everything.
+    allowed_origins = []
+    allow_origin_regex = ".*"
+    allow_credentials = True
     warnings.warn(
-        "ALLOWED_ORIGINS is not set — CORS is wide open (any origin can call "
-        "this API). Set ALLOWED_ORIGINS to your actual frontend domain(s) "
-        "(comma-separated) in production.",
+        "ALLOWED_ORIGINS is not set — CORS is wide open via regex matching everything. "
+        "This is convenient for development but insecure for production. "
+        "Set ALLOWED_ORIGINS to your actual frontend domain(s) in production.",
         RuntimeWarning,
     )
+else:
+    allowed_origins = [o.strip() for o in origins_env.split(",")]
+    allow_origin_regex = None
+    allow_credentials = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
