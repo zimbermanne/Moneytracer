@@ -8,10 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, RoleEnum, Account, AccountType, ActivityLog
+from models import User, RoleEnum, Account, AccountType, ActivityLog, DeviceFingerprint
 from schemas import (
     UserCreate, UserOut, LoginRequest, Token, ChangePasswordRequest, AccountCreate,
     ForgotPasswordRequest, ResetPasswordConfirmRequest, CompleteProfileRequest,
+    QuickSignupRequest,
 )
 from auth import (
     hash_password, authenticate_user, create_access_token,
@@ -20,6 +21,7 @@ from auth import (
 )
 from activity import log_activity_for_user, log_activity, log_superadmin_action
 from rate_limit import limiter
+from device_tracking import get_client_ip, geolocate_ip
 import email_utils
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
@@ -188,17 +190,43 @@ def _generate_unique_username(db: Session, prefix: str = "qr") -> str:
 
 @router.post("/quick-signup", response_model=Token)
 @limiter.limit("30/hour")
-def quick_signup(request: Request, response: Response, db: Session = Depends(get_db)):
+def quick_signup(request: Request, response: Response, payload: QuickSignupRequest, db: Session = Depends(get_db)):
     """One-tap account creation for the 'scan a QR code to sign up' shortcut.
 
-    No form to fill in: a brand-new business account and admin user are
-    created on the spot with a random username/password, the user is logged
-    in immediately (same cookie as a normal login), and `profile_incomplete`
-    is set so the frontend keeps prompting them to fill in their real name,
-    email, and business details via PUT /api/auth/complete-profile whenever
-    they're ready. Every scan of the same QR code creates a distinct account
-    — this is a signup shortcut, not a way to log back into an existing one.
+    If the same device scans the QR again, we log them back into the existing
+    account instead of creating a new one. Otherwise, a brand-new business
+    account and admin user are created on the spot with a random username/
+    password, the user is logged in immediately, and `profile_incomplete`
+    is set so the frontend keeps prompting them to fill in their details.
     """
+    # 1. Check if this device already has an account minted via QR
+    existing_fp = db.query(DeviceFingerprint).filter(
+        DeviceFingerprint.fingerprint_hash == payload.fingerprint_hash
+    ).first()
+
+    if existing_fp:
+        user = db.query(User).filter(User.id == existing_fp.user_id).first()
+        if user and user.is_active:
+            # Refresh location info for this return visit
+            ip = get_client_ip(request)
+            geo = geolocate_ip(ip)
+            existing_fp.ip_address = ip
+            existing_fp.city = geo.get("city", "")
+            existing_fp.region = geo.get("region", "")
+            existing_fp.country = geo.get("country", "")
+            existing_fp.last_seen_at = datetime.utcnow()
+            db.commit()
+
+            token_data = {
+                "sub": user.username, "role": user.role.value,
+                "tv": user.token_version or 0, "account_id": user.account_id
+            }
+            token = create_access_token(token_data)
+            set_auth_cookie(response, token)
+            log_activity_for_user(db, user, "quick_signup_revisit", "Returned to account via QR scan")
+            return Token(access_token=token, user=user)
+
+    # 2. Platform-wide daily cap check (only for NEW accounts)
     since = datetime.utcnow() - timedelta(hours=24)
     recent_count = db.query(ActivityLog).filter(
         ActivityLog.action == "quick_signup", ActivityLog.created_at >= since,
@@ -210,6 +238,7 @@ def quick_signup(request: Request, response: Response, db: Session = Depends(get
                    "via QR/barcode in the last 24 hours. Please use the regular sign-up form, or try again later.",
         )
 
+    # 3. Create a fresh account and admin user
     account = Account(
         account_type=AccountType.business,
         name="New Business",
@@ -223,9 +252,6 @@ def quick_signup(request: Request, response: Response, db: Session = Depends(get
     db.refresh(account)
 
     username = _generate_unique_username(db)
-    # Random, never shown to the user — they set a real password once they
-    # complete their profile. Until then they can only get back in from the
-    # same browser (session cookie) or by scanning a fresh QR (new account).
     user = User(
         username=username,
         full_name="",
@@ -238,6 +264,21 @@ def quick_signup(request: Request, response: Response, db: Session = Depends(get
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # 4. Record the fingerprint so we can recognize this device next time
+    ip = get_client_ip(request)
+    geo = geolocate_ip(ip)
+    new_fp = DeviceFingerprint(
+        user_id=user.id,
+        account_id=account.id,
+        fingerprint_hash=payload.fingerprint_hash,
+        ip_address=ip,
+        city=geo.get("city", ""),
+        region=geo.get("region", ""),
+        country=geo.get("country", ""),
+    )
+    db.add(new_fp)
+    db.commit()
 
     token_data = {"sub": user.username, "role": user.role.value, "tv": user.token_version or 0, "account_id": account.id}
     token = create_access_token(token_data)

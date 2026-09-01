@@ -81,6 +81,14 @@ class CompleteProfileRequest(BaseModel):
     new_password: Optional[str] = None
 
 
+class QuickSignupRequest(BaseModel):
+    fingerprint_hash: str
+    screen_width: Optional[int] = None
+    screen_height: Optional[int] = None
+    is_pwa: Optional[bool] = False
+    connection_type: Optional[str] = ""
+
+
 class ForgotPasswordRequest(BaseModel):
     username_or_email: str
 

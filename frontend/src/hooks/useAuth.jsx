@@ -14,21 +14,25 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [account, setAccount] = useState(null)
   const [accountLoading, setAccountLoading] = useState(false)
+  const [accountError, setAccountError] = useState(null)
 
   const fetchAccount = useCallback(async (currentUser) => {
     // Only account admins have (or need) an onboarding wizard; superadmin
     // and staff accounts (manager/employee) never see it.
     if (!currentUser || currentUser.role !== 'admin') {
       setAccount(null)
+      setAccountError(null)
       return
     }
     setAccountLoading(true)
+    setAccountError(null)
     try {
       const res = await fetch(apiUrl('/api/accounts/my-account'), { credentials: 'include' })
-      if (!res.ok) throw new Error('failed')
+      if (!res.ok) throw new Error('Could not load account details')
       setAccount(await res.json())
-    } catch {
+    } catch (err) {
       setAccount(null)
+      setAccountError(err.message)
     } finally {
       setAccountLoading(false)
     }
@@ -119,9 +123,42 @@ export function AuthProvider({ children }) {
   }, [fetchAccount])
 
   const quickSignup = useCallback(async () => {
+    // Generate a best-effort device fingerprint so the backend can recognize
+    // this device if it scans the same QR twice.
+    const parts = [
+      navigator.userAgent,
+      navigator.language,
+      window.screen.width,
+      window.screen.height,
+      new Date().getTimezoneOffset(),
+    ]
+    const fingerprintStr = parts.join('|')
+    let fingerprintHash
+    if (window.crypto && window.crypto.subtle) {
+      const msgUint8 = new TextEncoder().encode(fingerprintStr)
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgUint8)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      fingerprintHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    } else {
+      fingerprintHash = btoa(fingerprintStr).slice(0, 64)
+    }
+
+    const payload = {
+      fingerprint_hash: fingerprintHash,
+      screen_width: window.screen.width,
+      screen_height: window.screen.height,
+      is_pwa: window.matchMedia('(display-mode: standalone)').matches,
+      connection_type: navigator.connection?.effectiveType || 'unknown',
+    }
+
     let res
     try {
-      res = await fetch(apiUrl('/api/auth/quick-signup'), { method: 'POST', credentials: 'include' })
+      res = await fetch(apiUrl('/api/auth/quick-signup'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      })
     } catch {
       throw new Error('Could not reach the server. Check your connection or the API configuration.')
     }
@@ -182,7 +219,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       isAuthenticated, user, loading, login, loginAsDemo, quickSignup, completeProfile, logout,
-      account, accountLoading, setAccount, refreshAccount,
+      account, accountLoading, accountError, setAccount, refreshAccount,
     }}>
       {children}
     </AuthContext.Provider>
