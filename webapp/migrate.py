@@ -21,6 +21,8 @@ _MIGRATIONS = {
         ("is_demo", "BOOLEAN", "false"),
         # Force-logout support — see models.User.token_version docstring.
         ("token_version", "INTEGER", "0"),
+        # QR/barcode quick-signup — see models.User.profile_incomplete docstring.
+        ("profile_incomplete", "BOOLEAN", "false"),
     ],
     "accounts": [
         # Existing accounts predate the onboarding wizard, so they default to

@@ -29,6 +29,7 @@ const Download = lazy(() => import('./pages/Download.jsx'))
 const Legal = lazy(() => import('./pages/Legal.jsx'))
 const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const Register = lazy(() => import('./pages/Register.jsx'))
+const QuickSignup = lazy(() => import('./pages/QuickSignup.jsx'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
@@ -138,6 +139,16 @@ function Layout({ children }) {
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">
         <PlatformBanner />
+        {user?.profile_incomplete && location.pathname !== '/app/settings' && (
+          <div style={{
+            background: 'var(--warning-bg, #fff7e6)', color: 'var(--warning-text, #8a5a00)',
+            padding: '10px 16px', fontSize: 13, display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+          }}>
+            <span>👋 This account was created via the sign-up QR code. Add your name and email in Settings.</span>
+            <a href="/app/settings" className="btn btn-outline" style={{ padding: '4px 12px', fontSize: 12 }}>Complete profile</a>
+          </div>
+        )}
         <div className="desktop-topbar">
           <Clock
             accountName={company?.name}
@@ -229,6 +240,7 @@ export default function App() {
           <Route path="/legal/:doc" element={<Legal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/quick-signup" element={<QuickSignup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify/invoice/:id" element={<VerifyDocument kind="invoice" />} />
