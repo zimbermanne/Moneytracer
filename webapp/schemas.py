@@ -981,6 +981,41 @@ class MessageThreadOut(BaseModel):
     is_support: bool = False
 
 
+# SupportThreadOut — restored 2026-09-03: the "Unified Messaging" refactor
+# (commits 0e7d172/a9a0d13/07d818d/08a260c) introduced MessageThread/Message
+# to replace the tenant<->superadmin support flow, but deleted this class
+# while SuperadminSupportThreadOut still inherits from it and
+# routers/superadmin.py's legacy /support/threads* endpoints (SupportThread
+# model, still present in models.py) still return it. Deleting the class
+# without removing every reference to it took the whole API down at
+# startup (NameError on this module's own import), since nothing else in
+# schemas.py could load until this line evaluated cleanly. Restored
+# verbatim to match the still-existing SupportThread model's columns.
+# If/when the legacy support-thread endpoints in superadmin.py are migrated
+# over to MessageThread too, this class (and SupportThreadCreate above,
+# also currently unused dead weight) can come out then — but doing that
+# is a separate, deliberate change, not a hotfix.
+# SupportMessageCreate — restored alongside SupportThreadOut above; same
+# missing-class-broke-startup issue. superadmin.py's reply_to_support_thread
+# only reads payload.body, so this is intentionally minimal.
+class SupportMessageCreate(BaseModel):
+    body: str
+
+
+class SupportThreadOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    subject: str
+    status: str
+    unread_by_superadmin: bool
+    unread_by_tenant: bool
+    last_message_at: datetime
+    last_message_preview: str
+    created_at: datetime
+    messages: List[SupportMessageOut] = []
+
+
 class SuperadminSupportThreadOut(SupportThreadOut):
     account_name: Optional[str] = None
 
