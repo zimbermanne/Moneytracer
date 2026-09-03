@@ -89,6 +89,14 @@ class Account(Base):
     # Inventory balances are unaffected — this is opt-in per account.
     # See CogsMethod docstring for what each value means.
     cogs_method = Column(Enum(CogsMethod), default=CogsMethod.accrual)
+    # Shows a per-line profit/margin annotation next to each quotation item
+    # in the app (InvoiceEditor/DocumentPreview) — tenant-controlled via
+    # Settings. Deliberately has NO effect on the PDF/exported/emailed
+    # document (see routers/quotations.py's _render_quotation_pdf, which
+    # never reads cost_price or this flag at all) — this only ever governs
+    # what the business owner sees inside the app, never what a customer
+    # can see, regardless of its value.
+    show_quote_profit = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # ---- Superadmin/platform-management fields (not tenant-editable) ----
@@ -588,6 +596,16 @@ class QuotationItem(Base):
     quantity = Column(Float, default=1)
     unit_price = Column(Float, default=0)
     total = Column(Float, default=0)
+    # Optional link back to the inventory item this line was built from (null
+    # for a free-text/custom line — see InvoiceEditor.jsx's "Custom item"
+    # option). cost_price is a SNAPSHOT of Inventory.cost_price taken at the
+    # moment this line was saved (same pattern as Sale.cost_price_at_sale),
+    # not a live lookup — so profit shown on an old quotation stays accurate
+    # even if the item's cost has since changed. Both fields exist purely to
+    # power the in-app profit annotation (Account.show_quote_profit) and are
+    # never read by the PDF renderer.
+    item_id = Column(Integer, ForeignKey(fk_ref("inventory_items.id", SCHEMA_BUSINESS)), nullable=True)
+    cost_price = Column(Float, default=0)
 
     quotation = relationship("Quotation", back_populates="items")
 

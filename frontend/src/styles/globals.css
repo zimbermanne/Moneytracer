@@ -2132,8 +2132,16 @@ label {
   padding: 20px;
 }
 
+/* This sheet simulates an actual printed page (white paper, black ink) —
+   it must look the same regardless of the app's own theme. Previously it
+   only hardcoded the white background and left text colors on the normal
+   theme variables (--text-dark, --text-muted, --border), which flip to
+   near-white/dark-slate in dark mode — nearly invisible text on a white
+   "page". Every color in this block is intentionally a fixed value, not a
+   theme var, so switching the app to dark mode can never affect it. */
 .doc-sheet {
   background: #fff;
+  color: #000;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 32px;
@@ -2147,30 +2155,31 @@ label {
   align-items: flex-start;
   gap: 16px;
   padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e0ddd4;
 }
 
 .doc-sheet-company {
   font-size: 17px;
   font-weight: 700;
+  color: #000;
 }
 
 .doc-sheet-title {
   font-size: 26px;
   font-weight: 700;
-  color: var(--accent);
+  color: #000;
 }
 
 .doc-sheet-muted {
   font-size: 13px;
-  color: var(--text-muted);
+  color: #4b5563;
 }
 
 .doc-sheet-label {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: var(--text-muted);
+  color: #4b5563;
   margin-bottom: 4px;
 }
 
@@ -2186,21 +2195,23 @@ label {
   border-collapse: collapse;
   font-size: 14px;
   margin-top: 6px;
+  color: #000;
 }
 
 .doc-sheet-items th {
-  background: var(--surface-sunken, #f6f3ec);
+  background: #f6f3ec;
   text-align: left;
   padding: 8px 10px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--text-muted);
+  color: #4b5563;
 }
 
 .doc-sheet-items td {
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e0ddd4;
+  color: #000;
 }
 
 .doc-sheet-totals {
@@ -2208,6 +2219,7 @@ label {
   width: 260px;
   margin-top: 18px;
   font-size: 14px;
+  color: #000;
 }
 
 .doc-sheet-totals > div {
@@ -2217,11 +2229,25 @@ label {
 }
 
 .doc-sheet-total-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #e0ddd4;
   margin-top: 6px;
   padding-top: 8px !important;
   font-weight: 700;
   font-size: 16px;
+  color: #000;
+}
+
+/* Per-item profit — see DocumentPreview.jsx / InvoiceEditor.jsx. Deliberately
+   NOT part of .doc-sheet-items (the printable table): it's an in-app-only
+   annotation shown beside a line, never sent to the PDF endpoint, so there's
+   no risk of it leaking into anything a customer receives. */
+.doc-sheet-item-profit {
+  font-size: 11px;
+  color: #15803d;
+  white-space: nowrap;
+}
+.doc-sheet-item-profit.negative {
+  color: #b91c1c;
 }
 
 /* ---- MOBILE: document (invoice/quotation) preview panel (<=768px) -----
@@ -2287,6 +2313,13 @@ label {
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
+}
+
+/* Extra column for the per-item profit annotation — only added when the
+   account has show_quote_profit on and this is a quotation, never for
+   invoices. See Documents.jsx's showProfit prop. */
+.invoice-editor-line-with-profit {
+  grid-template-columns: 2fr 70px 110px 100px 90px 36px;
 }
 
 .invoice-line-item-picker {

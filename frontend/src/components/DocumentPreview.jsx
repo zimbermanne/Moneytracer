@@ -7,7 +7,7 @@ function money(n) {
   return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
-export default function DocumentPreview({ kind, doc, company, onClose }) {
+export default function DocumentPreview({ kind, doc, company, showProfit = false, onClose }) {
   const api = useApi()
   const isInvoice = kind === 'invoices'
   const numberKey = isInvoice ? 'invoice_no' : 'quote_no'
@@ -129,20 +129,37 @@ export default function DocumentPreview({ kind, doc, company, onClose }) {
                   <th style={{ textAlign: 'right' }}>Qty</th>
                   <th style={{ textAlign: 'right' }}>Rate</th>
                   <th style={{ textAlign: 'right' }}>Amount</th>
+                  {showProfit && <th style={{ textAlign: 'right' }}>Profit</th>}
                 </tr>
               </thead>
               <tbody>
-                {items.map((line, i) => (
+                {items.map((line, i) => {
+                  const profit = (Number(line.unit_price || 0) - Number(line.cost_price || 0)) * Number(line.quantity || 0)
+                  return (
                   <tr key={line.id ?? i}>
                     <td>{i + 1}</td>
                     <td>{line.description}</td>
                     <td style={{ textAlign: 'right' }}>{line.quantity}</td>
                     <td style={{ textAlign: 'right' }}>{money(line.unit_price)}</td>
                     <td style={{ textAlign: 'right' }}>{money(line.total)}</td>
+                    {showProfit && (
+                      <td style={{ textAlign: 'right' }}>
+                        {line.item_id ? (
+                          <span className={`doc-sheet-item-profit${profit < 0 ? ' negative' : ''}`}>
+                            {profit >= 0 ? '+' : ''}{money(profit)}
+                          </span>
+                        ) : <span className="doc-sheet-item-profit">—</span>}
+                      </td>
+                    )}
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
+            {showProfit && (
+              <div className="doc-sheet-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                Profit column is visible to you only — it's never included in the exported PDF, print, or emailed copy.
+              </div>
+            )}
 
             <div className="doc-sheet-totals">
               <div><span>Subtotal</span><span>{money(doc.subtotal)}</span></div>

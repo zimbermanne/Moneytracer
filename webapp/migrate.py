@@ -59,6 +59,9 @@ _MIGRATIONS = {
         ("deletion_requested_at", "TIMESTAMP", None),
         ("scheduled_purge_at", "TIMESTAMP", None),
         ("deletion_requested_by", "VARCHAR(80)", "''"),
+        # In-app-only per-item profit annotation on quotations — see
+        # models.Account.show_quote_profit docstring. Never affects the PDF.
+        ("show_quote_profit", "BOOLEAN", "false"),
     ],
     "journal_entries": [
         # This table predates reversal/void support (only is_locked existed
@@ -138,6 +141,13 @@ _SCHEMA_MIGRATIONS = {
         # Optional link to inventory so a paid invoice can decrement stock
         # and record a proper Sale against the item it actually sold.
         ("item_id", "INTEGER", None),
+    ],
+    ("business", "quotation_items"): [
+        # Same purpose as invoice_items.item_id above, plus a cost_price
+        # snapshot so the in-app profit annotation (Account.show_quote_profit)
+        # can compute margin per line — see models.QuotationItem docstring.
+        ("item_id", "INTEGER", None),
+        ("cost_price", "FLOAT", "0"),
     ],
     ("business", "customers"): [
         # Customer Center: email alongside the existing phone/address/TIN

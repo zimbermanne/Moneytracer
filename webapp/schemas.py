@@ -215,6 +215,7 @@ class AccountUpdate(BaseModel):
     is_suspended: Optional[bool] = None
     onboarding_completed: Optional[bool] = None
     cogs_method: Optional[CogsMethod] = None
+    show_quote_profit: Optional[bool] = None
     # plan / admin_notes deliberately omitted here — see update_my_account's
     # explicit block on them, same pattern as is_suspended. Tenant admins
     # change everything else on this model; those two are superadmin-only
@@ -253,6 +254,7 @@ class AccountOut(BaseModel):
     created_at: datetime
     plan: Optional[str] = "free"
     cogs_method: CogsMethod = CogsMethod.accrual
+    show_quote_profit: bool = False
 
 
 class AccountWithUsersOut(AccountOut):
@@ -1055,6 +1057,14 @@ class DocumentLineOut(BaseModel):
     unit_price: float
     total: float
     item_id: Optional[int] = None
+    # Snapshot of the linked inventory item's cost at save time — see
+    # models.QuotationItem.cost_price docstring. Populated for quotation
+    # lines; always 0 for invoice/purchase-order lines today since only
+    # quotations.py currently snapshots it (same shared schema, unused
+    # column elsewhere). Exists purely to let the frontend compute a
+    # per-line profit figure for Account.show_quote_profit — the PDF
+    # renderer never reads this field.
+    cost_price: float = 0
 
     # Same nullable-column-vs-required-field guard as PurchaseOrderOut below —
     # this schema is shared by invoice/quotation/purchase-order line items,
@@ -1066,7 +1076,7 @@ class DocumentLineOut(BaseModel):
     def _none_to_empty_str(cls, v):
         return "" if v is None else v
 
-    @field_validator("quantity", "unit_price", "total", mode="before")
+    @field_validator("quantity", "unit_price", "total", "cost_price", mode="before")
     @classmethod
     def _none_to_zero(cls, v):
         return 0 if v is None else v

@@ -9,7 +9,7 @@ import AppearanceSettings from '../components/AppearanceSettings.jsx'
 import SupportMessages from '../components/SupportMessages.jsx'
 
 export default function Settings() {
-  const { user, logout, completeProfile } = useAuth()
+  const { user, logout, completeProfile, refreshAccount } = useAuth()
   const api = useApi()
   const isAdmin = user?.role === 'admin'
   const isSuperadmin = user?.role === 'superadmin'
@@ -134,15 +134,16 @@ export default function Settings() {
       const {
         name, tin, vrn, owner_full_name, business_type, region, district,
         street_address, phone, email, tax_rate, invoice_prefix, payment_terms_days,
-        bank_name, bank_account_name, bank_account_number, bank_branch,
+        bank_name, bank_account_name, bank_account_number, bank_branch, show_quote_profit,
       } = account
       const payload = {
         name, tin, vrn, owner_full_name, business_type, region, district,
         street_address, phone, email, tax_rate, invoice_prefix, payment_terms_days,
-        bank_name, bank_account_name, bank_account_number, bank_branch,
+        bank_name, bank_account_name, bank_account_number, bank_branch, show_quote_profit,
       }
       const updated = await api.put('/accounts/my-account', payload)
       setAccount(updated)
+      refreshAccount()
       setAccountMsg('Account settings updated successfully!')
       setTimeout(() => setAccountMsg(''), 3000)
     } catch (e) {
@@ -338,6 +339,24 @@ export default function Settings() {
               <input type="number" value={account.payment_terms_days} onChange={(e) => setAccount({...account, payment_terms_days: parseInt(e.target.value) || 7})} />
             </div>
           </div>
+
+          <div style={{ marginTop: 20, marginBottom: 12, fontWeight: 600 }}>💹 Quotations</div>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', maxWidth: 480 }}>
+            <input
+              type="checkbox"
+              checked={!!account.show_quote_profit}
+              onChange={(e) => setAccount({ ...account, show_quote_profit: e.target.checked })}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <div style={{ fontWeight: 600 }}>Show profit per item on quotations</div>
+              <div className="doc-sheet-muted" style={{ fontSize: 13 }}>
+                When an item is picked from inventory, shows what you'd profit on that line while
+                you (or your staff) build the quote. This is only ever visible inside the app —
+                it never appears on the exported PDF, print, or emailed copy your customer receives.
+              </div>
+            </span>
+          </label>
 
           <div style={{ marginTop: 20, marginBottom: 12, fontWeight: 600 }}>🏦 Bank Details (shown on invoices)</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>

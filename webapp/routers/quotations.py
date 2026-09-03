@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Quotation, QuotationItem, Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account
+from models import Quotation, QuotationItem, Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem
 from schemas import QuotationCreate, QuotationUpdate, QuotationOut, InvoiceOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
@@ -31,6 +31,33 @@ def _calc(items, tax_rate, discount):
     sub = sum(l.quantity * l.unit_price for l in items)
     tax = sub * (tax_rate / 100)
     return round(sub,2), round(tax,2), round(sub+tax-discount,2)
+
+
+def _quotation_items(db: Session, account_id: int, quotation_id: int, lines) -> None:
+    """Build QuotationItem rows for `lines`, resolving item_id -> a cost_price
+    snapshot along the way. Pulled out of create/update so both stay in sync —
+    the whole point of the snapshot (see models.QuotationItem docstring) is
+    that it's taken once, here, not looked up live whenever a quote is
+    viewed, so an item's cost changing later doesn't rewrite past quotes.
+    A stale/foreign item_id (deleted item, or one from another account) is
+    treated the same as a freehand line rather than erroring the save.
+    """
+    for ln in lines:
+        item = None
+        if ln.item_id:
+            item = db.query(InventoryItem).filter(
+                InventoryItem.id == ln.item_id, InventoryItem.account_id == account_id,
+            ).first()
+        db.add(QuotationItem(
+            account_id=account_id,
+            quotation_id=quotation_id,
+            description=ln.description,
+            quantity=ln.quantity,
+            unit_price=ln.unit_price,
+            total=round(ln.quantity * ln.unit_price, 2),
+            item_id=item.id if item else None,
+            cost_price=item.cost_price if item else 0,
+        ))
 
 
 @router.post("/", response_model=QuotationOut)
@@ -56,15 +83,7 @@ def create_quotation(payload: QuotationCreate, db: Session = Depends(get_db),
         created_by=current_user.username,
     )
     db.add(q); db.flush()
-    for ln in payload.items:
-        db.add(QuotationItem(
-            account_id=account_id,
-            quotation_id=q.id, 
-            description=ln.description,
-            quantity=ln.quantity, 
-            unit_price=ln.unit_price,
-            total=round(ln.quantity*ln.unit_price,2)
-        ))
+    _quotation_items(db, account_id, q.id, payload.items)
     db.commit(); db.refresh(q)
     log_activity_for_user(db, current_user, "quotation_create", f"Created {q.quote_no}")
     return q
@@ -101,12 +120,7 @@ def update_quotation(qid: int, payload: QuotationUpdate, db: Session = Depends(g
         if not payload.items:
             raise HTTPException(status_code=400, detail="Quotation must have at least one line item")
         db.query(QuotationItem).filter(QuotationItem.quotation_id == q.id).delete()
-        for ln in payload.items:
-            db.add(QuotationItem(
-                account_id=q.account_id, quotation_id=q.id,
-                description=ln.description, quantity=ln.quantity, unit_price=ln.unit_price,
-                total=round(ln.quantity * ln.unit_price, 2),
-            ))
+        _quotation_items(db, q.account_id, q.id, payload.items)
         db.flush()
         sub, tax, total = _calc(payload.items, tax_rate, discount)
     else:
@@ -311,7 +325,7 @@ def _render_quotation_pdf(q: Quotation, account: Account = None) -> io.BytesIO:
     styles = getSampleStyleSheet()
     normal = ParagraphStyle("N", parent=styles["Normal"], fontSize=10, leading=14)
     right  = ParagraphStyle("R", parent=styles["Normal"], fontSize=10, leading=14, alignment=TA_RIGHT)
-    section = ParagraphStyle("S", parent=styles["Heading4"], fontSize=11, textColor=ACCENT)
+    section = ParagraphStyle("S", parent=styles["Heading4"], fontSize=11, textColor=colors.black)
 
     elems = []
     co_lines = [f"<b>{biz_name}</b>"]

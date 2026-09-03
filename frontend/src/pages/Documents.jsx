@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
@@ -18,9 +19,15 @@ const emptyForm = () => ({
 
 export default function Documents({ kind }) {
   const api = useApi()
+  const { account } = useAuth()
   const isInvoice = kind === 'invoices'
   const title = isInvoice ? 'Invoices' : 'Quotations / Proforma'
   const numberKey = isInvoice ? 'invoice_no' : 'quote_no'
+  // Per-item profit annotation — admin-only (account is only populated for
+  // the admin role, see useAuth/PrivateRoutes) and quotations-only (never
+  // shown on invoices, and never sent to the PDF regardless — see
+  // DocumentPreview.jsx / InvoiceEditor.jsx for where this actually renders).
+  const showProfit = !isInvoice && !!account?.show_quote_profit
 
   const [docs, setDocs] = useState([])
   const [error, setError] = useState('')
@@ -237,7 +244,7 @@ export default function Documents({ kind }) {
         emptyText={query ? `No ${title.toLowerCase()} match your search.` : `No ${title.toLowerCase()} yet.`} onRowClick={(row) => setPreviewDoc(row)} />
 
       {previewDoc && (
-        <DocumentPreview kind={kind} doc={previewDoc} company={company} onClose={() => setPreviewDoc(null)} />
+        <DocumentPreview kind={kind} doc={previewDoc} company={company} showProfit={showProfit} onClose={() => setPreviewDoc(null)} />
       )}
 
       {open && (
@@ -256,6 +263,7 @@ export default function Documents({ kind }) {
           removeLine={removeLine}
           inventoryItems={inventoryItems}
           selectInventoryItem={selectInventoryItem}
+          showProfit={showProfit}
           subtotal={subtotal}
           taxAmt={taxAmt}
           total={total}

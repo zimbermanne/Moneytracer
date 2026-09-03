@@ -14,7 +14,7 @@ function money(n) {
 export default function InvoiceEditor({
   kind, isInvoice, editingId, form, setForm, company, error,
   updateLine, addLine, removeLine, subtotal, taxAmt, total,
-  onClose, onSave, saving, inventoryItems = [], selectInventoryItem,
+  onClose, onSave, saving, inventoryItems = [], selectInventoryItem, showProfit = false,
 }) {
   const [checkAmount, setCheckAmount] = useState('')
   const label = isInvoice ? 'Invoice' : 'Quotation'
@@ -71,7 +71,7 @@ export default function InvoiceEditor({
             {form.items.map((line, idx) => {
               const isCustom = !line.item_id
               return (
-              <div key={idx} className="invoice-editor-line">
+              <div key={idx} className={`invoice-editor-line${showProfit ? ' invoice-editor-line-with-profit' : ''}`}>
                 <div className="invoice-line-item-picker">
                   <select
                     className="invoice-line-item-select"
@@ -95,6 +95,16 @@ export default function InvoiceEditor({
                 <input type="number" placeholder="Unit Price" value={line.unit_price}
                   onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
                 <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
+                {showProfit && (() => {
+                  const inv = line.item_id ? inventoryItems.find((it) => String(it.id) === String(line.item_id)) : null
+                  if (!inv) return <span className="doc-sheet-item-profit">—</span>
+                  const profit = ((Number(line.unit_price) || 0) - (inv.cost_price || 0)) * (Number(line.quantity) || 0)
+                  return (
+                    <span className={`doc-sheet-item-profit${profit < 0 ? ' negative' : ''}`} title="Profit for this line — visible to you only, never shown to the customer or on the PDF">
+                      {profit >= 0 ? '+' : ''}{money(profit)}
+                    </span>
+                  )
+                })()}
                 <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
               </div>
             )})}
