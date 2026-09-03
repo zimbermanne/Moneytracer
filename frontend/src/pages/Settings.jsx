@@ -6,11 +6,12 @@ import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import AppearanceSettings from '../components/AppearanceSettings.jsx'
-import SupportMessages from '../components/SupportMessages.jsx'
+import { useNavigate } from 'react-router-dom'
 
 export default function Settings() {
   const { user, logout, completeProfile, refreshAccount } = useAuth()
   const api = useApi()
+  const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
   const isSuperadmin = user?.role === 'superadmin'
 
@@ -247,8 +248,24 @@ export default function Settings() {
       {/* Appearance: theme mode, accent color */}
       <AppearanceSettings />
 
-      {/* Messages to support — not for superadmin, who reads these in the console instead */}
-      {!isSuperadmin && <SupportMessages />}
+      {/* Messages to support — the old embedded widget here called
+          /api/support/threads, an endpoint that no longer exists (the
+          messaging rebuild moved everything to /api/messages/threads);
+          it's been showing "Not Found" ever since. Support conversations
+          now live in the unified Messages page (has its own "Contact
+          Support" button), so this just links there instead of
+          duplicating a whole broken chat UI. */}
+      {!isSuperadmin && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <h3 style={{ marginTop: 0 }}>💬 Messages to Support</h3>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 18px' }}>
+            Leave a message for the platform team — billing questions, bugs, anything you need help with.
+          </div>
+          <button className="btn btn-primary" onClick={() => navigate('/app/messages')}>
+            Go to Messages
+          </button>
+        </div>
+      )}
 
       {/* Sign-up QR code — lets walk-in customers/staff scan and get a live
           account instantly instead of filling in the registration form. */}
