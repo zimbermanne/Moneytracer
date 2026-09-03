@@ -77,6 +77,10 @@ _MIGRATIONS = {
         ("is_pwa", "BOOLEAN", "false"),
         ("connection_type", "VARCHAR(20)", "''"),
     ],
+    "message_threads": [
+        ("unread_by_creator", "BOOLEAN", "false"),
+        ("unread_by_recipient", "BOOLEAN", "true"),
+    ],
 }
 
 # (schema, table) -> list of (column_name, DDL type, default SQL literal or None)

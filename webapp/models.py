@@ -1566,3 +1566,60 @@ class DeviceFingerprint(Base):
 
     user = relationship("User")
     account = relationship("Account")
+
+
+class MessageThread(Base):
+    """A conversation thread between two accounts (Peer-to-Peer) or between
+    a tenant and the platform Superadmin.
+
+    If recipient_account_id is NULL, it is a Support thread with the
+    Superadmin. Otherwise, it is a Peer thread between two businesses.
+    """
+    __tablename__ = "message_threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # The account that started the thread
+    creator_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    # The target account. NULL means "Superadmin Support".
+    recipient_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+
+    subject = Column(String(200), default="")
+    status = Column(String(20), default="open", index=True)  # 'open' | 'closed'
+
+    # Optimization: track unread status per side
+    unread_by_creator = Column(Boolean, default=False)
+    unread_by_recipient = Column(Boolean, default=True)  # new threads start unread for recipient
+
+    last_message_at = Column(DateTime, default=datetime.utcnow, index=True)
+    last_message_preview = Column(String(200), default="")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    creator_account = relationship("Account", foreign_keys=[creator_account_id])
+    recipient_account = relationship("Account", foreign_keys=[recipient_account_id])
+    messages = relationship("Message", back_populates="thread", cascade="all, delete-orphan")
+
+
+class Message(Base):
+    """One message within a MessageThread."""
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(Integer, ForeignKey("message_threads.id"), nullable=False, index=True)
+    sender_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+
+    # If sender_account_id matches thread.creator_account_id, it's from the "creator" side.
+    # Otherwise, it's from the "recipient" side (or superadmin if recipient_account_id is null).
+    is_from_superadmin = Column(Boolean, default=False)
+
+    body = Column(Text, nullable=False)
+
+    # Optional document attachment
+    attachment_type = Column(String(30), nullable=True) # 'invoice', 'quotation', 'receipt'
+    attachment_id = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    thread = relationship("MessageThread", back_populates="messages")
+    sender_user = relationship("User")
+    sender_account = relationship("Account")

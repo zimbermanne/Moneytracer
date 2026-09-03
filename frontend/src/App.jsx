@@ -59,6 +59,7 @@ const GeneralLedger = lazy(() => import('./pages/GeneralLedger.jsx'))
 const Payroll = lazy(() => import('./pages/Payroll.jsx'))
 const Budgets = lazy(() => import('./pages/Budgets.jsx'))
 const GroupLedger = lazy(() => import('./pages/GroupLedger.jsx'))
+const Messages = lazy(() => import('./pages/Messages.jsx'))
 
 function pageTitle(pathname, t) {
   const key = PAGE_TITLE_KEYS[pathname]
@@ -73,6 +74,11 @@ function Layout({ children }) {
   const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   const [reminders, setReminders] = useState([])
+  const [unreadMessages, setUnreadMessages] = useState(0)
+
+  const loadUnreadMessages = () => {
+    api.get('/messages/unread-count').then(data => setUnreadMessages(data.count || 0)).catch(() => {})
+  }
 
   const loadReminders = () => {
     api.get('/reminders/').then(data => {
@@ -107,6 +113,9 @@ function Layout({ children }) {
   useEffect(() => {
     api.get('/accounts/company-info').then(setCompany).catch(() => {})
     loadReminders()
+    loadUnreadMessages()
+    const id = setInterval(loadUnreadMessages, 60000) // check every minute
+    return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -134,6 +143,7 @@ function Layout({ children }) {
         reminders={reminders}
         onAddReminder={addReminder}
         onDismissReminder={dismissReminder}
+        unreadMessages={unreadMessages}
       />
       <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
@@ -156,6 +166,7 @@ function Layout({ children }) {
             reminders={reminders}
             onAddReminder={addReminder}
             onDismissReminder={dismissReminder}
+            unreadMessages={unreadMessages}
           />
         </div>
         {children}
@@ -246,6 +257,7 @@ function PrivateRoutes() {
         <Route path="/bank-loans" element={<BankLoans />} />
         <Route path="/deadlines" element={<Deadlines />} />
         <Route path="/assets" element={<Assets />} />
+        <Route path="/messages" element={<Messages />} />
         <Route path="/personal" element={<Personal />} />
         <Route path="/community/ledger" element={<GroupLedger />} />
         <Route path="*" element={<Navigate to="/app" replace />} />

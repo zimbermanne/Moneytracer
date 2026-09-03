@@ -931,30 +931,54 @@ class SupportMessageOut(BaseModel):
     sender_username: str
     sender_is_superadmin: bool
     body: str
+    attachment_type: Optional[str] = None
+    attachment_id: Optional[int] = None
     created_at: datetime
 
 
 class SupportThreadCreate(BaseModel):
     subject: str = ""
     body: str
+    recipient_account_id: Optional[int] = None  # None = Support
+    attachment_type: Optional[str] = None
+    attachment_id: Optional[int] = None
 
 
-class SupportMessageCreate(BaseModel):
+class MessageCreate(BaseModel):
     body: str
+    attachment_type: Optional[str] = None
+    attachment_id: Optional[int] = None
 
 
-class SupportThreadOut(BaseModel):
+class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    account_id: int
+    thread_id: int
+    sender_username: str
+    sender_account_id: int
+    is_from_superadmin: bool
+    body: str
+    attachment_type: Optional[str] = None
+    attachment_id: Optional[int] = None
+    created_at: datetime
+
+
+class MessageThreadOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    creator_account_id: int
+    recipient_account_id: Optional[int] = None
     subject: str
     status: str
-    unread_by_superadmin: bool
-    unread_by_tenant: bool
+    unread: bool = False  # Set by router based on user perspective
     last_message_at: datetime
     last_message_preview: str
     created_at: datetime
-    messages: List[SupportMessageOut] = []
+    messages: List[MessageOut] = []
+
+    # Partner info
+    partner_name: str = ""
+    is_support: bool = False
 
 
 class SuperadminSupportThreadOut(SupportThreadOut):

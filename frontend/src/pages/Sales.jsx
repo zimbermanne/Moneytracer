@@ -16,6 +16,11 @@ export default function Sales() {
   const [listLoading, setListLoading] = useState(true)
   const [printReceipt, setPrintReceipt] = useState(null)
 
+  const [shareDoc, setShareDoc] = useState(null)
+  const [shareQuery, setShareQuery] = useState('')
+  const [shareResults, setShareResults] = useState([])
+  const [shareSearching, setShareSearching] = useState(false)
+
   const load = () => {
     setListLoading(true)
     api.get('/sales/').then(setSales).catch((e) => setError(e.message)).finally(() => setListLoading(false))
@@ -50,6 +55,32 @@ export default function Sales() {
     })
   }
 
+  const searchShare = (q) => {
+    setShareQuery(q)
+    if (q.length < 3) { setShareResults([]); return }
+    setShareSearching(true)
+    api.get(`/messages/directory?q=${encodeURIComponent(q)}`)
+      .then(setShareResults)
+      .catch(() => {})
+      .finally(() => setShareSearching(false))
+  }
+
+  const doShare = async (business) => {
+    try {
+      await api.post('/messages/threads', {
+        recipient_account_id: business.id,
+        subject: `Shared Receipt: ${shareDoc.receipt_no || ('SALE-'+shareDoc.id)}`,
+        body: `Hello! I am sharing a receipt with you.`,
+        attachment_type: 'receipt',
+        attachment_id: shareDoc.id
+      })
+      alert('Receipt shared successfully!')
+      setShareDoc(null)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   const columns = [
     { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
     { key: 'item_name', header: 'Item' },
@@ -62,8 +93,9 @@ export default function Sales() {
       key: 'actions', header: '', stopRowClick: true,
       render: (r) => (
         <RowActionsMenu items={[
-          { label: 'Print Receipt', onClick: () => openReceipt(r) },
-          { label: 'Delete', onClick: () => remove(r.id), danger: true },
+          { label: 'Print Receipt', icon: '🖨️', onClick: () => openReceipt(r) },
+          { label: 'Share', icon: '✉️', onClick: () => setShareDoc(r) },
+          { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true },
         ]} />
       ),
     },
@@ -115,6 +147,37 @@ export default function Sales() {
           company={account}
           onClose={() => setPrintReceipt(null)}
         />
+      )}
+
+      {shareDoc && (
+        <div className="modal-overlay" onClick={() => setShareDoc(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h2>Share Receipt</h2>
+            <p className="sub">Share receipt <strong>{shareDoc.receipt_no || ('SALE-'+shareDoc.id)}</strong> with another business on Moneytracer.</p>
+            <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
+
+            <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
+              {shareSearching ? <div>Searching...</div> : (
+                shareResults.length === 0 && shareQuery.length >= 3 ? <div>No businesses found.</div> :
+                shareResults.map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => doShare(b)}
+                    style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                    className="hover-bg"
+                  >
+                    <strong>{b.name}</strong>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: 20 }}>
+              <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

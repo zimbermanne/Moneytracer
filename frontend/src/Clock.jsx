@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 function isoWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
@@ -27,11 +28,12 @@ const RANK_LABELS = {
  */
 export default function Clock({
   reminders = [], onAddReminder, onDismissReminder, accountName, accountRank,
-  showClock = true, showAccount = true, showReminders = true,
+  showClock = true, showAccount = true, showReminders = true, unreadMessages = 0,
 }) {
   const [now, setNow] = useState(new Date())
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -55,6 +57,23 @@ export default function Clock({
 
   return (
     <div className="clock-bar clock-bar-wide" title={now.toString()}>
+      <div
+        className="message-alert-segment"
+        onClick={() => navigate('/app/messages')}
+        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}
+      >
+        <span style={{ fontSize: 20 }}>✉️</span>
+        {unreadMessages > 0 && (
+          <span style={{
+            position: 'absolute', top: -4, right: -4, background: 'var(--danger, #f44336)',
+            color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 5px', borderRadius: 10,
+            boxShadow: '0 0 0 2px var(--surface, #fff)'
+          }}>
+            {unreadMessages}
+          </span>
+        )}
+      </div>
+      <div className="clock-divider" />
       {showReminders && (
         <div className="reminders-segment">
           {reminders.length === 0 && !adding && (

@@ -8,9 +8,9 @@ import logoMark from '../assets/logo-mark.png'
 // CSS. Styling/sizing tweaks go in that CSS file, not here.
 export default function MobileTopBar({
   title, onToggle, open, accountName, accountRank,
-  reminders, onAddReminder, onDismissReminder,
+  reminders, onAddReminder, onDismissReminder, unreadMessages,
 }) {
-  const hasInfoRow = accountName || accountRank || (reminders && reminders.length > 0) || onAddReminder
+  const hasInfoRow = accountName || accountRank || (reminders && reminders.length > 0) || onAddReminder || unreadMessages > 0
 
   return (
     <>
@@ -20,7 +20,7 @@ export default function MobileTopBar({
         </button>
         <img src={logoMark} alt="Moneytracer" className="brand-logo" style={{ width: 26, height: 26 }} />
         <div className="mobile-topbar-title">{title}</div>
-        <Clock showAccount={false} showReminders={false} />
+        <Clock showAccount={false} showReminders={false} unreadMessages={unreadMessages} />
       </div>
       {hasInfoRow && (
         <div className="mobile-info-row">
@@ -31,6 +31,7 @@ export default function MobileTopBar({
             reminders={reminders}
             onAddReminder={onAddReminder}
             onDismissReminder={onDismissReminder}
+            unreadMessages={unreadMessages}
           />
         </div>
       )}
