@@ -62,7 +62,7 @@ export default function Clock({
         onClick={() => navigate('/app/messages')}
         style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}
       >
-        <span style={{ fontSize: 20 }}>✉️</span>
+        <img src="/icons/messages.gif" alt="" width={22} height={22} loading="lazy" />
         {unreadMessages > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4, background: 'var(--danger, #f44336)',
