@@ -1302,22 +1302,19 @@ label {
   padding: 6px 10px 10px;
 }
 
-/* Bottom tab bar — hidden by default (desktop), shown under the 768px
-   breakpoint below. Fixed to the viewport bottom with safe-area padding so
-   it clears the home-indicator on notched iPhones instead of sitting under
-   it. */
-/* ── Bottom nav: hidden on desktop, pill-rail on mobile ───────────────────
-   The rail uses a two-tap interaction: first tap expands the pill and
-   reveals the label; second tap on the same pill navigates. Tapping
-   outside collapses all pills. Logic lives in BottomNav.jsx. */
+/* ── Bottom nav: hidden on desktop, fixed tab bar on mobile ───────────────
+   Standard fixed bottom tab bar — icon over label, equal-width columns,
+   direct single-tap navigation. Item list (curated, not the full sidebar)
+   lives in BottomNav.jsx; everything else is one tap away via the "More"
+   button, which opens the existing slide-in drawer (Sidebar.jsx). */
 .bottom-nav {
   display: none;
 }
 
 /* ---- MOBILE: main phone breakpoint (<=768px) --------------------------
    Sidebar -> slide-in drawer, hamburger + .mobile-topbar appear,
-   .desktop-topbar hides, and the .bottom-nav pill-rail appears fixed
-   to the viewport bottom. */
+   .desktop-topbar hides, and .bottom-nav appears fixed to the viewport
+   bottom. */
 @media (max-width: 768px) {
   .sidebar,
   .sidebar.mobile-open {
@@ -1344,148 +1341,75 @@ label {
     z-index: 55;
   }
 
-  /* Hide the rail while the drawer is open so they don't fight */
+  /* Hide the bar while the drawer is open so they don't fight */
   .mobile-backdrop.open ~ .bottom-nav { display: none; }
 
   .app-shell { flex-direction: column; padding: 0; gap: 0; }
 
-  /* Content padding so last table row / form field isn't hidden behind the rail */
+  /* Content padding so last table row / form field isn't hidden behind the bar */
   .main-content {
-    padding-bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
   }
 
-  /* ── Rail shell ── */
+  /* ── Bar shell: fixed, full-width, equal-width flex columns ── */
   .bottom-nav {
-    display: block;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: var(--bottom-nav-height, 64px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    margin: 0 !important;
     z-index: 58;
-    /* Fade the page content up into the rail so it feels floating */
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(to top, var(--surface) 55%, transparent);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
   }
 
-  /* Fade-edge wrapper — soft vignette on left/right so
-     partially-visible pills look intentional, not clipped */
-  .bottom-nav-rail-outer {
-    position: relative;
-  }
-  .bottom-nav-rail-outer::before,
-  .bottom-nav-rail-outer::after {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 22px;
-    pointer-events: none;
-    z-index: 2;
-  }
-  .bottom-nav-rail-outer::before {
-    left: 0;
-    background: linear-gradient(to right, var(--surface), transparent);
-    border-radius: 999px 0 0 999px;
-  }
-  .bottom-nav-rail-outer::after {
-    right: 0;
-    background: linear-gradient(to left, var(--surface), transparent);
-    border-radius: 0 999px 999px 0;
-  }
-
-  /* ── Scrollable pill row ── */
-  .bottom-nav-scroll {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    background: var(--surface-sunken);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 8px;
-  }
-  .bottom-nav-scroll::-webkit-scrollbar { display: none; }
-
-  /* ── Individual pill ── */
+  /* ── Individual tab: equal share of the bar width, icon over label ── */
   .bottom-nav-item {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.55rem;
-    /* Collapsed: icon-only circle */
-    width: 48px;
-    height: 48px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: none;
-    padding: 0 13px;
+    flex: 1 1 0% !important;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px;
+    height: 100%;
+    background: transparent !important;
+    border: none !important;
+    padding: 4px 2px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     color: var(--text-muted);
     font-family: var(--font-body);
-    /* Smooth expand */
-    transition:
-      width .38s cubic-bezier(.22, 1, .36, 1),
-      background .25s ease,
-      box-shadow .25s ease,
-      color .2s ease;
+    transition: color 0.2s ease;
   }
 
-  /* First-tap expanded state */
-  .bottom-nav-item.is-open {
-    width: 152px;
-    background: rgba(255,255,255,0.13);
-    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.22);
-    color: var(--text-dark);
-  }
-
-  /* Active (current route) */
   .bottom-nav-item.active {
-    background: var(--accent-soft);
     color: var(--accent);
   }
-  .bottom-nav-item.active.is-open {
-    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.3);
-  }
 
-  /* ── Icon ── */
   .bottom-nav-icon {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 17px;
+    display: block;
+    font-size: 20px;
     line-height: 1;
   }
 
-  /* ── Label: hidden when collapsed, slides in when expanded ── */
   .bottom-nav-label {
-    opacity: 0;
-    max-width: 0;
-    white-space: nowrap;
-    font-size: 13px;
+    display: block;
+    font-size: 11px;
     font-weight: 600;
-    transform: translateX(-6px);
-    transition:
-      opacity .2s ease,
-      max-width .38s ease,
-      transform .28s ease;
+    line-height: 1.2;
+    max-width: 100%;
     overflow: hidden;
-  }
-  .bottom-nav-item.is-open .bottom-nav-label {
-    opacity: 1;
-    max-width: 110px;
-    transform: translateX(0);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Touch targets: anything tappable should meet the ~44px minimum touch
@@ -3657,13 +3581,7 @@ label {
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 /* ── Bottom nav (mobile pill rail) ── */
-:root:not([data-theme]) .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
-:root:not([data-theme]) .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
-:root:not([data-theme]) .bottom-nav-rail-outer::after { background: linear-gradient(to left,  var(--cream), transparent); }
-:root:not([data-theme]) .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
-:root:not([data-theme]) .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
-:root:not([data-theme]) .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
-:root:not([data-theme]) .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
+:root:not([data-theme]) .bottom-nav { background: var(--surface); }
 /* ── Badges ── */
 :root:not([data-theme]) .badge-paid { background: var(--success-bg); color: var(--success); }
 :root:not([data-theme]) .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
@@ -3808,13 +3726,7 @@ label {
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 /* ── Bottom nav (mobile pill rail) ── */
-:root[data-theme="dark"] .bottom-nav { background: linear-gradient(to top, var(--cream) 55%, transparent); }
-:root[data-theme="dark"] .bottom-nav-rail-outer::before { background: linear-gradient(to right, var(--cream), transparent); }
-:root[data-theme="dark"] .bottom-nav-rail-outer::after { background: linear-gradient(to left,  var(--cream), transparent); }
-:root[data-theme="dark"] .bottom-nav-scroll { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
-:root[data-theme="dark"] .bottom-nav-item { background: rgba(255,255,255,0.05); color: var(--text-muted); }
-:root[data-theme="dark"] .bottom-nav-item.is-open { background: rgba(255,255,255,0.10); color: var(--text-dark); }
-:root[data-theme="dark"] .bottom-nav-item.active { background: var(--accent-soft); color: var(--accent); }
+:root[data-theme="dark"] .bottom-nav { background: var(--surface); }
 /* ── Badges ── */
 :root[data-theme="dark"] .badge-paid { background: var(--success-bg); color: var(--success); }
 :root[data-theme="dark"] .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
