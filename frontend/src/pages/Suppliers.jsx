@@ -332,6 +332,7 @@ export default function Suppliers() {
 
       {showForm && (
         <Modal title={editingId ? 'Edit Supplier' : 'New Supplier'} onClose={() => setShowForm(false)}
+          wide={true}
           footer={<>
             <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
             <button className="btn btn-gold" onClick={submitForm} disabled={saving}>
