@@ -165,15 +165,6 @@ export default function AppearanceSettings() {
         )}
       </div>
 
-      {/* Live preview */}
-      <div style={{ position: 'relative', padding: 24, borderRadius: 16, marginBottom: 16, background: 'linear-gradient(135deg, var(--accent) 0%, var(--info) 100%)' }}>
-        <div className="card" style={{ maxWidth: 260 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Preview</div>
-          <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>Net Profit</div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>This is how your cards will look.</div>
-        </div>
-      </div>
-
       <button className="btn btn-outline" onClick={reset}>Reset to Defaults</button>
     </div>
   )
