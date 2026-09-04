@@ -85,6 +85,16 @@ export default function Documents({ kind }) {
   }
   const addLine = () => setForm({ ...form, items: [...form.items, emptyLine()] })
   const removeLine = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) })
+  // Swaps a line with its neighbor above/below — the order here is exactly
+  // the order items print on the invoice/quotation, so this is how the
+  // user controls that without deleting and re-adding lines.
+  const moveLine = (idx, direction) => {
+    const target = idx + direction
+    if (target < 0 || target >= form.items.length) return
+    const items = [...form.items]
+    ;[items[idx], items[target]] = [items[target], items[idx]]
+    setForm({ ...form, items })
+  }
 
   const openEdit = (doc) => {
     setEditingId(doc.id)
@@ -261,6 +271,7 @@ export default function Documents({ kind }) {
           updateLine={updateLine}
           addLine={addLine}
           removeLine={removeLine}
+          moveLine={moveLine}
           inventoryItems={inventoryItems}
           selectInventoryItem={selectInventoryItem}
           showProfit={showProfit}

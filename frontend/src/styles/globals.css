@@ -2309,7 +2309,7 @@ label {
 
 .invoice-editor-line {
   display: grid;
-  grid-template-columns: 2fr 70px 110px 100px 36px;
+  grid-template-columns: 34px 2fr 70px 110px 100px 36px;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
@@ -2319,7 +2319,35 @@ label {
    account has show_quote_profit on and this is a quotation, never for
    invoices. See Documents.jsx's showProfit prop. */
 .invoice-editor-line-with-profit {
-  grid-template-columns: 2fr 70px 110px 100px 90px 36px;
+  grid-template-columns: 34px 2fr 70px 110px 100px 90px 36px;
+}
+
+.invoice-line-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.invoice-line-reorder-btn {
+  width: 100%;
+  padding: 0;
+  line-height: 1;
+  font-size: 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.invoice-line-reorder-btn:hover:not(:disabled) {
+  background: var(--surface-sunken);
+  color: var(--text-dark);
+}
+
+.invoice-line-reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .invoice-line-item-picker {
@@ -2424,6 +2452,11 @@ label {
   .invoice-editor-form { max-width: 100%; overflow-y: visible; }
   .invoice-editor-preview { border-left: none; border-top: 1px solid var(--border); min-width: 0; }
   .invoice-editor-line { grid-template-columns: 1fr; }
+  /* Two full-width buttons stacked vertically looks wrong once the grid
+     collapses to one column — lay them out side by side instead, sized to
+     content rather than stretching edge to edge. */
+  .invoice-line-reorder { flex-direction: row; width: fit-content; gap: 6px; }
+  .invoice-line-reorder-btn { width: 32px; height: 28px; font-size: 11px; }
 }
 
 /* Phone widths: the form and the full invoice sheet genuinely can't both
