@@ -182,6 +182,7 @@ export default function Creditors() {
         <Modal
           title={editingId ? 'Edit Creditor' : 'Add Creditor'}
           onClose={() => setOpen(false)}
+          wide={true}
           footer={(<>
             <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>

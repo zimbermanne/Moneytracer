@@ -314,6 +314,7 @@ export default function Debtors() {
         <Modal
           title={editingId ? `Edit Debtor — ${form.name || ''}` : 'Add Debtor'}
           onClose={() => setOpen(false)}
+          wide={true}
           footer={(<>
             <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>

@@ -192,6 +192,7 @@ export default function Payroll() {
         <Modal
           title={editingEmpId ? 'Edit Employee' : 'Add Employee'}
           onClose={() => setEmpOpen(false)}
+          wide={true}
           footer={
             <>
               <button className="btn btn-outline" onClick={() => setEmpOpen(false)}>Cancel</button>

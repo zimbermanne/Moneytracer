@@ -243,7 +243,7 @@ export default function GeneralLedger() {
 
       {/* New Journal Entry Modal */}
       {showNewEntry && (
-        <Modal onClose={() => setShowNewEntry(false)} title="New Journal Entry">
+        <Modal onClose={() => setShowNewEntry(false)} title="New Journal Entry" wide={true}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="form-row">
               <label>Date</label>
