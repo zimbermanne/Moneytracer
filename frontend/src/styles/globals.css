@@ -595,45 +595,36 @@ td, .stat-value, input[type="number"] {
 /* ---- Typing Animation for Search Bars ---- */
 .typing-container {
   position: absolute;
-  left: 36px;
+  left: 38px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
   font-size: 14px;
-  color: var(--text-faint);
+  color: #000; /* Force black for visibility */
   display: flex;
   align-items: center;
   white-space: nowrap;
 }
 
 .typing-text {
-  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--accent);
+  width: 0;
+  animation:
+    typing-reveal 4s steps(30, end) infinite,
+    typing-cursor .75s step-end infinite;
 }
 
-.typing-text::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: 100%;
-  background: var(--app-bg-solid, #fff); /* Fallback */
-  border-left: 2px solid var(--accent);
-  animation: typing-swipe 4s steps(30, end) infinite, blinking 1s steps(1, end) infinite;
+@keyframes typing-reveal {
+  0%, 10% { width: 0; }
+  50%, 80% { width: 100%; }
+  90%, 100% { width: 0; }
 }
 
-/* If inside a card, the mask must match the card tint */
-.card .typing-text::after {
-  background: var(--glass-tint);
-  backdrop-filter: blur(10px);
-}
-
-@keyframes typing-swipe {
-  0%, 10% { width: 100%; }
-  50%, 80% { width: 0; }
-  90%, 100% { width: 100%; }
-}
-
-@keyframes blinking {
-  0%, 100% { border-color: transparent; }
+@keyframes typing-cursor {
+  from, to { border-color: transparent }
   50% { border-color: var(--accent); }
 }
 
@@ -656,6 +647,8 @@ td, .stat-value, input[type="number"] {
   background: rgba(255, 255, 255, 0.06) !important;
   border: 1px solid var(--glass-border) !important;
   backdrop-filter: blur(10px);
+  color: #000 !important; /* Force black text color */
+  font-weight: 600;
   transition: all 0.3s var(--ease);
 }
 
@@ -671,8 +664,9 @@ td, .stat-value, input[type="number"] {
   top: 50%;
   transform: translateY(-50%);
   font-size: 16px;
-  opacity: 0.5;
+  opacity: 0.7;
   z-index: 2;
+  filter: grayscale(1) brightness(0); /* Make emoji icon dark/black */
 }
 
 .btn {
