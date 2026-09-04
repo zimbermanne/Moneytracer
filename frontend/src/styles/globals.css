@@ -600,7 +600,7 @@ td, .stat-value, input[type="number"] {
   transform: translateY(-50%);
   pointer-events: none;
   font-size: 14px;
-  color: #000; /* Force black for visibility */
+  color: var(--text-muted); /* Dynamic color for visibility */
   display: flex;
   align-items: center;
   white-space: nowrap;
@@ -644,18 +644,18 @@ td, .stat-value, input[type="number"] {
   height: 42px;
   padding: 8px 12px 8px 40px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--glass-tint) !important;
   border: 1px solid var(--glass-border) !important;
   backdrop-filter: blur(10px);
-  color: #000 !important; /* Force black text color */
-  font-weight: 600;
+  color: var(--text-dark) !important; /* Adaptive text color */
+  font-weight: 500;
   transition: all 0.3s var(--ease);
 }
 
 .search-bar-input:focus {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--glass-tint-hover) !important;
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 4px rgba(193, 95, 60, 0.15) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft) !important;
 }
 
 .search-bar-icon {
@@ -664,90 +664,51 @@ td, .stat-value, input[type="number"] {
   top: 50%;
   transform: translateY(-50%);
   font-size: 16px;
-  opacity: 0.7;
+  opacity: 0.5;
   z-index: 2;
-  filter: grayscale(1) brightness(0); /* Make emoji icon dark/black */
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  font-size: 13.5px;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   background: var(--surface);
   color: var(--text-dark);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  transition: all 0.2s var(--ease);
-  position: relative;
-  overflow: hidden;
+  box-shadow: var(--neu-raised);
+  transition: box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.btn:active { box-shadow: var(--neu-pressed); transform: translateY(1px); }
+
+:root[data-style="classic"] .btn {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-strong);
+}
+:root[data-style="classic"] .btn:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
-.btn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0);
-  transition: background 0.2s ease;
-}
+.btn-primary { background: var(--accent); color: var(--surface); box-shadow: var(--neu-accent-raised); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:active { box-shadow: var(--neu-accent-pressed); }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.btn:hover::after {
-  background: rgba(255,255,255,0.08);
-}
-
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(193, 95, 60, 0.25);
+:root[data-style="classic"] .btn-primary {
+  box-shadow: var(--shadow);
   border: none;
 }
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%; width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.6s var(--ease);
-}
-
-.btn-primary:hover::before {
-  left: 100%;
-}
-
-.btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(193, 95, 60, 0.35);
-}
-
-.btn-outline {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
-  color: var(--text-dark);
-}
-
-.btn-outline:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--accent);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #fff;
-}
+.btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
+.btn-gold:active { box-shadow: var(--neu-pressed); }
+.btn-outline { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
+.btn-outline:hover { background: rgba(255,255,255,0.28); }
+.btn-outline:active { box-shadow: var(--neu-pressed); }
+.btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
+.btn-danger:active { box-shadow: inset 3px 3px 6px rgba(43,38,34,0.25), inset -2px -2px 5px rgba(255,255,255,0.4); }
 
 .btn:disabled {
   opacity: 0.5;
