@@ -246,6 +246,7 @@ export default function Payroll() {
         <Modal
           title="Run Payroll — New Payslip"
           onClose={() => setSlipOpen(false)}
+          wide={true}
           footer={
             <>
               <button className="btn btn-outline" onClick={() => setSlipOpen(false)}>Cancel</button>
