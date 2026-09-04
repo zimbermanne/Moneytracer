@@ -595,84 +595,158 @@ td, .stat-value, input[type="number"] {
 /* ---- Typing Animation for Search Bars ---- */
 .typing-container {
   position: absolute;
-  left: 32px;
+  left: 36px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--text-faint);
   display: flex;
   align-items: center;
-  white-space: nowrap;
+  overflow: hidden;
+  max-width: calc(100% - 60px);
 }
 
 .typing-text {
   position: relative;
-  margin: 0;
+  white-space: nowrap;
+  animation: typing-reveal 4s steps(40, end) infinite;
 }
 
-.typing-mask {
+.typing-text::after {
+  content: '';
   position: absolute;
+  right: -4px;
   top: 0;
-  right: 0;
   bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  animation: typing-cursor 0.8s step-end infinite;
+}
+
+@keyframes typing-reveal {
+  0%, 10% { width: 0; opacity: 1; }
+  70%, 90% { width: 100%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
+
+@keyframes typing-cursor {
+  from, to { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.search-bar-wrap {
+  position: relative;
+  max-width: 400px;
+  flex: 1 1 240px;
+  transition: all 0.3s var(--ease);
+}
+
+.search-bar-wrap:focus-within {
+  max-width: 440px;
+}
+
+.search-bar-input {
   width: 100%;
-  background: var(--cream); /* Matches the background being refracted */
-  border-left: 2px solid var(--accent);
-  animation: typing 4s steps(30, end) forwards, blinking 1s steps(1, end) infinite;
+  height: 42px;
+  padding: 8px 12px 8px 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--glass-border) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s var(--ease);
 }
 
-@keyframes typing {
-  from { width: 100%; }
-  to { width: 0; }
+.search-bar-input:focus {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 4px rgba(193, 95, 60, 0.15) !important;
 }
 
-@keyframes blinking {
-  0%, 100% { border-color: transparent; }
-  50% { border-color: var(--accent); }
+.search-bar-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: 0.5;
+  z-index: 2;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 13px;
-  border-radius: var(--radius-sm);
-  border: none;
-  font-size: 13px;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   background: var(--surface);
   color: var(--text-dark);
-  box-shadow: var(--neu-raised);
-  transition: box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
-}
-.btn:active { box-shadow: var(--neu-pressed); transform: translateY(1px); }
-
-:root[data-style="classic"] .btn {
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-strong);
-}
-:root[data-style="classic"] .btn:active {
-  box-shadow: none;
-  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  transition: all 0.2s var(--ease);
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-primary { background: var(--accent); color: var(--surface); box-shadow: var(--neu-accent-raised); }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-primary:active { box-shadow: var(--neu-accent-pressed); }
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.2s ease;
+}
 
-:root[data-style="classic"] .btn-primary {
-  box-shadow: var(--shadow);
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.btn:hover::after {
+  background: rgba(255,255,255,0.08);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(193, 95, 60, 0.25);
   border: none;
 }
-.btn-gold { background: var(--accent-soft); color: var(--accent-hover); }
-.btn-gold:active { box-shadow: var(--neu-pressed); }
-.btn-outline { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.40); color: var(--text-dark); box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 8px rgba(80,60,40,0.05); }
-.btn-outline:hover { background: rgba(255,255,255,0.28); }
-.btn-outline:active { box-shadow: var(--neu-pressed); }
-.btn-danger { background: var(--danger); color: #fff; box-shadow: 3px 3px 8px rgba(180,69,58,0.35), -3px -3px 8px rgba(255,255,255,0.5); }
-.btn-danger:active { box-shadow: inset 3px 3px 6px rgba(43,38,34,0.25), inset -2px -2px 5px rgba(255,255,255,0.4); }
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(193, 95, 60, 0.35);
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  color: var(--text-dark);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
 .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
 input, select, textarea {
@@ -1324,34 +1398,39 @@ label {
     display: none !important;
   }
 
-  .hamburger { display: none; }
-  .mobile-topbar { display: flex; }
+  .hamburger { display: block; color: #fff; margin-right: 8px; }
+  .mobile-topbar {
+    display: flex;
+    background: rgba(10, 10, 30, 0.8) !important;
+    backdrop-filter: blur(15px);
+    height: 64px;
+    padding: 0 16px;
+  }
 
   .mobile-info-row {
     display: block;
     position: sticky;
-    top: 56px;
+    top: 64px;
     z-index: 49;
+    background: var(--navy);
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
   }
 
   .desktop-topbar { display: none; }
+
+  .mobile-topbar-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
 
   .mobile-backdrop.open {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.45);
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
     z-index: 55;
-  }
-
-  /* Hide the rail while the drawer is open so they don't fight */
-  .mobile-backdrop.open ~ .bottom-nav { display: none; }
-
-  .app-shell { flex-direction: column; padding: 0; gap: 0; }
-
-  /* Content padding so last table row / form field isn't hidden behind the rail */
-  .main-content {
-    padding-bottom: calc(var(--bottom-nav-height, 76px) + env(safe-area-inset-bottom, 0px));
   }
 
   /* ── Rail shell ── */
@@ -1362,131 +1441,47 @@ label {
     right: 0;
     bottom: 0;
     z-index: 58;
-    /* Fade the page content up into the rail so it feels floating */
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(to top, var(--surface) 55%, transparent);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(255,255,255,0.9) 60%, transparent);
+    backdrop-filter: blur(10px);
   }
 
-  /* Fade-edge wrapper — soft vignette on left/right so
-     partially-visible pills look intentional, not clipped */
-  .bottom-nav-rail-outer {
-    position: relative;
-  }
-  .bottom-nav-rail-outer::before,
-  .bottom-nav-rail-outer::after {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 22px;
-    pointer-events: none;
-    z-index: 2;
-  }
-  .bottom-nav-rail-outer::before {
-    left: 0;
-    background: linear-gradient(to right, var(--surface), transparent);
-    border-radius: 999px 0 0 999px;
-  }
-  .bottom-nav-rail-outer::after {
-    right: 0;
-    background: linear-gradient(to left, var(--surface), transparent);
-    border-radius: 0 999px 999px 0;
-  }
-
-  /* ── Scrollable pill row ── */
   .bottom-nav-scroll {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    background: var(--surface-sunken);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 8px;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 6px;
   }
-  .bottom-nav-scroll::-webkit-scrollbar { display: none; }
 
-  /* ── Individual pill ── */
   .bottom-nav-item {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.55rem;
-    /* Collapsed: icon-only circle */
-    width: 48px;
-    height: 48px;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: none;
-    padding: 0 13px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    color: var(--text-muted);
-    font-family: var(--font-body);
-    /* Smooth expand */
-    transition:
-      width .38s cubic-bezier(.22, 1, .36, 1),
-      background .25s ease,
-      box-shadow .25s ease,
-      color .2s ease;
+    height: 44px;
+    background: transparent;
   }
 
-  /* First-tap expanded state */
-  .bottom-nav-item.is-open {
-    width: 152px;
-    background: rgba(255,255,255,0.13);
-    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.22);
-    color: var(--text-dark);
-  }
-
-  /* Active (current route) */
   .bottom-nav-item.active {
     background: var(--accent-soft);
-    color: var(--accent);
-  }
-  .bottom-nav-item.active.is-open {
-    box-shadow: 0 0 22px rgba(var(--accent-rgb, 166,100,50), 0.3);
   }
 
-  /* ── Icon ── */
-  .bottom-nav-icon {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 17px;
-    line-height: 1;
+  .message-alert-segment {
+    transform: scale(0.85);
   }
 
-  /* ── Label: hidden when collapsed, slides in when expanded ── */
-  .bottom-nav-label {
-    opacity: 0;
-    max-width: 0;
-    white-space: nowrap;
-    font-size: 13px;
-    font-weight: 600;
-    transform: translateX(-6px);
-    transition:
-      opacity .2s ease,
-      max-width .38s ease,
-      transform .28s ease;
-    overflow: hidden;
+  .clock-bar {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
   }
-  .bottom-nav-item.is-open .bottom-nav-label {
-    opacity: 1;
-    max-width: 110px;
-    transform: translateX(0);
-  }
+  .clock-bar::before, .clock-bar::after { display: none; }
+
+  .clock-time { font-size: 16px; color: #fff; text-shadow: none; }
+  .clock-date { font-size: 9px; color: rgba(255,255,255,0.7); }
+
+  .page-header { margin-bottom: 16px; }
+  .page-header h1 { font-size: 20px; }
+
+  .btn { padding: 12px 20px; border-radius: 12px; }
+  input, select, textarea { height: 48px; font-size: 16px !important; }
+}
 
   /* Touch targets: anything tappable should meet the ~44px minimum touch
      target size on phones, not just shrink to fit desktop density. */
