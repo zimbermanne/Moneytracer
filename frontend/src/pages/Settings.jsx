@@ -41,20 +41,6 @@ export default function Settings() {
     } catch (e) { setProfileErr(e.message) } finally { setProfileSaving(false) }
   }
 
-  // Sign-up QR code — admins only, lets a business display/print a scannable
-  // shortcut for new users to auto-create an account (POST /auth/quick-signup).
-  const [qrUrl, setQrUrl] = useState(null)
-  const [qrErr, setQrErr] = useState('')
-  useEffect(() => {
-    if (!isAdmin || isSuperadmin) return
-    let objectUrl
-    api.get('/auth/quick-signup/qr')
-      .then((res) => res.blob())
-      .then((blob) => { objectUrl = URL.createObjectURL(blob); setQrUrl(objectUrl) })
-      .catch((e) => setQrErr(e.message))
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [isAdmin, isSuperadmin]) // eslint-disable-line
-
   // Account settings (for regular admins)
   const [account, setAccount] = useState(null)
   const [accountErr, setAccountErr] = useState('')
@@ -264,26 +250,6 @@ export default function Settings() {
           <button className="btn btn-primary" onClick={() => navigate('/app/messages')}>
             Go to Messages
           </button>
-        </div>
-      )}
-
-      {/* Sign-up QR code — lets walk-in customers/staff scan and get a live
-          account instantly instead of filling in the registration form. */}
-      {isAdmin && !isSuperadmin && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <h3 style={{ marginTop: 0 }}>📱 Sign-up QR Code</h3>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-            Print or display this code. Anyone who scans it gets a live Moneytracer account
-            instantly — no form to fill in — and can add their name, email, and business
-            details afterwards from Settings.
-          </div>
-          {qrErr && <div className="error-text">{qrErr}</div>}
-          {qrUrl && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-              <img src={qrUrl} alt="Sign-up QR code" width={200} height={200} style={{ background: '#fff', padding: 8, borderRadius: 8 }} />
-              <a className="btn btn-outline" href={qrUrl} download="moneytracer-quick-signup-qr.png">⬇ Download</a>
-            </div>
-          )}
         </div>
       )}
 

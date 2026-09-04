@@ -243,74 +243,157 @@ export default function PurchaseOrders() {
 
             <div className="invoice-editor-body">
               <div className="invoice-editor-form">
-            <div className="invoice-editor-section-label">Supplier</div>
-            <div className="form-row"><label>Supplier Name *</label>
-              <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
-                list="po-supplier-list" placeholder="Type or pick a known supplier" />
-              <datalist id="po-supplier-list">
-                {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-              </datalist>
-            </div>
-            <div className="form-row"><label>Phone</label>
-              <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} /></div>
-            <div className="form-row"><label>Email</label>
-              <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })}
-                placeholder="For easy PO delivery from the preview screen" /></div>
-            <div className="form-row"><label>Address</label>
-              <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} /></div>
-            <div className="form-row"><label>Supplier TIN</label>
-              <input value={form.supplier_tin} onChange={(e) => setForm({ ...form, supplier_tin: e.target.value })} /></div>
-            <div className="form-row"><label>Supplier VRN</label>
-              <input value={form.supplier_vrn} onChange={(e) => setForm({ ...form, supplier_vrn: e.target.value })} /></div>
-            <div className="form-row"><label>Expected Delivery</label>
-              <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} /></div>
-
-            <div className="invoice-editor-section-label">Line Items</div>
-            {form.items.map((line, idx) => {
-              const isCustom = !line.item_id
-              return (
-                <div key={idx} className="invoice-editor-line">
-                  <div className="invoice-line-item-picker">
-                    <select
-                      className="invoice-line-item-select"
-                      value={line.item_id ?? ''}
-                      onChange={(e) => selectInventoryItem(idx, e.target.value)}
-                    >
-                      <option value="">— Custom / new item (not in inventory) —</option>
-                      {inventoryItems.map((it) => (
-                        <option key={it.id} value={it.id}>
-                          {it.name} ({it.quantity} in stock)
-                        </option>
-                      ))}
-                    </select>
-                    {isCustom && (
-                      <input placeholder="Describe the item" value={line.description}
-                        onChange={(e) => updateLine(idx, 'description', e.target.value)} />
-                    )}
-                  </div>
-                  <input type="number" placeholder="Qty" value={line.quantity}
-                    onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-                  <input type="number" placeholder="Unit Cost" value={line.unit_price}
-                    onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                  <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
-                  <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
+                <div className="invoice-editor-section-label">Supplier</div>
+                <div className="form-row"><label>Supplier Name *</label>
+                  <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
+                    list="po-supplier-list" placeholder="Type or pick a known supplier" />
+                  <datalist id="po-supplier-list">
+                    {suppliers.map((s) => <option key={s.id} value={s.name} />)}
+                  </datalist>
                 </div>
-              )
-            })}
-            <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 20 }}>+ Add Line</button>
+                <div className="form-row"><label>Phone</label>
+                  <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} /></div>
+                <div className="form-row"><label>Email</label>
+                  <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })}
+                    placeholder="For easy PO delivery from the preview screen" /></div>
+                <div className="form-row"><label>Address</label>
+                  <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} /></div>
+                <div className="form-row"><label>Supplier TIN</label>
+                  <input value={form.supplier_tin} onChange={(e) => setForm({ ...form, supplier_tin: e.target.value })} /></div>
+                <div className="form-row"><label>Supplier VRN</label>
+                  <input value={form.supplier_vrn} onChange={(e) => setForm({ ...form, supplier_vrn: e.target.value })} /></div>
+                <div className="form-row"><label>Expected Delivery</label>
+                  <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} /></div>
 
-            <div className="form-row"><label>Tax Rate (%)</label>
-              <input type="number" value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: Number(e.target.value) })} /></div>
-            <div className="form-row"><label>Discount</label>
-              <input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })} /></div>
-            <div className="form-row"><label>Notes</label>
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                <div className="invoice-editor-section-label">Line Items</div>
+                {form.items.map((line, idx) => {
+                  const isCustom = !line.item_id
+                  return (
+                    <div key={idx} className="invoice-editor-line">
+                      <div className="invoice-line-reorder">
+                        <button
+                          type="button"
+                          className="invoice-line-reorder-btn"
+                          onClick={() => moveLine(idx, -1)}
+                          disabled={idx === 0}
+                          aria-label="Move item up"
+                          title="Move up"
+                        >▲</button>
+                        <button
+                          type="button"
+                          className="invoice-line-reorder-btn"
+                          onClick={() => moveLine(idx, 1)}
+                          disabled={idx === form.items.length - 1}
+                          aria-label="Move item down"
+                          title="Move down"
+                        >▼</button>
+                      </div>
+                      <div className="invoice-line-item-picker">
+                        <select
+                          className="invoice-line-item-select"
+                          value={line.item_id ?? ''}
+                          onChange={(e) => selectInventoryItem(idx, e.target.value)}
+                        >
+                          <option value="">— Custom / new item (not in inventory) —</option>
+                          {inventoryItems.map((it) => (
+                            <option key={it.id} value={it.id}>
+                              {it.name} ({it.quantity} in stock)
+                            </option>
+                          ))}
+                        </select>
+                        {isCustom && (
+                          <input placeholder="Describe the item" value={line.description}
+                            onChange={(e) => updateLine(idx, 'description', e.target.value)} />
+                        )}
+                        {!isCustom && !inventoryItems.find(it => String(it.id) === String(line.item_id)) && (
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                            Linked to: {line.description}
+                          </div>
+                        )}
+                      </div>
+                      <input type="number" placeholder="Qty" value={line.quantity}
+                        onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                      <input type="number" placeholder="Unit Cost" value={line.unit_price}
+                        onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
+                      <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
+                      <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
+                    </div>
+                  )
+                })}
+                <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 20 }}>+ Add Line</button>
 
-            <div className="invoice-editor-checkline">
-              <div>Subtotal: {money(subtotal)}</div>
-              <div>Tax: {money(taxAmt)}</div>
-              <div><strong>Total: {money(total)}</strong></div>
-            </div>
+                <div className="form-row"><label>Tax Rate (%)</label>
+                  <input type="number" value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: Number(e.target.value) })} /></div>
+                <div className="form-row"><label>Discount</label>
+                  <input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })} /></div>
+                <div className="form-row"><label>Notes</label>
+                  <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+
+                <div className="invoice-editor-checkline">
+                  <div>Subtotal: {money(subtotal)}</div>
+                  <div>Tax: {money(taxAmt)}</div>
+                  <div><strong>Total: {money(total)}</strong></div>
+                </div>
+              </div>
+
+              <div className="invoice-editor-preview">
+                <div className="invoice-editor-preview-label">Live Preview</div>
+                <div className="doc-sheet doc-sheet-live">
+                  <div className="doc-sheet-head">
+                    <div>
+                      <div className="doc-sheet-company">{company?.name || 'Your Company'}</div>
+                      {company?.address && <div className="doc-sheet-muted">{company.address}</div>}
+                      {company?.email && <div className="doc-sheet-muted">{company.email}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="doc-sheet-title">Purchase Order</div>
+                      <div className="doc-sheet-muted">{editingId ? '(editing)' : '# (assigned on save)'}</div>
+                    </div>
+                  </div>
+
+                  <div className="doc-sheet-meta">
+                    <div>
+                      <div className="doc-sheet-label">Supplier</div>
+                      <div style={{ fontWeight: 600 }}>{form.supplier_name || '—'}</div>
+                      {form.supplier_phone && <div className="doc-sheet-muted">{form.supplier_phone}</div>}
+                      {form.supplier_address && <div className="doc-sheet-muted">{form.supplier_address}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="doc-sheet-label">Date</div>
+                      <div>{new Date().toLocaleDateString()}</div>
+                    </div>
+                  </div>
+
+                  <table className="doc-sheet-items">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th style={{ textAlign: 'right' }}>Qty</th>
+                        <th style={{ textAlign: 'right' }}>Unit Cost</th>
+                        <th style={{ textAlign: 'right' }}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {form.items.filter(l => l.description.trim()).map((line, i) => (
+                        <tr key={i}>
+                          <td>{i + 1}</td>
+                          <td>{line.description}</td>
+                          <td style={{ textAlign: 'right' }}>{line.quantity}</td>
+                          <td style={{ textAlign: 'right' }}>{money(line.unit_price)}</td>
+                          <td style={{ textAlign: 'right' }}>{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="doc-sheet-totals">
+                    <div><span>Subtotal</span><span>{money(subtotal)}</span></div>
+                    {form.tax_rate > 0 && <div><span>Tax ({form.tax_rate}%)</span><span>{money(taxAmt)}</span></div>}
+                    {form.discount > 0 && <div><span>Discount</span><span>-{money(form.discount)}</span></div>}
+                    <div className="doc-sheet-total-row"><span>Total</span><span>{money(total)}</span></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -150,34 +150,35 @@ export default function Sales() {
       )}
 
       {shareDoc && (
-        <div className="modal-overlay" onClick={() => setShareDoc(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h2>Share Receipt</h2>
-            <p className="sub">Share receipt <strong>{shareDoc.receipt_no || ('SALE-'+shareDoc.id)}</strong> with another business on Moneytracer.</p>
-            <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
+        <Modal
+          title="Share Receipt"
+          onClose={() => setShareDoc(null)}
+          wide={true}
+          isDirty={false}
+          footer={(
+            <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
+          )}
+        >
+          <p className="sub">Share receipt <strong>{shareDoc.receipt_no || ('SALE-'+shareDoc.id)}</strong> with another business on Moneytracer.</p>
+          <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
 
-            <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
-              {shareSearching ? <div>Searching...</div> : (
-                shareResults.length === 0 && shareQuery.length >= 3 ? <div>No businesses found.</div> :
-                shareResults.map(b => (
-                  <div
-                    key={b.id}
-                    onClick={() => doShare(b)}
-                    style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                    className="hover-bg"
-                  >
-                    <strong>{b.name}</strong>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="modal-actions" style={{ marginTop: 20 }}>
-              <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
-            </div>
+          <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
+            {shareSearching ? <div>Searching...</div> : (
+              shareResults.length === 0 && shareQuery.length >= 3 ? <div>No businesses found.</div> :
+              shareResults.map(b => (
+                <div
+                  key={b.id}
+                  onClick={() => doShare(b)}
+                  style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                  className="hover-bg"
+                >
+                  <strong>{b.name}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

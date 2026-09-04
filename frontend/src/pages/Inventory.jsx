@@ -162,6 +162,7 @@ export default function Inventory() {
           title="Redundant / Duplicate Items"
           onClose={() => setRedundant(null)}
           isDirty={false}
+          wide={true}
           footer={<button className="btn btn-outline" onClick={() => setRedundant(null)}>Close</button>}
         >
           {redundant.flagged_item_count === 0 ? (

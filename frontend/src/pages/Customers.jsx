@@ -425,6 +425,7 @@ export default function Customers() {
 
       {showForm && (
         <Modal title={editingId ? 'Edit Customer' : 'New Customer'} onClose={() => setShowForm(false)}
+          wide={true}
           footer={<>
             <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
             <button className="btn btn-gold" onClick={submitForm} disabled={saving}>
