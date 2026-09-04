@@ -76,8 +76,21 @@ export default function Expenses() {
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
       {stats && (
         <div className="card-grid">
-          <div className="card metric-card"><div className="label">Total Expenses</div><div className="value">{stats.total_expenses}</div></div>
-          <div className="card metric-card"><div className="label">Total Amount</div><div className="value">TZS {stats.total_amount.toLocaleString()}</div></div>
+          <div className="card metric-card">
+            <div className="label">Operating Expenses</div>
+            <div className="value">TZS {stats.total_amount.toLocaleString()}</div>
+            <div className="sub">{stats.total_expenses} recorded entries</div>
+          </div>
+          <div className="card metric-card">
+            <div className="label">Cost of Goods Sold (COGS)</div>
+            <div className="value">TZS {stats.cogs.toLocaleString()}</div>
+            <div className="sub">Inventory cost from sales</div>
+          </div>
+          <div className="card metric-card" style={{ background: 'var(--surface-sunken)' }}>
+            <div className="label">Total Business Outgoings</div>
+            <div className="value" style={{ color: 'var(--danger)' }}>TZS {stats.total_outgoings.toLocaleString()}</div>
+            <div className="sub">Combined operational + inventory cost</div>
+          </div>
         </div>
       )}
       <div style={{ display: 'flex', marginBottom: 14 }}>

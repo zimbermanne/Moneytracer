@@ -3,10 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, User, RoleEnum, PaymentMethod
+from models import Expense, User, RoleEnum, PaymentMethod, ChartOfAccount, JournalLine, JournalEntry
 from schemas import ExpenseCreate, ExpenseOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
+from sqlalchemy import func
 from ledger import (
     post_expense_entry, find_journal_entry_by_reference, reverse_journal_entry,
     FiscalPeriodLockedError, ensure_default_payment_methods,
@@ -83,17 +84,37 @@ def list_expenses(db: Session = Depends(get_db), current_user: User = Depends(ge
 
 @router.get("/stats/summary")
 def expense_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Expense)
     account_id = get_account_filter(current_user)
-    if account_id is not None:
-        query = query.filter(Expense.account_id == account_id)
-    expenses = query.all()
+    if account_id is None:
+        return {"total_expenses": 0, "total_amount": 0, "cogs": 0, "total_outgoings": 0, "by_category": {}}
+
+    # 1. Operational Expenses
+    expenses = db.query(Expense).filter(Expense.account_id == account_id).all()
     by_category = {}
+    total_op_expenses = 0.0
     for e in expenses:
         by_category[e.category] = by_category.get(e.category, 0) + e.amount
+        total_op_expenses += e.amount
+
+    # 2. Cost of Goods Sold (Account 5000)
+    # Sum up all debits to account 5000 across all journal entries for this tenant.
+    cogs = (
+        db.query(func.sum(JournalLine.debit))
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .join(ChartOfAccount, JournalLine.chart_account_id == ChartOfAccount.id)
+        .filter(
+            ChartOfAccount.code == "5000",
+            ChartOfAccount.account_id == account_id,
+            JournalEntry.is_voided == False,
+        )
+        .scalar()
+    ) or 0.0
+
     return {
         "total_expenses": len(expenses),
-        "total_amount": round(sum(e.amount for e in expenses), 2),
+        "total_amount": round(total_op_expenses, 2),
+        "cogs": round(float(cogs), 2),
+        "total_outgoings": round(total_op_expenses + float(cogs), 2),
         "by_category": {k: round(v, 2) for k, v in by_category.items()},
     }
 
