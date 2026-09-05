@@ -22,7 +22,7 @@ from schemas import (
 )
 from auth import get_current_user, require_manager_up, require_admin
 from activity import log_activity_for_user
-from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods
+from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods, signed_balance
 from routers.invoices import get_account_details
 
 router = APIRouter(prefix="/api/ledgers", tags=["ledgers"])
@@ -656,14 +656,9 @@ def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = D
     account_balances = {}
     for row in balance_rows:
         acc = accounts_by_id.get(row.chart_account_id)
-        total_debit = row.total_debit or 0
-        total_credit = row.total_credit or 0
-        if acc is not None and acc.account_type in (
-            LedgerAccountType.liability, LedgerAccountType.equity, LedgerAccountType.revenue,
-        ):
-            account_balances[row.chart_account_id] = total_credit - total_debit
-        else:
-            account_balances[row.chart_account_id] = total_debit - total_credit
+        if acc is None:
+            continue
+        account_balances[row.chart_account_id] = signed_balance(acc.account_type, row.total_debit, row.total_credit)
 
     # Build nested tree structure. `seen` guards against a corrupted
     # parent_id cycle (e.g. A -> B -> A) recursing forever and taking the
@@ -827,7 +822,17 @@ def list_journal_entries(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Paginated list of journal entries with optional filtering by account and date range."""
+    """Paginated list of journal entries with optional filtering by account and date range.
+
+    When account_id_filter is set, each line also carries a server-computed
+    running_balance (see ledger.signed_balance) so the frontend never has to
+    re-derive the debit/credit sign convention itself — that duplication is
+    exactly how the General Ledger page's balance/sign bug happened (fixed
+    2026-09): the correct rule existed in list_chart_of_accounts but the
+    client-side copy in GeneralLedger.jsx silently drifted out of sync with
+    it. There is now exactly one implementation of the rule, and the
+    frontend only ever displays what this endpoint sends.
+    """
     account_id = get_account_filter(current_user)
     query = db.query(JournalEntry).options(
         selectinload(JournalEntry.lines).selectinload(JournalLine.account)
@@ -841,9 +846,20 @@ def list_journal_entries(
     if end_date is not None:
         query = query.filter(JournalEntry.date <= end_date)
 
-    entries = query.order_by(JournalEntry.date.desc()).all()
+    # Running balance only makes sense accumulated in true chronological
+    # order (oldest first) — fetch that way regardless of display order,
+    # then reverse for the newest-first response the frontend expects.
+    entries = query.order_by(JournalEntry.date.asc(), JournalEntry.id.asc()).all()
+
+    filtered_account_type = None
+    if account_id_filter is not None:
+        filtered_account = db.query(ChartOfAccount).filter(ChartOfAccount.id == account_id_filter).first()
+        if filtered_account is not None:
+            filtered_account_type = filtered_account.account_type
 
     # Build response with lines and running balance
+    running_total_debit = 0.0
+    running_total_credit = 0.0
     result = []
     for entry in entries:
         lines = []
@@ -862,6 +878,11 @@ def list_journal_entries(
             # line.account can be None if the chart-of-accounts row it points
             # at was ever deleted — without this guard, `.code`/`.name` on
             # None raises AttributeError and takes the whole endpoint down.
+            running_balance = None
+            if account_id_filter is not None and filtered_account_type is not None:
+                running_total_debit += line.debit or 0
+                running_total_credit += line.credit or 0
+                running_balance = signed_balance(filtered_account_type, running_total_debit, running_total_credit)
             lines.append(JournalLineOut(
                 id=line.id,
                 chart_account_id=line.chart_account_id,
@@ -870,6 +891,7 @@ def list_journal_entries(
                 debit=line.debit,
                 credit=line.credit,
                 description=line.description,
+                running_balance=running_balance,
             ))
         result.append(JournalEntryOut(
             id=entry.id,
@@ -884,6 +906,9 @@ def list_journal_entries(
             reversed_entry_id=entry.reversed_entry_id,
             lines=lines,
         ))
+    # Reverse back to newest-first for display, now that running_balance was
+    # accumulated in the correct chronological order above.
+    result.reverse()
     return result
 
 

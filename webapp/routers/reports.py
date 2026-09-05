@@ -15,6 +15,7 @@ from models import (
     ChartOfAccount, JournalEntry, JournalLine,
 )
 from auth import get_current_user
+from ledger import signed_balance
 from activity import log_activity, log_activity_for_user
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -366,12 +367,11 @@ def _ledger_account_balances(db: Session, account_id, start: datetime = None, en
         total_debit = round(total_debit or 0.0, 2)
         total_credit = round(total_credit or 0.0, 2)
         # Normal balance side depends on account type: assets/expenses are
-        # debit-normal, liabilities/equity/revenue are credit-normal.
+        # debit-normal, liabilities/equity/revenue are credit-normal — see
+        # ledger.signed_balance, the single shared implementation of this
+        # rule (previously duplicated here and in routers/ledgers.py).
         type_value = acc_type.value if hasattr(acc_type, "value") else acc_type
-        if type_value in ("asset", "expense"):
-            balance = round(total_debit - total_credit, 2)
-        else:
-            balance = round(total_credit - total_debit, 2)
+        balance = signed_balance(acc_type, total_debit, total_credit)
         rows.append({
             "account_id": acc_id,
             "code": code,

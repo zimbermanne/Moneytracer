@@ -1638,6 +1638,13 @@ class JournalLineOut(BaseModel):
     debit: float
     credit: float
     description: Optional[str] = None
+    # Cumulative signed balance for this account as of this line, computed
+    # server-side (see ledger.signed_balance) — only populated when the
+    # request filtered to a single account_id_filter, where "running
+    # balance" is a meaningful concept. Null in the unfiltered/multi-account
+    # view, where the frontend shows a plain chronological journal instead
+    # of pretending to have one true "balance" across unrelated accounts.
+    running_balance: Optional[float] = None
 
 
 class JournalEntryOut(BaseModel):

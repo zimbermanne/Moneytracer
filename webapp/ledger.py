@@ -166,6 +166,26 @@ def ensure_default_payment_methods(db: Session, account_id: int) -> list:
     return created
 
 
+def signed_balance(account_type: LedgerAccountType, total_debit: float, total_credit: float) -> float:
+    """The one place that decides which side of debit/credit counts as
+    'positive' for a given account type — asset/expense accounts carry a
+    normal DEBIT balance, liability/equity/revenue accounts carry a normal
+    CREDIT balance. Getting this backwards silently flips the sign of every
+    balance for exactly those three account types (Debtors, AP, Revenue,
+    Owner's Equity, VAT Payable, ...) while looking fine for Cash/Inventory/
+    Expenses, which is exactly the shape of bug this was written to prevent
+    happening a second/third time — see the 2026-09 General Ledger fix.
+
+    Previously duplicated (and once out of sync) across list_chart_of_accounts
+    and list_journal_entries in routers/ledgers.py, and _ledger_account_balances
+    in routers/reports.py. All three now call this instead of re-deriving it.
+    """
+    type_value = account_type.value if hasattr(account_type, "value") else account_type
+    if type_value in ("liability", "equity", "revenue"):
+        return round((total_credit or 0) - (total_debit or 0), 2)
+    return round((total_debit or 0) - (total_credit or 0), 2)
+
+
 def post_journal_entry(db: Session, account_id: int, description: str, lines: list,
                         reference: str = None, created_by: str = None, date: datetime = None) -> JournalEntry:
     """lines: list of (chart_account_code, debit, credit) tuples.

@@ -138,13 +138,17 @@ export default function GeneralLedger() {
     }
   }, [])
 
-  // Compute running balance for display
-  const entriesWithBalance = entries.reduce((acc, entry, idx) => {
-    const entryNet = entry.lines.reduce((sum, line) => sum + line.debit - line.credit, 0)
-    const prevBalance = idx > 0 ? acc[idx - 1].runningBalance : 0
-    acc.push({ ...entry, runningBalance: prevBalance + entryNet })
-    return acc
-  }, [])
+  // Running balance now comes straight from the server (see
+  // routers/ledgers.list_journal_entries -> ledger.signed_balance) — it
+  // already applies the correct debit/credit sign convention per account
+  // type. The frontend used to recompute this itself as a flat
+  // `debit - credit` across every line, which was wrong two ways at once:
+  // (1) with no account selected, it summed every account touched by a
+  // compound entry together, which is meaningless (a balanced entry always
+  // nets to zero that way); (2) even with one account selected, plain
+  // debit-minus-credit is the wrong sign for Liability/Equity/Revenue
+  // accounts. Never re-derive this here — display whatever the server sent.
+  const hasAccountFilter = !!accountIdFilter
 
   return (
     <div className="page">
@@ -193,6 +197,15 @@ export default function GeneralLedger() {
       {error && <div className="error-text">{error}</div>}
       {loading && <div style={{ color: 'var(--text-muted)' }}>Loading…</div>}
 
+      {!loading && !error && !hasAccountFilter && (
+        <div className="card" style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+          Showing every entry across all accounts as a plain chronological journal — a
+          journal entry always has debits = credits by definition, so summing that across
+          multiple accounts wouldn't be a meaningful balance. <strong>Select an account above</strong> to
+          see its own debit/credit history and running balance.
+        </div>
+      )}
+
       {!loading && !error && (
         <div className="card">
           <div style={{ overflowX: 'auto' }}>
@@ -202,20 +215,31 @@ export default function GeneralLedger() {
                   <th style={{ padding: '8px 12px' }}>Date</th>
                   <th style={{ padding: '8px 12px' }}>Description</th>
                   <th style={{ padding: '8px 12px' }}>Reference</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Debit</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Credit</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Balance</th>
+                  {hasAccountFilter ? (
+                    <>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Debit</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Credit</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right' }}>Balance</th>
+                    </>
+                  ) : (
+                    <th style={{ padding: '8px 12px', textAlign: 'right' }}>Accounts touched</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {entriesWithBalance.length === 0 ? (
+                {entries.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <td colSpan={hasAccountFilter ? 6 : 4} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No journal entries found
                     </td>
                   </tr>
                 ) : (
-                  entriesWithBalance.map((entry) => (
+                  entries.map((entry) => {
+                    // Filtered view: exactly one line belongs to this entry
+                    // for the selected account (server already filtered
+                    // lines down to it — see list_journal_entries).
+                    const line = hasAccountFilter ? entry.lines[0] : null
+                    return (
                     <tr key={entry.id} style={{ borderTop: '1px solid #f0ece1' }}>
                       <td style={{ padding: '8px 12px' }}>{new Date(entry.date).toLocaleDateString()}</td>
                       <td style={{ padding: '8px 12px' }}>
@@ -223,17 +247,25 @@ export default function GeneralLedger() {
                         {entry.is_reversal && <span className="badge badge-unpaid" style={{ marginLeft: 8 }}>Reversal</span>}
                       </td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{entry.reference || '—'}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {entry.lines.reduce((sum, l) => sum + l.debit, 0) > 0 ? money(entry.lines.reduce((sum, l) => sum + l.debit, 0)) : '—'}
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {entry.lines.reduce((sum, l) => sum + l.credit, 0) > 0 ? money(entry.lines.reduce((sum, l) => sum + l.credit, 0)) : '—'}
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>
-                        {money(entry.runningBalance)}
-                      </td>
+                      {hasAccountFilter ? (
+                        <>
+                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                            {line?.debit > 0 ? money(line.debit) : '—'}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                            {line?.credit > 0 ? money(line.credit) : '—'}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>
+                            {line?.running_balance != null ? money(line.running_balance) : '—'}
+                          </td>
+                        </>
+                      ) : (
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                          {entry.lines.map((l) => l.account_code).join(', ')}
+                        </td>
+                      )}
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
