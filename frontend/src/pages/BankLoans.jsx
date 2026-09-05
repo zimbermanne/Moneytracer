@@ -284,7 +284,7 @@ export default function BankLoans() {
           {
             label: t('common.delete'),
             icon: '✕',
-            onClick: () => { if(confirm(t('bankLoans.confirmDelete'))) remove(r.id) },
+            onClick: () => { if(window.confirm(t('bankLoans.confirmDelete'))) remove(r.id) },
             danger: true
           },
         ]} />
@@ -471,28 +471,64 @@ export default function BankLoans() {
             </table>
           )}
 
-          {detail.status === 'active' && detail.total_balance > 0 && (
-            <>
-              <div className="invoice-editor-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {t('bankLoans.roadmap')}
-                <button className="btn btn-outline" onClick={loadRoadmap} disabled={roadmapLoading}>
-                  {roadmapLoading ? t('common.loadingEllipsis') : t('bankLoans.viewRoadmap')}
-                </button>
-              </div>
-              {roadmap && roadmap.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={roadmap.map((r) => ({ period: r.period, balance: r.balance }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v} />
-                      <Tooltip formatter={(v) => money(v)} />
-                      <Line type="monotone" dataKey="balance" stroke="var(--accent)" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+          <div className="invoice-editor-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {t('bankLoans.roadmap')}
+            <button className="btn btn-outline btn-sm" onClick={loadRoadmap} disabled={roadmapLoading}>
+              {roadmapLoading ? t('common.loadingEllipsis') : roadmap ? 'Refresh Roadmap' : t('bankLoans.viewRoadmap')}
+            </button>
+          </div>
+
+          {roadmap && roadmap.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                <div className="card" style={{ flex: 1, padding: 10, background: 'var(--surface-sunken)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remaining Interest</div>
+                  <div style={{ fontWeight: 700, color: 'var(--danger)' }}>
+                    {money(roadmap.reduce((sum, r) => sum + r.interest, 0))}
+                  </div>
                 </div>
-              )}
-            </>
+                <div className="card" style={{ flex: 1, padding: 10, background: 'var(--surface-sunken)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total to Pay</div>
+                  <div style={{ fontWeight: 700 }}>
+                    {money(roadmap.reduce((sum, r) => sum + r.payment, 0))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={roadmap.map((r) => ({ period: r.period, balance: r.balance }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v} />
+                    <Tooltip formatter={(v) => money(v)} />
+                    <Line type="monotone" dataKey="balance" stroke="var(--accent)" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div style={{ maxHeight: 250, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                <table className="doc-sheet-items" style={{ fontSize: 12 }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--surface)' }}><tr>
+                    <th>#</th><th>{t('common.date')}</th>
+                    <th>{t('common.amount')}</th><th>{t('bankLoans.interest')}</th>
+                    <th>{t('bankLoans.principalPortion')}</th><th>{t('bankLoans.balanceAfter')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {roadmap.map((r) => (
+                      <tr key={r.period}>
+                        <td>{r.period}</td>
+                        <td>{new Date(r.date).toLocaleDateString()}</td>
+                        <td>{money(r.payment)}</td>
+                        <td>{money(r.interest)}</td>
+                        <td>{money(r.principal)}</td>
+                        <td>{money(r.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </Modal>
       )}

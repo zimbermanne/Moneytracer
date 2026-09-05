@@ -424,9 +424,15 @@ def post_loan_disbursement_entry(db: Session, account_id: int, loan, created_by:
 
 
 def post_loan_payment_entry(db: Session, account_id: int, loan, payment, created_by: str = None):
-    """A repayment reduces what's owed (principal portion) and recognizes
-    the cost of borrowing (interest portion) — both come out of the
-    selected funding account."""
+    """A repayment reduces what's owed (principal portion) and settles
+    interest that has been accrued (interest portion).
+
+    Since the system runs a background job (accrue_loan_interest) to post
+    interest to the Interest Payable (2210) liability account, the interest
+    portion of a payment MUST debit that payable account, not Interest
+    Expense (5200). If it debited expense directly, the interest would be
+    double-counted (once at accrual, once at payment).
+    """
     payment_method = getattr(payment, "payment_method", None)
     funding_account_code = (
         payment_method.chart_account.code
@@ -436,7 +442,7 @@ def post_loan_payment_entry(db: Session, account_id: int, loan, payment, created
 
     lines = [
         ("2200", payment.principal_portion, 0),  # reduces the liability
-        ("5200", payment.interest_portion, 0),   # interest expense
+        ("2210", payment.interest_portion, 0),   # settles the accrued interest payable
         (funding_account_code, 0, payment.amount),  # cash/bank goes out
     ]
     return post_journal_entry(
