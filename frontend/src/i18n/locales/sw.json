@@ -70,7 +70,9 @@
     "debtorsGroup": "Wadaiwa",
     "creditorsGroup": "Wadai",
     "accountingReportsGroup": "Uhasibu na Ripoti",
-    "expensesGroup": "Daftari la Matumizi"
+    "expensesGroup": "Daftari la Matumizi",
+    "debtorsAging": "Umri wa Madeni ya Wadaiwa",
+    "creditorsAging": "Umri wa Madeni ya Wadai"
   },
   "auth": {
     "login": "Ingia",

@@ -228,6 +228,53 @@ function LedgerReport({ data, listKey, title }) {
   )
 }
 
+function AgingReport({ data, title }) {
+  const buckets = data.buckets || {}
+  const bucketLabels = {
+    current_0_30: '0–30 days',
+    days_31_60: '31–60 days',
+    days_61_90: '61–90 days',
+    over_90: 'Over 90 days (at risk)',
+  }
+  return (
+    <>
+      <div className="card-grid">
+        <div className="card home-kpi-card metric-card">
+          <div className="label">Total Outstanding</div>
+          <div className="value">{money(data.total_outstanding)}</div>
+        </div>
+        {Object.entries(bucketLabels).map(([key, label]) => (
+          <div className="card home-kpi-card metric-card" key={key}>
+            <div className="label">{label}</div>
+            <div className="value" style={key === 'over_90' ? { color: 'var(--danger)' } : undefined}>
+              {money((data.summary || {})[key])}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {Object.entries(bucketLabels).map(([key, label]) => {
+        const rows = buckets[key] || []
+        if (rows.length === 0) return null
+        return (
+          <Accordion key={key} title={`${label} — ${title} (${rows.length})`} defaultOpen={key === 'over_90'}>
+            <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
+              {rows.map((r, idx) => (
+                <Row
+                  key={idx}
+                  left={`${r.name}${r.phone ? ` (${r.phone})` : ''} — ${r.age_days}d`}
+                  right={money(r.balance)}
+                  color={key === 'over_90' ? 'var(--danger)' : undefined}
+                />
+              ))}
+            </div>
+          </Accordion>
+        )
+      })}
+    </>
+  )
+}
+
 function InventoryValuation({ data }) {
   return (
     <>
@@ -406,7 +453,9 @@ const VIEW_CONFIG = {
   'financial-summary': { title: 'Financial Summary', endpoint: '/reports/financial-summary', dateFilter: true, Component: FinancialSummary },
   'cashflow': { title: 'Cash Flow', endpoint: '/reports/cashflow?months=12', dateFilter: false, Component: CashFlow },
   'debtors': { title: 'Debtors Report', endpoint: '/reports/debtors', dateFilter: false, Component: (p) => <LedgerReport {...p} listKey="top_debtors" title="Top Debtors" /> },
+  'debtors-aging': { title: 'Debtors Aging', endpoint: '/reports/debtors-aging', dateFilter: false, Component: (p) => <AgingReport {...p} title="Debtors" /> },
   'creditors': { title: 'Creditors Report', endpoint: '/reports/creditors', dateFilter: false, Component: (p) => <LedgerReport {...p} listKey="top_creditors" title="Top Creditors" /> },
+  'creditors-aging': { title: 'Creditors Aging', endpoint: '/reports/creditors-aging', dateFilter: false, Component: (p) => <AgingReport {...p} title="Creditors" /> },
   'inventory-valuation': { title: 'Inventory Valuation', endpoint: '/reports/inventory-valuation', dateFilter: false, Component: InventoryValuation },
   'trial-balance': { title: 'Trial Balance', endpoint: '/reports/trial-balance', dateFilter: true, Component: TrialBalance },
   'balance-sheet': { title: 'Balance Sheet', endpoint: '/reports/balance-sheet', dateFilter: true, Component: BalanceSheet },

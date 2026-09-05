@@ -81,7 +81,9 @@
     "debtorsGroup": "Debtors",
     "creditorsGroup": "Creditors",
     "accountingReportsGroup": "Accounting & Reports",
-    "expensesGroup": "Expenses Ledger"
+    "expensesGroup": "Expenses Ledger",
+    "debtorsAging": "Debtors Aging",
+    "creditorsAging": "Creditors Aging"
   },
   "auth": {
     "login": "Login",

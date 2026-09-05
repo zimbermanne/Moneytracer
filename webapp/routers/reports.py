@@ -256,6 +256,39 @@ def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(g
     }
 
 
+@router.get("/debtors-aging")
+def debtors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Aging: how overdue is each debtor's balance, bucketed by days since
+    the debt was recorded (created_at) since there's no separate due_date
+    field on Debtor — the standard fallback when credit terms aren't
+    tracked explicitly. Only rows with a balance still outstanding count."""
+    account_id = get_account_filter(current_user)
+    debtors = _scoped(db.query(Debtor), Debtor, account_id).all()
+    now = datetime.utcnow()
+    buckets = {"current_0_30": [], "days_31_60": [], "days_61_90": [], "over_90": []}
+    for d in debtors:
+        balance = round(d.total_owed - d.amount_paid, 2)
+        if balance <= 0:
+            continue
+        age_days = (now - d.created_at).days if d.created_at else 0
+        row = {"name": d.name, "phone": d.phone, "balance": balance, "age_days": age_days}
+        if age_days <= 30:
+            buckets["current_0_30"].append(row)
+        elif age_days <= 60:
+            buckets["days_31_60"].append(row)
+        elif age_days <= 90:
+            buckets["days_61_90"].append(row)
+        else:
+            buckets["over_90"].append(row)
+    summary = {k: round(sum(r["balance"] for r in v), 2) for k, v in buckets.items()}
+    return {
+        "as_of": now.isoformat(),
+        "summary": summary,
+        "total_outstanding": round(sum(summary.values()), 2),
+        "buckets": buckets,
+    }
+
+
 @router.get("/creditors")
 def creditors_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     account_id = get_account_filter(current_user)
@@ -273,6 +306,37 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
         "count": len(creditors),
         "by_status": dict(by_status),
         "top_creditors": top,
+    }
+
+
+@router.get("/creditors-aging")
+def creditors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Mirrors debtors_aging_report — same created_at-based bucketing,
+    same fallback reasoning (no separate due_date on Creditor either)."""
+    account_id = get_account_filter(current_user)
+    creditors = _scoped(db.query(Creditor), Creditor, account_id).all()
+    now = datetime.utcnow()
+    buckets = {"current_0_30": [], "days_31_60": [], "days_61_90": [], "over_90": []}
+    for c in creditors:
+        balance = round(c.total_owed - c.amount_paid, 2)
+        if balance <= 0:
+            continue
+        age_days = (now - c.created_at).days if c.created_at else 0
+        row = {"name": c.name, "phone": c.phone, "balance": balance, "age_days": age_days}
+        if age_days <= 30:
+            buckets["current_0_30"].append(row)
+        elif age_days <= 60:
+            buckets["days_31_60"].append(row)
+        elif age_days <= 90:
+            buckets["days_61_90"].append(row)
+        else:
+            buckets["over_90"].append(row)
+    summary = {k: round(sum(r["balance"] for r in v), 2) for k, v in buckets.items()}
+    return {
+        "as_of": now.isoformat(),
+        "summary": summary,
+        "total_outstanding": round(sum(summary.values()), 2),
+        "buckets": buckets,
     }
 
 
