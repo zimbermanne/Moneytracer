@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
@@ -30,6 +31,7 @@ const emptyRecForm = () => ({
 
 export default function Expenses() {
   const api = useApi()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager'
 
@@ -113,7 +115,7 @@ export default function Expenses() {
 
   const openEdit = (e) => {
     if (e.type !== 'expense') {
-      window.location.hash = '#/app/purchases'
+      navigate('/app/purchases')
       return
     }
     setEditingId(e.real_id)
@@ -211,7 +213,7 @@ export default function Expenses() {
         <RowActionsMenu items={[
           { label: 'Edit', onClick: () => openEdit(r), hidden: r.type !== 'expense' },
           { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin || r.type !== 'expense' },
-          { label: 'View in Purchases', onClick: () => window.location.hash = '#/app/purchases', hidden: r.type !== 'purchase' }
+          { label: 'View in Purchases', onClick: () => navigate('/app/purchases'), hidden: r.type !== 'purchase' }
         ]} />
       )
     }
