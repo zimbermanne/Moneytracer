@@ -231,7 +231,12 @@ export default function BankLoans() {
         <RowActionsMenu items={[
           { label: t('common.view'), icon: '👁', onClick: () => openDetail(r) },
           { label: t('common.edit'), icon: '✎', onClick: () => openEdit(r), hidden: r.payments?.length > 0 },
-          { label: t('common.delete'), icon: '✕', onClick: () => remove(r), danger: true, hidden: r.payments?.length > 0 },
+          {
+            label: t('common.delete'),
+            icon: '✕',
+            onClick: () => { if(confirm(t('bankLoans.confirmDelete'))) remove(r.id) },
+            danger: true
+          },
         ]} />
       ),
     },
