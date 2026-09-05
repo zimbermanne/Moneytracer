@@ -204,7 +204,14 @@ export default function Inventory() {
         >
           <div className="form-row">
             <label>Name</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. PPR Pipe - 3/4\""
+            />
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              <strong>Standard Format:</strong> [Category] [Item Name] - [Size] (e.g., PPR Pipe - 1/2")
+            </div>
           </div>
           <div className="form-row">
             <label>SKU</label>

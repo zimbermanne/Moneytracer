@@ -51,6 +51,13 @@ def _decrement_stock(db: Session, item: InventoryItem, qty: float):
     item.quantity -= qty
 
 
+def _normalize_customer_name(name: Optional[str]) -> str:
+    """Standardize one-off cash sales strictly to 'Walk-in'."""
+    clean = (name or "").strip()
+    if not clean or clean.lower() in ("walk-in", "walkin", "cash"):
+        return "Walk-in"
+    return clean
+
 @router.post("/", response_model=SaleOut)
 def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
                  current_user: User = Depends(get_current_user)):
@@ -71,8 +78,17 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
         unit_price = payload.unit_price if payload.unit_price is not None else item.selling_price
         item_name = item.name
 
+    if unit_price <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sale total cannot be zero. Items must have a positive unit price."
+        )
+
     payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
     is_credit_sale = (payment_method.is_credit if payment_method else payload.payment_mode == PaymentMode.credit)
+
+    # Standardize customer name
+    customer_name = _normalize_customer_name(payload.customer_name)
 
     total = unit_price * payload.quantity
     sale = Sale(
@@ -85,7 +101,7 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
         total=total,
         payment_mode=payload.payment_mode,
         payment_method_id=payment_method.id if payment_method else None,
-        customer_name=payload.customer_name or "Walk-in",
+        customer_name=customer_name,
         sold_by=current_user.username,
         receipt_no=f"RCT-{uuid.uuid4().hex[:8].upper()}",
     )
@@ -94,7 +110,7 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
     if is_credit_sale:
         debtor = Debtor(
             account_id=account_id,
-            name=payload.customer_name or "Walk-in",
+            name=customer_name,
             total_owed=total,
             status=LedgerStatus.unpaid,
             note=f"Credit sale: {item_name}",
@@ -141,6 +157,9 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
     payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
     is_credit_sale = (payment_method.is_credit if payment_method else payload.payment_mode == PaymentMode.credit)
 
+    # Standardize customer name
+    customer_name = _normalize_customer_name(payload.customer_name)
+
     receipt_no = f"RCT-{uuid.uuid4().hex[:8].upper()}"
     sales = []
     grand_total = 0.0
@@ -153,8 +172,15 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
             price = line.unit_price
         else:
             price = item.selling_price
-        if price < 0:
-            raise HTTPException(status_code=400, detail=f"Price for {item.name} cannot be negative")
+        
+        if price <= 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Item '{item.name}' has an invalid price (TZS {price}). "
+                       "Zero-value sales are not permitted. Please enter a valid price or "
+                       "record this as a promotional expense in the Expenses module."
+            )
+
         total = price * line.quantity
         grand_total += total
         sale = Sale(
@@ -167,7 +193,7 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
             total=total,
             payment_mode=payload.payment_mode,
             payment_method_id=payment_method.id if payment_method else None,
-            customer_name=payload.customer_name or "Walk-in",
+            customer_name=customer_name,
             sold_by=current_user.username,
             receipt_no=receipt_no,
         )
@@ -177,7 +203,7 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
     if is_credit_sale:
         debtor = Debtor(
             account_id=account_id,
-            name=payload.customer_name or "Walk-in",
+            name=customer_name,
             phone=payload.customer_phone or "",
             total_owed=grand_total,
             status=LedgerStatus.unpaid,

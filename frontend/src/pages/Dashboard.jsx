@@ -212,6 +212,43 @@ function LoansAndDeadlinesWidget({ loans, deadlines }) {
   )
 }
 
+function AuditWidget() {
+  const api = useApi()
+  const navigate = useNavigate()
+  const [auditStats, setAuditStats] = useState(null)
+
+  useEffect(() => {
+    // Simple frontend-side audit logic or a dedicated backend call
+    api.get('/sales/').then(sales => {
+      const zeroSales = sales.filter(s => s.total === 0).length
+      const informalNames = sales.filter(s => s.customer_name && s.customer_name.length < 3 && s.customer_name.toLowerCase() !== 'walk-in').length
+      setAuditStats({ zeroSales, informalNames })
+    }).catch(() => {})
+  }, [api])
+
+  if (!auditStats || (auditStats.zeroSales === 0 && auditStats.informalNames === 0)) return null
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid var(--warning)' }}>
+      <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>🕵️ Audit Recommendations</span>
+        <span className="badge badge-partial">WEEKLY CHECK</span>
+      </h3>
+      <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {auditStats.zeroSales > 0 && (
+          <div>⚠️ Found <strong>{auditStats.zeroSales}</strong> sales with zero value. This distorts revenue reports.</div>
+        )}
+        {auditStats.informalNames > 0 && (
+          <div>📋 Found <strong>{auditStats.informalNames}</strong> informal customer entries. Clean these up to ensure collection accuracy.</div>
+        )}
+        <button className="btn btn-outline btn-sm" onClick={() => navigate('/app/activity')} style={{ width: 'fit-content' }}>
+          View Activity Logs
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function BusinessDashboard() {
   const api = useApi()
   const navigate = useNavigate()
@@ -287,6 +324,7 @@ function BusinessDashboard() {
 
       {error && <div className="error-text">{error}</div>}
 
+      <AuditWidget />
       <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
 
       {lowStock.length > 0 && (

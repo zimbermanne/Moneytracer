@@ -141,6 +141,14 @@ export default function POS() {
 
   const checkout = async () => {
     if (cart.length === 0) return
+
+    // 1. Audit Guard: Eliminate Zero-Value Sales
+    const zeroPriceItems = cart.filter(c => c.price <= 0)
+    if (zeroPriceItems.length > 0) {
+      setError(`Cannot checkout: ${zeroPriceItems[0].name} has a price of 0. Zero-value sales throw off financial reports. If this is a giveaway, record it as a Promotional Expense in the Expenses module instead.`)
+      return
+    }
+
     setBusy(true)
     setError('')
     try {
@@ -286,6 +294,21 @@ export default function POS() {
                     ))}
                   </select>
                 </div>
+                {isCreditSale && (
+                  <div style={{
+                    padding: 10,
+                    background: 'rgba(193, 95, 60, 0.08)',
+                    borderLeft: '3px solid var(--accent)',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    marginBottom: 14,
+                    lineHeight: 1.4
+                  }}>
+                    <strong>Tip:</strong> For regular business-to-business credit, consider using the
+                    <a href="/app/invoices" style={{ color: 'var(--accent)', fontWeight: 700, marginLeft: 4 }}>Invoices</a>
+                    module to track aging and formal collection.
+                  </div>
+                )}
                 {isCreditSale && (
                   <div className="form-row">
                     <label>Customer phone</label>
