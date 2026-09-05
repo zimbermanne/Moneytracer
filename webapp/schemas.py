@@ -642,11 +642,21 @@ class BankLoanCreate(BaseModel):
 
 class BankLoanUpdate(BaseModel):
     lender_name: Optional[str] = None
+    principal: Optional[float] = None
+    interest_type: Optional[LoanInterestType] = None
+    annual_rate: Optional[float] = None
+    start_date: Optional[datetime] = None
     due_day_of_month: Optional[int] = None
     term_months: Optional[int] = None
     grace_period_days: Optional[int] = None
     status: Optional[LoanStatus] = None
     notes: Optional[str] = None
+
+
+class BankLoanPaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    paid_at: Optional[datetime] = None
+    payment_method_id: Optional[int] = None
 
 
 class BankLoanPaymentCreate(BaseModel):

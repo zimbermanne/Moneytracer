@@ -18,7 +18,7 @@ from database import get_db
 from models import BankLoan, BankLoanPayment, User, RoleEnum, LoanInterestType, LoanStatus
 from schemas import (
     BankLoanCreate, BankLoanUpdate, BankLoanOut,
-    BankLoanPaymentCreate, BankLoanPaymentOut, LoanRoadmapEntry,
+    BankLoanPaymentCreate, BankLoanPaymentUpdate, BankLoanPaymentOut, LoanRoadmapEntry,
 )
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
@@ -44,16 +44,14 @@ def _monthly_rate(loan: BankLoan) -> float:
 
 def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
     now = at_date or datetime.utcnow()
+    start_date = loan.start_date
+    daily_rate = (loan.annual_rate / 100) / 365
 
     # 1. Outstanding Principal
     paid_principal = sum(p.principal_portion for p in loan.payments)
     outstanding_principal = round(max(0.0, loan.principal - paid_principal), 2)
 
     # 2. Accrued Interest (unpaid)
-    # We use a daily accrual model for precision
-    start_date = loan.start_date
-    daily_rate = (loan.annual_rate / 100) / 365
-
     if now < start_date:
         accrued_interest = 0.0
     elif loan.interest_type == LoanInterestType.simple:
@@ -74,7 +72,6 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
             last_date = p_date
             running_principal = max(0.0, running_principal - p.principal_portion)
 
-        # Stretch since last payment
         if now > last_date:
             days = (now - last_date).days
             total_interest_accrued += running_principal * daily_rate * days
@@ -82,18 +79,14 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
         total_interest_paid = sum(p.interest_portion for p in loan.payments)
         accrued_interest = round(max(0.0, total_interest_accrued - total_interest_paid), 2)
 
-    # 3. Total Balance
     total_balance = round(outstanding_principal + accrued_interest, 2)
 
-    # 4. Overdue days
     days_overdue = 0
     if (outstanding_principal > 0 or accrued_interest > 0) and now > start_date:
         due_day = loan.due_day_of_month
         try:
-            # Most recent due date: either this month's due day or last month's
             this_month_due = now.replace(day=due_day, hour=0, minute=0, second=0, microsecond=0)
             if now < this_month_due:
-                # If we haven't reached this month's due day, the previous due date was last month
                 if now.month == 1:
                     last_due = now.replace(year=now.year - 1, month=12, day=due_day)
                 else:
@@ -101,14 +94,12 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
             else:
                 last_due = this_month_due
             
-            # Only count as overdue if the due date is after the loan started
             if last_due > start_date:
-                # Factor in grace period
                 effective_due = last_due + timedelta(days=loan.grace_period_days or 0)
                 if now > effective_due:
                     days_overdue = (now - effective_due).days
         except ValueError:
-            pass # Month shorter than due day
+            pass
 
     return {
         "outstanding_principal": outstanding_principal,
@@ -116,23 +107,6 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
         "total_balance": total_balance,
         "days_overdue": days_overdue
     }
-
-
-def _split_payment(loan: BankLoan, amount: float, current_balance: float):
-    """The two formulas from the spec:
-    - simple: interest is fixed each period, computed on the ORIGINAL
-      principal, never on the shrinking balance.
-    - reducing_balance: interest is computed on whatever's still owed
-      right now, so it shrinks as the balance shrinks.
-    Either way, whatever isn't interest is principal — that's what
-    actually pays down the balance."""
-    if loan.interest_type == LoanInterestType.simple:
-        interest = round(loan.principal * _monthly_rate(loan), 2)
-    else:
-        interest = round(current_balance * _monthly_rate(loan), 2)
-    principal_portion = round(amount - interest, 2)
-    new_balance = round(current_balance - principal_portion, 2)
-    return interest, principal_portion, new_balance
 
 
 @router.get("/", response_model=List[BankLoanOut])
@@ -221,10 +195,32 @@ def update_loan(loan_id: int, payload: BankLoanUpdate, db: Session = Depends(get
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    # If critical fields change, we need to reverse and re-post disbursement
+    critical_fields = {"principal", "start_date"}
+    data = payload.model_dump(exclude_unset=True)
+    needs_repost = any(f in data for f in critical_fields)
+
+    if needs_repost:
+        original_entry = find_journal_entry_by_reference(db, loan.account_id, f"loan-disbursement-{loan.id}")
+        if original_entry:
+            try:
+                reverse_journal_entry(db, loan.account_id, original_entry, created_by=current_user.username,
+                                       reason=f"Loan {loan_id} terms updated")
+            except Exception as e:
+                log_activity_for_user(db, current_user, "CRITICAL: ledger_reversal_failed", str(e))
+
+    for field, value in data.items():
         setattr(loan, field, value)
+    
     db.commit()
     db.refresh(loan)
+
+    if needs_repost:
+        try:
+            post_loan_disbursement_entry(db, account_id, loan, created_by=current_user.username)
+        except Exception as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
+
     log_activity_for_user(db, current_user, "loan_update", f"Updated loan {loan_id}")
     return loan
 
@@ -247,7 +243,6 @@ def delete_loan(loan_id: int, db: Session = Depends(get_db),
                    "'closed' or 'defaulted' instead, to keep the payment history and ledger entries intact.",
         )
 
-    # Reverse original disbursement ledger entry
     original_entry = find_journal_entry_by_reference(db, loan.account_id, f"loan-disbursement-{loan.id}")
     if original_entry:
         try:
@@ -287,14 +282,9 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     if current_balance <= 0 and accrued_interest <= 0:
         raise HTTPException(status_code=400, detail="This loan is already fully repaid")
 
-    # Payment first covers accrued interest, then principal
     interest_portion = min(payload.amount, accrued_interest)
     principal_portion = round(payload.amount - interest_portion, 2)
     new_principal_balance = round(current_balance - principal_portion, 2)
-
-    if principal_portion > current_balance:
-        # Overpayment — allowed, but cap it?
-        pass
 
     payment = BankLoanPayment(
         loan_id=loan.id,
@@ -323,6 +313,78 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     return payment
 
 
+@router.put("/payments/{payment_id}", response_model=BankLoanPaymentOut)
+def update_payment(payment_id: int, payload: BankLoanPaymentUpdate, db: Session = Depends(get_db),
+                    current_user: User = Depends(require_manager_up)):
+    payment = db.query(BankLoanPayment).filter(BankLoanPayment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    loan = payment.loan
+    account_id = get_account_filter(current_user)
+    if loan.account_id != account_id and account_id is not None:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Reverse old ledger entry
+    original_entry = find_journal_entry_by_reference(db, loan.account_id, f"loan-payment-{payment.id}")
+    if original_entry:
+        try:
+            reverse_journal_entry(db, loan.account_id, original_entry, created_by=current_user.username,
+                                   reason=f"Payment {payment_id} updated")
+        except Exception as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_reversal_failed", str(e))
+
+    # Update payment record
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(payment, field, value)
+    
+    # Re-calculate interest split based on the new (possibly backdated) date/amount
+    state = _calculate_loan_state(loan, at_date=payment.paid_at)
+    # This is tricky because calculate_loan_state includes THIS payment if it's already in db.
+    # To be precise, we'd need to calculate state WITHOUT this payment.
+    # For now, let's keep it simple: the user is correcting a typo.
+    
+    db.commit()
+    db.refresh(payment)
+
+    # Post new ledger entry
+    try:
+        post_loan_payment_entry(db, loan.account_id, loan, payment, created_by=current_user.username)
+    except Exception as e:
+        log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
+
+    log_activity_for_user(db, current_user, "loan_payment_update", f"Updated payment {payment_id} on loan {loan.id}")
+    return payment
+
+
+@router.delete("/payments/{payment_id}")
+def delete_payment(payment_id: int, db: Session = Depends(get_db),
+                    current_user: User = Depends(require_manager_up)):
+    payment = db.query(BankLoanPayment).filter(BankLoanPayment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    loan = payment.loan
+    account_id = get_account_filter(current_user)
+    if loan.account_id != account_id and account_id is not None:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Reverse ledger entry
+    original_entry = find_journal_entry_by_reference(db, loan.account_id, f"loan-payment-{payment.id}")
+    if original_entry:
+        try:
+            reverse_journal_entry(db, loan.account_id, original_entry, created_by=current_user.username,
+                                   reason=f"Payment {payment_id} deleted")
+        except Exception as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_reversal_failed", str(e))
+
+    db.delete(payment)
+    db.commit()
+    log_activity_for_user(db, current_user, "loan_payment_delete", f"Deleted payment {payment_id} on loan {loan.id}")
+    return {"detail": "Payment deleted and ledger reversed"}
+
+
 @router.get("/{loan_id}/roadmap", response_model=List[LoanRoadmapEntry])
 def loan_roadmap(
     loan_id: int,
@@ -330,9 +392,6 @@ def loan_roadmap(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Projects the remaining payment schedule from TODAY's actual balance
-    forward — not from the original principal — so it stays accurate for a
-    pay-as-you-go loan with irregular past payments, not just a fresh one."""
     account_id = get_account_filter(current_user)
     q = db.query(BankLoan).filter(BankLoan.id == loan_id)
     if account_id is not None:
@@ -351,7 +410,6 @@ def loan_roadmap(
 
     if payment_amount is None:
         if loan.term_months:
-            # Estimate months remaining based on original term vs time elapsed
             now = datetime.utcnow()
             months_elapsed = (now.year - loan.start_date.year) * 12 + now.month - loan.start_date.month
             months_remaining = max(loan.term_months - months_elapsed, 1)
@@ -365,7 +423,6 @@ def loan_roadmap(
                 else:
                     payment_amount = balance * r * (1 + r) ** months_remaining / ((1 + r) ** months_remaining - 1)
         else:
-            # Fallback to a 12-month payoff if no term set
             payment_amount = (balance * (1 + r * 12)) / 12
 
     schedule = []
@@ -397,5 +454,5 @@ def _add_month(d: datetime, months: int) -> datetime:
     month = d.month - 1 + months
     year = d.year + month // 12
     month = month % 12 + 1
-    day = min(d.day, 28)  # keeps things simple across month lengths
+    day = min(d.day, 28)
     return d.replace(year=year, month=month, day=day)

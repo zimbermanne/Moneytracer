@@ -14,6 +14,10 @@ const emptyForm = () => ({
   start_date: new Date().toISOString().slice(0, 10), due_day_of_month: 1, term_months: '12', grace_period_days: 0, notes: '',
 })
 
+const emptyPaymentForm = () => ({
+  amount: '', paid_at: new Date().toISOString().slice(0, 10), payment_method_id: ''
+})
+
 /**
  * Calculates Monthly EMI for display purposes.
  */
@@ -24,12 +28,10 @@ function calculateEMI(principal, rate, months, type) {
   if (!p || n <= 0) return 0;
 
   if (type === 'simple') {
-    // EMI = (Principal + Total Interest) / Months
     const totalInterest = p * (Number(rate) / 100) * (n / 12);
     return (p + totalInterest) / n;
   }
 
-  // Reducing Balance formula
   if (!r) return p / n;
   return (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
@@ -46,12 +48,13 @@ export default function BankLoans() {
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
 
-  const [detail, setDetail] = useState(null)          // the loan being viewed
+  const [detail, setDetail] = useState(null)
   const [roadmap, setRoadmap] = useState(null)
   const [roadmapLoading, setRoadmapLoading] = useState(false)
-  const [payAmount, setPayAmount] = useState('')
-  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10))
-  const [payMethodId, setPayMethodId] = useState('')
+
+  // Payment creation/edit state
+  const [payForm, setPayForm] = useState(emptyPaymentForm())
+  const [editingPaymentId, setEditingPaymentId] = useState(null)
   const [paymentMethods, setPaymentMethods] = useState([])
   const [paying, setPaying] = useState(false)
   const [reminders, setReminders] = useState([])
@@ -59,8 +62,11 @@ export default function BankLoans() {
   const loadMetaData = async () => {
     try {
       const methods = await api.get('/ledgers/payment-methods')
-      setPaymentMethods(methods.filter(m => !m.is_credit))
-      if (methods.length > 0) setPayMethodId(methods[0].id)
+      const filtered = methods.filter(m => !m.is_credit)
+      setPaymentMethods(filtered)
+      if (filtered.length > 0 && !payForm.payment_method_id) {
+        setPayForm(f => ({ ...f, payment_method_id: filtered[0].id }))
+      }
     } catch (e) { console.error(e) }
   }
 
@@ -93,11 +99,12 @@ export default function BankLoans() {
     setListLoading(true)
     api.get('/bank-loans/').then(setLoans).catch((e) => setError(e.message)).finally(() => setListLoading(false))
   }
+
   useEffect(() => {
     load()
     loadReminders()
     loadMetaData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line
 
   const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
 
@@ -151,7 +158,11 @@ export default function BankLoans() {
   const openDetail = async (loan) => {
     setDetail(loan)
     setRoadmap(null)
-    setPayAmount('')
+    setPayForm(emptyPaymentForm())
+    if (paymentMethods.length > 0) {
+      setPayForm(f => ({ ...f, payment_method_id: paymentMethods[0].id }))
+    }
+    setEditingPaymentId(null)
     setError('')
   }
 
@@ -165,22 +176,61 @@ export default function BankLoans() {
   }
 
   const logPayment = async () => {
-    if (!payAmount || Number(payAmount) <= 0) return
+    if (!payForm.amount || Number(payForm.amount) <= 0) return
     setPaying(true); setError('')
     try {
-      await api.post(`/bank-loans/${detail.id}/payments`, {
-        amount: Number(payAmount),
-        paid_at: new Date(payDate).toISOString(),
-        payment_method_id: payMethodId ? Number(payMethodId) : null
-      })
+      const payload = {
+        amount: Number(payForm.amount),
+        paid_at: new Date(payForm.paid_at).toISOString(),
+        payment_method_id: payForm.payment_method_id ? Number(payForm.payment_method_id) : null
+      }
+
+      if (editingPaymentId) {
+        await api.put(`/bank-loans/payments/${editingPaymentId}`, payload)
+      } else {
+        await api.post(`/bank-loans/${detail.id}/payments`, payload)
+      }
+
       const refreshed = await api.get(`/bank-loans/${detail.id}`)
       setDetail(refreshed)
-      setPayAmount('')
-      setPayDate(new Date().toISOString().slice(0, 10))
+      setPayForm(emptyPaymentForm())
+      if (paymentMethods.length > 0) {
+        setPayForm(f => ({ ...f, payment_method_id: paymentMethods[0].id }))
+      }
+      setEditingPaymentId(null)
       setRoadmap(null)
       load()
     } catch (e) { setError(e.message) }
     finally { setPaying(false) }
+  }
+
+  const startEditPayment = (p) => {
+    setEditingPaymentId(p.id)
+    setPayForm({
+      amount: p.amount,
+      paid_at: p.paid_at.slice(0, 10),
+      payment_method_id: p.payment_method_id
+    })
+    // Scroll up to the form
+    document.querySelector('.log-payment-card')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const cancelEditPayment = () => {
+    setEditingPaymentId(null)
+    setPayForm(emptyPaymentForm())
+    if (paymentMethods.length > 0) {
+      setPayForm(f => ({ ...f, payment_method_id: paymentMethods[0].id }))
+    }
+  }
+
+  const deletePayment = async (id) => {
+    if (!confirm('Are you sure you want to delete this payment? This will reverse the ledger entry and restore the loan balance.')) return
+    try {
+      await api.del(`/bank-loans/payments/${id}`)
+      const refreshed = await api.get(`/bank-loans/${detail.id}`)
+      setDetail(refreshed)
+      load()
+    } catch (e) { setError(e.message) }
   }
 
   const setStatus = async (status) => {
@@ -230,7 +280,7 @@ export default function BankLoans() {
       render: (r) => (
         <RowActionsMenu items={[
           { label: t('common.view'), icon: '👁', onClick: () => openDetail(r) },
-          { label: t('common.edit'), icon: '✎', onClick: () => openEdit(r), hidden: r.payments?.length > 0 },
+          { label: t('common.edit'), icon: '✎', onClick: () => openEdit(r) },
           {
             label: t('common.delete'),
             icon: '✕',
@@ -333,6 +383,7 @@ export default function BankLoans() {
         <Modal
           title={`${detail.lender_name} — ${money(detail.total_balance)} ${t('bankLoans.outstanding')}`}
           onClose={() => setDetail(null)}
+          wide={true}
           footer={(<button className="btn btn-outline" onClick={() => setDetail(null)}>{t('common.close')}</button>)}
         >
           {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
@@ -348,28 +399,24 @@ export default function BankLoans() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              Total Original: {money(detail.principal)} · {detail.annual_rate}% {t('bankLoans.annualRate').toLowerCase()} ·{' '}
-              {detail.interest_type === 'simple' ? t('bankLoans.simple') : t('bankLoans.reducingBalance')}
-            </div>
-          </div>
-
-          {detail.status === 'active' && detail.total_balance > 0 && (
-            <div className="card" style={{ padding: 16, marginBottom: 20, background: 'var(--surface-sunken)' }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('bankLoans.logPayment')}</div>
+          {detail.status === 'active' && (detail.total_balance > 0 || editingPaymentId) && (
+            <div className="card log-payment-card" style={{ padding: 16, marginBottom: 20, background: 'var(--surface-sunken)', border: editingPaymentId ? '1px solid var(--accent)' : 'none' }}>
+              <div style={{ fontWeight: 700, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                {editingPaymentId ? 'Edit Payment Record' : t('bankLoans.logPayment')}
+                {editingPaymentId && <button className="btn btn-outline btn-sm" onClick={cancelEditPayment}>Cancel Edit</button>}
+              </div>
               <div className="debtor-form-grid">
                 <div className="form-row">
                   <label>{t('common.amount')}</label>
-                  <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="0.00" />
+                  <input type="number" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} placeholder="0.00" />
                 </div>
                 <div className="form-row">
                   <label>{t('common.date')}</label>
-                  <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+                  <input type="date" value={payForm.paid_at} onChange={(e) => setPayForm({ ...payForm, paid_at: e.target.value })} />
                 </div>
                 <div className="form-row span-2">
                   <label>Paid From (Source Account)</label>
-                  <select value={payMethodId} onChange={(e) => setPayMethodId(e.target.value)}>
+                  <select value={payForm.payment_method_id} onChange={(e) => setPayForm({ ...payForm, payment_method_id: e.target.value })}>
                     {paymentMethods.map(m => (
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
@@ -382,7 +429,7 @@ export default function BankLoans() {
                 onClick={logPayment}
                 disabled={paying}
               >
-                {paying ? t('common.loadingEllipsis') : 'Confirm Payment'}
+                {paying ? t('common.loadingEllipsis') : editingPaymentId ? 'Save Changes' : 'Confirm Payment'}
               </button>
             </div>
           )}
@@ -402,6 +449,7 @@ export default function BankLoans() {
               <thead><tr>
                 <th>{t('common.date')}</th><th>{t('common.amount')}</th>
                 <th>{t('bankLoans.interest')}</th><th>{t('bankLoans.principalPortion')}</th><th>{t('bankLoans.balanceAfter')}</th>
+                <th style={{ width: 40 }}></th>
               </tr></thead>
               <tbody>
                 {detail.payments.map((p) => (
@@ -411,6 +459,12 @@ export default function BankLoans() {
                     <td>{money(p.interest_portion)}</td>
                     <td>{money(p.principal_portion)}</td>
                     <td>{money(p.balance_after)}</td>
+                    <td>
+                       <RowActionsMenu items={[
+                         { label: t('common.edit'), onClick: () => startEditPayment(p) },
+                         { label: t('common.delete'), onClick: () => deletePayment(p.id), danger: true },
+                       ]} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
