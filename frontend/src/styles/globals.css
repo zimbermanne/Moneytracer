@@ -1367,14 +1367,14 @@ label {
   padding: 6px 10px 10px;
 }
 
-/* ── Bottom nav: modern list-based bar ── */
-.bottom-nav-wrapper {
+/* ── Bottom nav: sidebar, moved to the bottom ── */
+.bottom-nav {
   display: none;
 }
 
 /* ---- MOBILE: main phone breakpoint (<=768px) --------------------------
    Sidebar -> slide-in drawer, hamburger + .mobile-topbar appear,
-   .desktop-topbar hides, and .bottom-nav-wrapper appears fixed to bottom. */
+   .desktop-topbar hides, and .bottom-nav appears fixed to bottom. */
 @media (max-width: 768px) {
   .sidebar,
   .sidebar.mobile-open {
@@ -1423,75 +1423,138 @@ label {
     padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
   }
 
-  /* ── New Bottom Nav Styling ── */
-  .bottom-nav-wrapper {
+  /* ── Bottom nav: dark glass pill rail, tap-to-expand ──
+     Recipe matches the reference: 52px collapsed circle → 160px expanded
+     pill on the same cubic-bezier(.22,1,.36,1) width transition, label
+     fades + slides in as it does. Desktop uses :hover for that reveal;
+     touch has no reliable hover, so BottomNav.jsx toggles an .is-open
+     class on tap instead — same visual result, tap-driven. */
+  .bottom-nav {
     display: block;
     position: fixed;
-    bottom: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     z-index: 58;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(10, 12, 20, 0.001) 0%, transparent 100%);
+    pointer-events: none; /* only the pills/rail below should catch taps */
   }
 
-  .nav--icons ul {
+  .bottom-nav-rail-outer {
+    position: relative;
+    pointer-events: none;
+  }
+  .bottom-nav-rail-outer::before,
+  .bottom-nav-rail-outer::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 22px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .bottom-nav-rail-outer::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(15, 22, 30, 0.92), transparent);
+    border-radius: 999px 0 0 999px;
+  }
+  .bottom-nav-rail-outer::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(15, 22, 30, 0.92), transparent);
+    border-radius: 0 999px 999px 0;
+  }
+
+  .bottom-nav-scroll {
     display: flex;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    height: var(--bottom-nav-height, 64px);
-  }
-
-  .nav--icons li {
-    flex: 1;
-  }
-
-  .nav--icons button {
-    display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
     width: 100%;
-    height: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: rgba(15, 22, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 8px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+  }
+  .bottom-nav-scroll::-webkit-scrollbar { display: none; }
+
+  .bottom-nav-item {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    width: 52px;
+    height: 52px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: transparent;
     border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    gap: 4px;
-    transition: all 0.2s ease;
+    padding: 0 14px;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: rgba(255, 255, 255, 0.65);
+    font-family: var(--font-body);
+    transition:
+      width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.3s ease,
+      box-shadow 0.3s ease;
   }
 
-  .nav--icons li.active button,
-  .nav--icons button:active {
+  .bottom-nav-item.is-open {
+    width: 160px;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 28px rgba(0, 229, 255, 0.22);
+    color: #fff;
+  }
+
+  .bottom-nav-item.active {
     color: var(--accent);
   }
-
-  .nav--icons .icon {
-    width: 24px;
-    height: 24px;
-    stroke-width: 2;
-    transition: transform 0.2s ease;
+  .bottom-nav-item.active.is-open {
+    box-shadow: 0 0 28px rgba(var(--accent-rgb, 166, 100, 50), 0.35);
   }
 
-  .nav--icons li.active .icon {
-    transform: translateY(-2px);
+  .bottom-nav-icon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
   }
 
-  .nav--icons span {
-    display: block;
-    opacity: 0.8;
+  .bottom-nav-label {
+    opacity: 0;
+    max-width: 0;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transform: translateX(-8px);
+    transition:
+      opacity 0.25s ease,
+      max-width 0.45s ease,
+      transform 0.35s ease;
+    overflow: hidden;
+  }
+  .bottom-nav-item.is-open .bottom-nav-label {
+    opacity: 1;
+    max-width: 100px;
+    transform: translateX(0);
   }
 
   /* Hide the bar while the drawer is open */
-  .mobile-backdrop.open ~ .main-content .bottom-nav-wrapper { display: none; }
+  .mobile-backdrop.open ~ .main-content .bottom-nav { display: none; }
 
   .message-alert-segment {
     transform: scale(0.85);
@@ -3682,7 +3745,6 @@ label {
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 /* ── Bottom nav (mobile pill rail) ── */
-:root:not([data-theme]) .bottom-nav { background: var(--surface); }
 /* ── Badges ── */
 :root:not([data-theme]) .badge-paid { background: var(--success-bg); color: var(--success); }
 :root:not([data-theme]) .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
@@ -3827,7 +3889,6 @@ label {
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 /* ── Bottom nav (mobile pill rail) ── */
-:root[data-theme="dark"] .bottom-nav { background: var(--surface); }
 /* ── Badges ── */
 :root[data-theme="dark"] .badge-paid { background: var(--success-bg); color: var(--success); }
 :root[data-theme="dark"] .badge-unpaid { background: var(--danger-bg);  color: var(--danger);  }
