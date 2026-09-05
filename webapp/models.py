@@ -1329,9 +1329,40 @@ class JournalLine(Base):
     debit = Column(Float, default=0)
     credit = Column(Float, default=0)
     description = Column(String(255), nullable=True)
+    # Bank reconciliation: has this line been ticked off against a bank
+    # statement? Toggled independently of the journal entry itself (an
+    # entry can have one line reconciled — the bank side — while its
+    # offsetting line on a different account isn't, since reconciliation
+    # is inherently per-account, not per-entry).
+    is_reconciled = Column(Boolean, default=False)
+    reconciled_at = Column(DateTime, nullable=True)
 
     journal_entry = relationship("JournalEntry", back_populates="lines")
     account = relationship("ChartOfAccount", back_populates="journal_lines")
+
+
+class BankReconciliation(Base):
+    """A completed reconciliation snapshot: 'as of this statement date, the
+    ticked-off (is_reconciled) lines for this account summed to X, the bank
+    statement said Y, difference was Z'. Doesn't hold the individual matched
+    lines itself — those are the JournalLine rows with is_reconciled=True as
+    of when this was saved — this is just the audit-trail header so a user
+    (or their accountant) can look back and see "reconciled clean on Aug 31"
+    without re-deriving it from scratch."""
+    __tablename__ = "bank_reconciliations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    statement_date = Column(DateTime, nullable=False)
+    statement_balance = Column(Float, nullable=False)
+    book_balance = Column(Float, nullable=False)  # sum of reconciled lines at save time
+    difference = Column(Float, nullable=False)    # statement_balance - book_balance; 0 = clean
+    notes = Column(String(255), default="")
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    chart_account = relationship("ChartOfAccount")
 
 
 class FiscalPeriodStatus(str, enum.Enum):

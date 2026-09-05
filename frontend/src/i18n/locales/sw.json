@@ -72,7 +72,8 @@
     "accountingReportsGroup": "Uhasibu na Ripoti",
     "expensesGroup": "Daftari la Matumizi",
     "debtorsAging": "Umri wa Madeni ya Wadaiwa",
-    "creditorsAging": "Umri wa Madeni ya Wadai"
+    "creditorsAging": "Umri wa Madeni ya Wadai",
+    "bankReconciliation": "Upatanisho wa Benki"
   },
   "auth": {
     "login": "Ingia",

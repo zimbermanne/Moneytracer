@@ -73,6 +73,13 @@ _MIGRATIONS = {
         ("is_voided", "BOOLEAN", "false"),
         ("reversed_entry_id", "INTEGER", None),
     ],
+    "journal_lines": [
+        # Bank reconciliation: whether this line has been ticked off against
+        # a bank statement — see models.JournalLine.is_reconciled and
+        # routers/bank_reconciliation.py.
+        ("is_reconciled", "BOOLEAN", "false"),
+        ("reconciled_at", "TIMESTAMP", None),
+    ],
     "login_sessions": [
         ("accept_language", "VARCHAR(100)", "''"),
         ("screen_width", "INTEGER", "NULL"),

@@ -121,6 +121,7 @@ function buildNav(t) {
       children: [
         { label: t('nav.chartOfAccounts'), icon: 'chart-of-accounts', path: '/app/accounting/chart-of-accounts' },
         { label: t('nav.generalLedger'), icon: 'trialbalance', path: '/app/accounting/general-ledger' },
+        { label: t('nav.bankReconciliation'), icon: 'bank-loans', path: '/app/bank-reconciliation' },
         { label: t('nav.trialBalance'), icon: 'trial-balance', path: '/app/reports/trial-balance' },
         { label: t('nav.balanceSheet'), icon: 'balance-sheet', path: '/app/reports/balance-sheet' },
         { label: t('nav.vatReturn'), icon: 'vat', path: '/app/reports/vat-return' },
@@ -197,6 +198,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/reports/vat-return': 'nav.vatReturn',
   '/app/accounting/chart-of-accounts': 'nav.chartOfAccounts',
   '/app/accounting/general-ledger': 'nav.generalLedger',
+  '/app/bank-reconciliation': 'nav.bankReconciliation',
   '/app/payroll': 'nav.payroll',
   '/app/budgets': 'nav.budgets',
   '/app/expenses': 'nav.expensesItem',

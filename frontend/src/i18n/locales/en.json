@@ -83,7 +83,8 @@
     "accountingReportsGroup": "Accounting & Reports",
     "expensesGroup": "Expenses Ledger",
     "debtorsAging": "Debtors Aging",
-    "creditorsAging": "Creditors Aging"
+    "creditorsAging": "Creditors Aging",
+    "bankReconciliation": "Bank Reconciliation"
   },
   "auth": {
     "login": "Login",

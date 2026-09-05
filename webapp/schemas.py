@@ -469,6 +469,43 @@ class ExpenseUpdate(BaseModel):
     payment_method_id: Optional[int] = None
 
 
+# ---------- Bank reconciliation ----------
+
+class ReconcilableLineOut(BaseModel):
+    """One journal line on the account being reconciled, plus enough of its
+    parent entry (date/description/reference) to identify it against a
+    bank statement without a second lookup."""
+    model_config = ConfigDict(from_attributes=True)
+    line_id: int
+    journal_entry_id: int
+    date: datetime
+    description: str
+    reference: Optional[str] = None
+    debit: float
+    credit: float
+    is_reconciled: bool
+    reconciled_at: Optional[datetime] = None
+
+
+class BankReconciliationComplete(BaseModel):
+    statement_date: datetime
+    statement_balance: float
+    notes: Optional[str] = ""
+
+
+class BankReconciliationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    chart_account_id: int
+    statement_date: datetime
+    statement_balance: float
+    book_balance: float
+    difference: float
+    notes: str
+    created_by: Optional[str] = None
+    created_at: datetime
+
+
 class ExpenseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

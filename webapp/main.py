@@ -12,7 +12,7 @@ import models  # noqa: F401 ensures models are registered before create_all
 from migrate import run_migrations
 from seed_pan_african_data import seed_all_pan_african_data
 from rate_limit import limiter
-from routers import auth_router as auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, suppliers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets, attachments, payroll, approvals, ar_dashboard, drafts, support as messages, recurring_expenses
+from routers import auth_router as auth, inventory, sales, purchases, expenses, ledgers, reports, users, activity, backup, agent, invoices, quotations, customers, suppliers, accounts, reminders, community, personal, public, reference, purchase_orders, superadmin, bank_loans, deadlines, assets, attachments, payroll, approvals, ar_dashboard, drafts, support as messages, recurring_expenses, bank_reconciliation
 from scheduler import start_scheduler
 from database import SessionLocal
 
@@ -107,6 +107,7 @@ app.include_router(accounts.router)
 app.include_router(superadmin.router)
 app.include_router(messages.router)
 app.include_router(bank_loans.router)
+app.include_router(bank_reconciliation.router)
 app.include_router(deadlines.router)
 app.include_router(assets.router)
 app.include_router(reminders.router)

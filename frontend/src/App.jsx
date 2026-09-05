@@ -51,6 +51,7 @@ const Settings = lazy(() => import('./pages/Settings.jsx'))
 const ActivityLogs = lazy(() => import('./pages/ActivityLogs.jsx'))
 const VerifyDocument = lazy(() => import('./pages/VerifyDocument.jsx'))
 const BankLoans = lazy(() => import('./pages/BankLoans.jsx'))
+const BankReconciliation = lazy(() => import('./pages/BankReconciliation.jsx'))
 const Deadlines = lazy(() => import('./pages/Deadlines.jsx'))
 const Assets = lazy(() => import('./pages/Assets.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
@@ -257,6 +258,7 @@ function PrivateRoutes() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/activity" element={<ActivityLogs />} />
         <Route path="/bank-loans" element={<BankLoans />} />
+        <Route path="/bank-reconciliation" element={<BankReconciliation />} />
         <Route path="/deadlines" element={<Deadlines />} />
         <Route path="/assets" element={<Assets />} />
         <Route path="/messages" element={<Messages />} />
