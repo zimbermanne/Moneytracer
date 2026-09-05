@@ -13,7 +13,7 @@ function money(n) {
  */
 export default function InvoiceEditor({
   kind, isInvoice, editingId, form, setForm, company, error,
-  updateLine, addLine, removeLine, subtotal, taxAmt, total,
+  updateLine, addLine, removeLine, moveLine, subtotal, taxAmt, total,
   onClose, onSave, saving, inventoryItems = [], selectInventoryItem, showProfit = false,
 }) {
   const [checkAmount, setCheckAmount] = useState('')
@@ -72,6 +72,24 @@ export default function InvoiceEditor({
               const isCustom = !line.item_id
               return (
               <div key={idx} className={`invoice-editor-line${showProfit ? ' invoice-editor-line-with-profit' : ''}`}>
+                <div className="invoice-line-reorder">
+                  <button
+                    type="button"
+                    className="invoice-line-reorder-btn"
+                    onClick={() => moveLine(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label="Move item up"
+                    title="Move up"
+                  >▲</button>
+                  <button
+                    type="button"
+                    className="invoice-line-reorder-btn"
+                    onClick={() => moveLine(idx, 1)}
+                    disabled={idx === form.items.length - 1}
+                    aria-label="Move item down"
+                    title="Move down"
+                  >▼</button>
+                </div>
                 <div className="invoice-line-item-picker">
                   <select
                     className="invoice-line-item-select"

@@ -207,6 +207,7 @@ export default function Assets() {
         <Modal
           title={editingId ? 'Edit Asset' : 'Add Asset'}
           onClose={() => setOpen(false)}
+          wide={true}
           footer={
             <>
               <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>

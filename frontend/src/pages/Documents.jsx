@@ -85,6 +85,16 @@ export default function Documents({ kind }) {
   }
   const addLine = () => setForm({ ...form, items: [...form.items, emptyLine()] })
   const removeLine = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) })
+  // Swaps a line with its neighbor above/below — the order here is exactly
+  // the order items print on the invoice/quotation, so this is how the
+  // user controls that without deleting and re-adding lines.
+  const moveLine = (idx, direction) => {
+    const target = idx + direction
+    if (target < 0 || target >= form.items.length) return
+    const items = [...form.items]
+    ;[items[idx], items[target]] = [items[target], items[idx]]
+    setForm({ ...form, items })
+  }
 
   const openEdit = (doc) => {
     setEditingId(doc.id)
@@ -261,6 +271,7 @@ export default function Documents({ kind }) {
           updateLine={updateLine}
           addLine={addLine}
           removeLine={removeLine}
+          moveLine={moveLine}
           inventoryItems={inventoryItems}
           selectInventoryItem={selectInventoryItem}
           showProfit={showProfit}
@@ -273,34 +284,35 @@ export default function Documents({ kind }) {
       )}
 
       {shareDoc && (
-        <div className="modal-overlay" onClick={() => setShareDoc(null)}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h2>Share {isInvoice ? 'Invoice' : 'Quotation'}</h2>
-            <p className="sub">Share <strong>{shareDoc[numberKey]}</strong> with another business on Moneytracer.</p>
-            <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
+        <Modal
+          title={isInvoice ? 'Share Invoice' : 'Share Quotation'}
+          onClose={() => setShareDoc(null)}
+          wide={true}
+          isDirty={false}
+          footer={(
+            <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
+          )}
+        >
+          <p className="sub">Share <strong>{shareDoc[numberKey]}</strong> with another business on Moneytracer.</p>
+          <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
 
-            <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
-              {shareSearching ? <div>Searching...</div> : (
-                shareResults.length === 0 && shareQuery.length >= 3 ? <div>No businesses found.</div> :
-                shareResults.map(b => (
-                  <div
-                    key={b.id}
-                    onClick={() => doShare(b)}
-                    style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                    className="hover-bg"
-                  >
-                    <strong>{b.name}</strong>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="modal-actions" style={{ marginTop: 20 }}>
-              <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
-            </div>
+          <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
+            {shareSearching ? <div>Searching...</div> : (
+              shareResults.length === 0 && shareQuery.length >= 3 ? <div>No businesses found.</div> :
+              shareResults.map(b => (
+                <div
+                  key={b.id}
+                  onClick={() => doShare(b)}
+                  style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                  className="hover-bg"
+                >
+                  <strong>{b.name}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

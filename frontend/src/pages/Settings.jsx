@@ -6,11 +6,12 @@ import Table from '../components/Table.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import AppearanceSettings from '../components/AppearanceSettings.jsx'
-import SupportMessages from '../components/SupportMessages.jsx'
+import { useNavigate } from 'react-router-dom'
 
 export default function Settings() {
   const { user, logout, completeProfile, refreshAccount } = useAuth()
   const api = useApi()
+  const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
   const isSuperadmin = user?.role === 'superadmin'
 
@@ -39,20 +40,6 @@ export default function Settings() {
       setProfileMsg('Profile saved.')
     } catch (e) { setProfileErr(e.message) } finally { setProfileSaving(false) }
   }
-
-  // Sign-up QR code — admins only, lets a business display/print a scannable
-  // shortcut for new users to auto-create an account (POST /auth/quick-signup).
-  const [qrUrl, setQrUrl] = useState(null)
-  const [qrErr, setQrErr] = useState('')
-  useEffect(() => {
-    if (!isAdmin || isSuperadmin) return
-    let objectUrl
-    api.get('/auth/quick-signup/qr')
-      .then((res) => res.blob())
-      .then((blob) => { objectUrl = URL.createObjectURL(blob); setQrUrl(objectUrl) })
-      .catch((e) => setQrErr(e.message))
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [isAdmin, isSuperadmin]) // eslint-disable-line
 
   // Account settings (for regular admins)
   const [account, setAccount] = useState(null)
@@ -247,26 +234,22 @@ export default function Settings() {
       {/* Appearance: theme mode, accent color */}
       <AppearanceSettings />
 
-      {/* Messages to support — not for superadmin, who reads these in the console instead */}
-      {!isSuperadmin && <SupportMessages />}
-
-      {/* Sign-up QR code — lets walk-in customers/staff scan and get a live
-          account instantly instead of filling in the registration form. */}
-      {isAdmin && !isSuperadmin && (
+      {/* Messages to support — the old embedded widget here called
+          /api/support/threads, an endpoint that no longer exists (the
+          messaging rebuild moved everything to /api/messages/threads);
+          it's been showing "Not Found" ever since. Support conversations
+          now live in the unified Messages page (has its own "Contact
+          Support" button), so this just links there instead of
+          duplicating a whole broken chat UI. */}
+      {!isSuperadmin && (
         <div className="card" style={{ marginTop: 20 }}>
-          <h3 style={{ marginTop: 0 }}>📱 Sign-up QR Code</h3>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-            Print or display this code. Anyone who scans it gets a live Moneytracer account
-            instantly — no form to fill in — and can add their name, email, and business
-            details afterwards from Settings.
+          <h3 style={{ marginTop: 0 }}>💬 Messages to Support</h3>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 18px' }}>
+            Leave a message for the platform team — billing questions, bugs, anything you need help with.
           </div>
-          {qrErr && <div className="error-text">{qrErr}</div>}
-          {qrUrl && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-              <img src={qrUrl} alt="Sign-up QR code" width={200} height={200} style={{ background: '#fff', padding: 8, borderRadius: 8 }} />
-              <a className="btn btn-outline" href={qrUrl} download="moneytracer-quick-signup-qr.png">⬇ Download</a>
-            </div>
-          )}
+          <button className="btn btn-primary" onClick={() => navigate('/app/messages')}>
+            Go to Messages
+          </button>
         </div>
       )}
 
