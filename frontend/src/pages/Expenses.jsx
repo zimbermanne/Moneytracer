@@ -17,6 +17,17 @@ const emptyForm = () => ({
   payment_method_id: null
 })
 
+const emptyRecForm = () => ({
+  category: 'General',
+  description: '',
+  vendor_name: '',
+  amount: 0,
+  payment_method_id: null,
+  frequency: 'monthly',
+  interval: 1,
+  start_date: new Date().toISOString().split('T')[0]
+})
+
 export default function Expenses() {
   const api = useApi()
   const { user } = useAuth()
@@ -46,11 +57,7 @@ export default function Expenses() {
   const [recurring, setRecurring] = useState([])
   const [showRecurringForm, setShowRecurringForm] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState(null)
-  const [recForm, setRecForm] = useState({
-    category: 'General', description: '', vendor_name: '', amount: 0,
-    payment_method_id: null, frequency: 'monthly', interval: 1,
-    start_date: new Date().toISOString().split('T')[0]
-  })
+  const [recForm, setRecForm] = useState(emptyRecForm())
 
   const load = async () => {
     setListLoading(true)
@@ -343,7 +350,7 @@ export default function Expenses() {
       ) : (
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-             <button className="btn btn-primary" onClick={() => { setEditingRecurring(null); setRecForm({ ...emptyForm(), frequency: 'monthly', interval: 1 }); setShowRecurringForm(true); }}>+ Create Recurring Template</button>
+             <button className="btn btn-primary" onClick={() => { setEditingRecurring(null); setRecForm(emptyRecForm()); setShowRecurringForm(true); }}>+ Create Recurring Template</button>
           </div>
           <Table
             columns={recurringColumns}
