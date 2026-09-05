@@ -112,13 +112,17 @@ export default function Expenses() {
   }
 
   const openEdit = (e) => {
-    setEditingId(e.id)
+    if (e.type !== 'expense') {
+      window.location.hash = '#/app/purchases'
+      return
+    }
+    setEditingId(e.real_id)
     setForm({
       category: e.category,
       description: e.description,
-      vendor_name: e.vendor_name || '',
+      vendor_name: e.vendor || '',
       amount: e.amount,
-      expense_date: e.expense_date.split('T')[0],
+      expense_date: e.date.split('T')[0],
       payment_method_id: e.payment_method_id
     })
     setError('')
@@ -153,10 +157,14 @@ export default function Expenses() {
     }
   }
 
-  const remove = async (id) => {
+  const remove = async (outgoing) => {
+    if (outgoing.type !== 'expense') {
+      alert('Inventory purchases must be deleted from the Purchases Ledger.')
+      return
+    }
     if (!confirm('Delete this expense? Ledger entries will be reversed.')) return
     try {
-      await api.del(`/expenses/${id}`)
+      await api.del(`/expenses/${outgoing.real_id}`)
       load()
     } catch (e) {
       setError(e.message)
@@ -174,14 +182,22 @@ export default function Expenses() {
 
   const columns = [
     {
-      key: 'expense_date',
+      key: 'date',
       header: 'Date',
-      render: (r) => new Date(r.expense_date).toLocaleDateString()
+      render: (r) => new Date(r.date).toLocaleDateString()
     },
-    { key: 'category', header: 'Category', render: (r) => <span className="badge badge-outline">{r.category}</span> },
-    { key: 'vendor_name', header: 'Vendor', render: (r) => r.vendor_name || <span style={{color: 'var(--text-faint)'}}>—</span> },
+    {
+      key: 'category',
+      header: 'Category',
+      render: (r) => (
+        <span className={`badge ${r.type === 'purchase' ? 'badge-partial' : 'badge-outline'}`}>
+          {r.category}
+        </span>
+      )
+    },
+    { key: 'vendor', header: 'Vendor / Supplier', render: (r) => r.vendor || <span style={{color: 'var(--text-faint)'}}>—</span> },
     { key: 'description', header: 'Description' },
-    { key: 'payment_method_name', header: 'Paid From', render: (r) => r.payment_method_name || 'Cash' },
+    { key: 'payment_method_name', header: 'Paid From' },
     {
       key: 'amount',
       header: 'Amount',
@@ -193,8 +209,9 @@ export default function Expenses() {
       stopRowClick: true,
       render: (r) => (
         <RowActionsMenu items={[
-          { label: 'Edit', onClick: () => openEdit(r) },
-          { label: 'Delete', onClick: () => remove(r.id), danger: true, hidden: !isAdmin },
+          { label: 'Edit', onClick: () => openEdit(r), hidden: r.type !== 'expense' },
+          { label: 'Delete', onClick: () => remove(r), danger: true, hidden: !isAdmin || r.type !== 'expense' },
+          { label: 'View in Purchases', onClick: () => window.location.hash = '#/app/purchases', hidden: r.type !== 'purchase' }
         ]} />
       )
     }

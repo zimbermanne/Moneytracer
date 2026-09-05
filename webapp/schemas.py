@@ -482,6 +482,19 @@ class ExpenseOut(BaseModel):
     created_at: datetime
 
 
+class OutgoingOut(BaseModel):
+    id: str
+    real_id: int
+    type: str # "expense" or "purchase"
+    date: datetime
+    category: str
+    vendor: str
+    description: str
+    amount: float
+    payment_method_name: str
+    payment_method_id: Optional[int] = None
+
+
 class RecurringExpenseCreate(BaseModel):
     category: Optional[str] = "General"
     description: Optional[str] = ""

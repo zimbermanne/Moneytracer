@@ -9,7 +9,7 @@ from sqlalchemy import func
 
 from database import get_db
 from models import Expense, User, RoleEnum, PaymentMethod, ChartOfAccount, JournalLine, JournalEntry
-from schemas import ExpenseCreate, ExpenseUpdate, ExpenseOut
+from schemas import ExpenseCreate, ExpenseUpdate, ExpenseOut, OutgoingOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import (
@@ -83,32 +83,75 @@ def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
     return expense
 
 
-@router.get("/", response_model=List[ExpenseOut])
+@router.get("/", response_model=List[OutgoingOut])
 def list_expenses(
     start: Optional[date] = None,
     end: Optional[date] = None,
     category: Optional[str] = None,
     q: Optional[str] = None,
+    include_purchases: Optional[bool] = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     account_id = get_account_filter(current_user)
-    query = db.query(Expense)
+    outgoings = []
+
+    # 1. Fetch Expenses
+    exp_q = db.query(Expense)
     if account_id is not None:
-        query = query.filter(Expense.account_id == account_id)
-
+        exp_q = exp_q.filter(Expense.account_id == account_id)
     if start:
-        query = query.filter(Expense.expense_date >= datetime.combine(start, datetime.min.time()))
+        exp_q = exp_q.filter(Expense.expense_date >= datetime.combine(start, datetime.min.time()))
     if end:
-        query = query.filter(Expense.expense_date <= datetime.combine(end, datetime.max.time()))
-    if category:
-        query = query.filter(Expense.category == category)
+        exp_q = exp_q.filter(Expense.expense_date <= datetime.combine(end, datetime.max.time()))
+    if category and category != "Cost of Goods":
+        exp_q = exp_q.filter(Expense.category == category)
     if q:
-        query = query.filter(
-            (Expense.description.ilike(f"%{q}%")) | (Expense.vendor_name.ilike(f"%{q}%"))
-        )
+        exp_q = exp_q.filter((Expense.description.ilike(f"%{q}%")) | (Expense.vendor_name.ilike(f"%{q}%")))
+    
+    for e in exp_q.all():
+        outgoings.append({
+            "id": f"exp-{e.id}",
+            "real_id": e.id,
+            "type": "expense",
+            "date": e.expense_date,
+            "category": e.category,
+            "vendor": e.vendor_name,
+            "description": e.description,
+            "amount": e.amount,
+            "payment_method_name": e.payment_method_name or "Cash",
+            "payment_method_id": e.payment_method_id
+        })
 
-    return query.order_by(Expense.expense_date.desc()).all()
+    # 2. Fetch Purchases (Inventory spend) if requested
+    if include_purchases and (not category or category == "Cost of Goods"):
+        from models import Purchase
+        pur_q = db.query(Purchase)
+        if account_id is not None:
+            pur_q = pur_q.filter(Purchase.account_id == account_id)
+        if start:
+            pur_q = pur_q.filter(Purchase.created_at >= datetime.combine(start, datetime.min.time()))
+        if end:
+            pur_q = pur_q.filter(Purchase.created_at <= datetime.combine(end, datetime.max.time()))
+        if q:
+            pur_q = pur_q.filter((Purchase.item_name.ilike(f"%{q}%")) | (Purchase.supplier.ilike(f"%{q}%")))
+            
+        for p in pur_q.all():
+            outgoings.append({
+                "id": f"pur-{p.id}",
+                "real_id": p.id,
+                "type": "purchase",
+                "date": p.created_at,
+                "category": "Cost of Goods",
+                "vendor": p.supplier,
+                "description": f"Stock: {p.item_name} x{p.quantity}",
+                "amount": p.total,
+                "payment_method_name": "Cash", # Default for now
+                "payment_method_id": None
+            })
+
+    outgoings.sort(key=lambda x: x["date"], reverse=True)
+    return outgoings
 
 
 @router.get("/export/csv")
@@ -181,7 +224,9 @@ def list_categories(db: Session = Depends(get_db), current_user: User = Depends(
     if account_id is None:
         return []
     rows = db.query(Expense.category).filter(Expense.account_id == account_id).distinct().all()
-    return sorted({r[0] for r in rows if r[0]})
+    cats = {r[0] for r in rows if r[0]}
+    cats.add("Cost of Goods")
+    return sorted(cats)
 
 
 @router.get("/{expense_id}", response_model=ExpenseOut)
