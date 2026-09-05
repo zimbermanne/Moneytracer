@@ -8,7 +8,7 @@ follows the same "ledger-first" principle as sales/purchases/expenses:
 a loan is real money moving, and reports.py's trial balance should reflect
 it without a separate reconciliation step.
 """
-from datetime import datetime, timedelta
+import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -42,8 +42,8 @@ def _monthly_rate(loan: BankLoan) -> float:
     return (loan.annual_rate / 100) / 12
 
 
-def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
-    now = at_date or datetime.utcnow()
+def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime.datetime] = None):
+    now = at_date or datetime.datetime.utcnow()
     start_date = loan.start_date
     daily_rate = (loan.annual_rate / 100) / 365
 
@@ -95,7 +95,7 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
                 last_due = this_month_due
             
             if last_due > start_date:
-                effective_due = last_due + timedelta(days=loan.grace_period_days or 0)
+                effective_due = last_due + datetime.timedelta(days=loan.grace_period_days or 0)
                 if now > effective_due:
                     days_overdue = (now - effective_due).days
         except ValueError:
@@ -274,7 +274,7 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be positive")
 
-    payment_date = payload.paid_at or datetime.utcnow()
+    payment_date = payload.paid_at or datetime.datetime.utcnow()
     state = _calculate_loan_state(loan, at_date=payment_date)
     current_balance = state["outstanding_principal"]
     accrued_interest = state["accrued_interest"]
@@ -338,12 +338,6 @@ def update_payment(payment_id: int, payload: BankLoanPaymentUpdate, db: Session 
     data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(payment, field, value)
-    
-    # Re-calculate interest split based on the new (possibly backdated) date/amount
-    state = _calculate_loan_state(loan, at_date=payment.paid_at)
-    # This is tricky because calculate_loan_state includes THIS payment if it's already in db.
-    # To be precise, we'd need to calculate state WITHOUT this payment.
-    # For now, let's keep it simple: the user is correcting a typo.
     
     db.commit()
     db.refresh(payment)
@@ -410,7 +404,7 @@ def loan_roadmap(
 
     if payment_amount is None:
         if loan.term_months:
-            now = datetime.utcnow()
+            now = datetime.datetime.utcnow()
             months_elapsed = (now.year - loan.start_date.year) * 12 + now.month - loan.start_date.month
             months_remaining = max(loan.term_months - months_elapsed, 1)
 
@@ -427,7 +421,7 @@ def loan_roadmap(
 
     schedule = []
     running_balance = balance
-    last_date = datetime.utcnow()
+    last_date = datetime.datetime.utcnow()
     period = len(loan.payments)
     safety_cap = 600
     while running_balance > 0.01 and len(schedule) < safety_cap:
@@ -450,7 +444,7 @@ def loan_roadmap(
     return schedule
 
 
-def _add_month(d: datetime, months: int) -> datetime:
+def _add_month(d: datetime.datetime, months: int) -> datetime.datetime:
     month = d.month - 1 + months
     year = d.year + month // 12
     month = month % 12 + 1
