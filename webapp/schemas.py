@@ -651,6 +651,7 @@ class BankLoanUpdate(BaseModel):
 
 class BankLoanPaymentCreate(BaseModel):
     amount: float
+    payment_method_id: Optional[int] = None
     paid_at: Optional[datetime] = None
 
 
@@ -661,6 +662,7 @@ class BankLoanPaymentOut(BaseModel):
     interest_portion: float
     principal_portion: float
     balance_after: float
+    payment_method_id: Optional[int] = None
     paid_at: datetime
 
 

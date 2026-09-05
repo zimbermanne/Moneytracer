@@ -49,8 +49,19 @@ export default function BankLoans() {
   const [roadmap, setRoadmap] = useState(null)
   const [roadmapLoading, setRoadmapLoading] = useState(false)
   const [payAmount, setPayAmount] = useState('')
+  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10))
+  const [payMethodId, setPayMethodId] = useState('')
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [paying, setPaying] = useState(false)
   const [reminders, setReminders] = useState([])
+
+  const loadMetaData = async () => {
+    try {
+      const methods = await api.get('/ledgers/payment-methods')
+      setPaymentMethods(methods.filter(m => !m.is_credit))
+      if (methods.length > 0) setPayMethodId(methods[0].id)
+    } catch (e) { console.error(e) }
+  }
 
   const loadReminders = () => {
     api.get('/reminders/').then(data => {
@@ -84,6 +95,7 @@ export default function BankLoans() {
   useEffect(() => {
     load()
     loadReminders()
+    loadMetaData()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openNew = () => { setForm(emptyForm()); setError(''); setOpen(true) }
@@ -131,10 +143,15 @@ export default function BankLoans() {
     if (!payAmount || Number(payAmount) <= 0) return
     setPaying(true); setError('')
     try {
-      await api.post(`/bank-loans/${detail.id}/payments`, { amount: Number(payAmount) })
+      await api.post(`/bank-loans/${detail.id}/payments`, {
+        amount: Number(payAmount),
+        paid_at: new Date(payDate).toISOString(),
+        payment_method_id: payMethodId ? Number(payMethodId) : null
+      })
       const refreshed = await api.get(`/bank-loans/${detail.id}`)
       setDetail(refreshed)
       setPayAmount('')
+      setPayDate(new Date().toISOString().slice(0, 10))
       setRoadmap(null)
       load()
     } catch (e) { setError(e.message) }
@@ -295,13 +312,33 @@ export default function BankLoans() {
           </div>
 
           {detail.status === 'active' && detail.total_balance > 0 && (
-            <div className="form-row" style={{ alignItems: 'flex-end', display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label>{t('bankLoans.logPayment')}</label>
-                <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+            <div className="card" style={{ padding: 16, marginBottom: 20, background: 'var(--surface-sunken)' }}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{t('bankLoans.logPayment')}</div>
+              <div className="debtor-form-grid">
+                <div className="form-row">
+                  <label>{t('common.amount')}</label>
+                  <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="0.00" />
+                </div>
+                <div className="form-row">
+                  <label>{t('common.date')}</label>
+                  <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+                </div>
+                <div className="form-row span-2">
+                  <label>Paid From (Source Account)</label>
+                  <select value={payMethodId} onChange={(e) => setPayMethodId(e.target.value)}>
+                    {paymentMethods.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <button className="btn btn-primary" onClick={logPayment} disabled={paying}>
-                {paying ? t('common.loadingEllipsis') : t('common.save')}
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: 10 }}
+                onClick={logPayment}
+                disabled={paying}
+              >
+                {paying ? t('common.loadingEllipsis') : 'Confirm Payment'}
               </button>
             </div>
           )}

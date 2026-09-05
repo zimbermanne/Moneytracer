@@ -167,6 +167,9 @@ _SCHEMA_MIGRATIONS = {
         # user having to look the address up and type it in every time.
         ("supplier_email", "VARCHAR(150)", "''"),
     ],
+    ("business", "bank_loan_payments"): [
+        ("payment_method_id", "INTEGER", "NULL"),
+    ],
 }
 
 

@@ -425,12 +425,19 @@ def post_loan_disbursement_entry(db: Session, account_id: int, loan, created_by:
 
 def post_loan_payment_entry(db: Session, account_id: int, loan, payment, created_by: str = None):
     """A repayment reduces what's owed (principal portion) and recognizes
-    the cost of borrowing (interest portion) — both come out of the bank
-    account for the total payment amount."""
+    the cost of borrowing (interest portion) — both come out of the
+    selected funding account."""
+    payment_method = getattr(payment, "payment_method", None)
+    funding_account_code = (
+        payment_method.chart_account.code
+        if payment_method is not None and payment_method.chart_account is not None
+        else "1010"  # fallback to Bank
+    )
+
     lines = [
         ("2200", payment.principal_portion, 0),  # reduces the liability
         ("5200", payment.interest_portion, 0),   # interest expense
-        ("1010", 0, payment.amount),              # cash/bank goes out
+        (funding_account_code, 0, payment.amount),  # cash/bank goes out
     ]
     return post_journal_entry(
         db, account_id,

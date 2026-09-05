@@ -286,6 +286,7 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
         interest_portion=interest_portion,
         principal_portion=principal_portion,
         balance_after=max(new_principal_balance, 0),
+        payment_method_id=payload.payment_method_id,
         paid_at=payment_date,
         created_by=current_user.username,
     )

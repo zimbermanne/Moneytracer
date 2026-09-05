@@ -1187,7 +1187,7 @@ class BankLoan(Base):
                              cascade="all, delete-orphan", order_by="BankLoanPayment.paid_at")
 
 
-class BankLoanPayment(Base):
+class BankLoanPayment(Base) :
     __tablename__ = "bank_loan_payments"
     __table_args__ = schema_args(SCHEMA_BUSINESS)
 
@@ -1197,10 +1197,13 @@ class BankLoanPayment(Base):
     interest_portion = Column(Float, default=0)
     principal_portion = Column(Float, default=0)
     balance_after = Column(Float, default=0)
+    # Which account the payment was made from (Cash, Bank, etc.)
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
     paid_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(String(80), default="")
 
     loan = relationship("BankLoan", back_populates="payments")
+    payment_method = relationship("PaymentMethod")
 
 
 # ---------------------------------------------------------------------------
