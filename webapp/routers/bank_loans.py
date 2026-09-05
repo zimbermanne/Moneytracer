@@ -8,7 +8,7 @@ follows the same "ledger-first" principle as sales/purchases/expenses:
 a loan is real money moving, and reports.py's trial balance should reflect
 it without a separate reconciliation step.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -84,12 +84,26 @@ def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime] = None):
 
     # 4. Overdue days
     days_overdue = 0
-    if outstanding_principal > 0 or accrued_interest > 0:
+    if (outstanding_principal > 0 or accrued_interest > 0) and now > start_date:
         due_day = loan.due_day_of_month
         try:
+            # Most recent due date: either this month's due day or last month's
             this_month_due = now.replace(day=due_day, hour=0, minute=0, second=0, microsecond=0)
-            if now > this_month_due:
-                days_overdue = (now - this_month_due).days
+            if now < this_month_due:
+                # If we haven't reached this month's due day, the previous due date was last month
+                if now.month == 1:
+                    last_due = now.replace(year=now.year - 1, month=12, day=due_day)
+                else:
+                    last_due = now.replace(month=now.month - 1, day=due_day)
+            else:
+                last_due = this_month_due
+            
+            # Only count as overdue if the due date is after the loan started
+            if last_due > start_date:
+                # Factor in grace period
+                effective_due = last_due + timedelta(days=loan.grace_period_days or 0)
+                if now > effective_due:
+                    days_overdue = (now - effective_due).days
         except ValueError:
             pass # Month shorter than due day
 
@@ -249,7 +263,8 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be positive")
 
-    state = _calculate_loan_state(loan)
+    payment_date = payload.paid_at or datetime.utcnow()
+    state = _calculate_loan_state(loan, at_date=payment_date)
     current_balance = state["outstanding_principal"]
     accrued_interest = state["accrued_interest"]
 
@@ -271,7 +286,7 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
         interest_portion=interest_portion,
         principal_portion=principal_portion,
         balance_after=max(new_principal_balance, 0),
-        paid_at=payload.paid_at or datetime.utcnow(),
+        paid_at=payment_date,
         created_by=current_user.username,
     )
     db.add(payment)

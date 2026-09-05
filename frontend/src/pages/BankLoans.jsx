@@ -17,11 +17,20 @@ const emptyForm = () => ({
 /**
  * Calculates Monthly EMI for display purposes.
  */
-function calculateEMI(principal, rate, months) {
+function calculateEMI(principal, rate, months, type) {
   const p = Number(principal);
   const r = (Number(rate) / 100) / 12;
   const n = Number(months);
-  if (!p || !r || !n) return 0;
+  if (!p || n <= 0) return 0;
+
+  if (type === 'simple') {
+    // EMI = (Principal + Total Interest) / Months
+    const totalInterest = p * (Number(rate) / 100) * (n / 12);
+    return (p + totalInterest) / n;
+  }
+
+  // Reducing Balance formula
+  if (!r) return p / n;
   return (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
 
@@ -241,7 +250,7 @@ export default function BankLoans() {
             <div className="card" style={{ marginBottom: 16, background: 'var(--success-bg)', border: '1px solid var(--success)' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Estimated Monthly EMI</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>
-                {money(calculateEMI(form.principal, form.annual_rate, form.term_months))}
+                {money(calculateEMI(form.principal, form.annual_rate, form.term_months, form.interest_type))}
               </div>
             </div>
           )}
@@ -327,7 +336,7 @@ export default function BankLoans() {
             </table>
           )}
 
-          {detail.status === 'active' && currentBalance(detail) > 0 && (
+          {detail.status === 'active' && detail.total_balance > 0 && (
             <>
               <div className="invoice-editor-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {t('bankLoans.roadmap')}
