@@ -192,9 +192,12 @@ export default function BankLoans() {
     } catch (e) { setError(e.message) }
   }
 
-  const remove = async (loan) => {
-    if (!confirm(t('bankLoans.confirmDelete'))) return
-    try { await api.del(`/bank-loans/${loan.id}`); load() } catch (e) { setError(e.message) }
+  const remove = async (loanId) => {
+    try {
+      await api.del(`/bank-loans/${loanId}`);
+      setOpen(false);
+      load();
+    } catch (e) { setError(e.message) }
   }
 
   const columns = [
@@ -272,6 +275,16 @@ export default function BankLoans() {
           title={editingId ? t('bankLoans.editLoan') || 'Edit Loan' : t('bankLoans.newLoan')}
           onClose={() => setOpen(false)}
           footer={(<>
+            {editingId && (
+              <button
+                className="btn btn-danger"
+                style={{ marginInlineEnd: 'auto' }}
+                onClick={() => { if(confirm(t('bankLoans.confirmDelete'))) remove(editingId) }}
+                disabled={saving}
+              >
+                {t('common.delete')}
+              </button>
+            )}
             <button className="btn btn-outline" onClick={() => setOpen(false)}>{t('common.cancel')}</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? t('common.loadingEllipsis') : t('common.save')}</button>
           </>)}

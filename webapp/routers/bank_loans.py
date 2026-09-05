@@ -22,7 +22,10 @@ from schemas import (
 )
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
-from ledger import post_loan_disbursement_entry, post_loan_payment_entry, FiscalPeriodLockedError
+from ledger import (
+    post_loan_disbursement_entry, post_loan_payment_entry, FiscalPeriodLockedError,
+    find_journal_entry_by_reference, reverse_journal_entry,
+)
 
 router = APIRouter(prefix="/api/bank-loans", tags=["bank-loans"])
 
@@ -236,15 +239,28 @@ def delete_loan(loan_id: int, db: Session = Depends(get_db),
     loan = q.first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    
     if loan.payments:
         raise HTTPException(
             status_code=400,
             detail="This loan has recorded payments and can't be deleted — set its status to "
                    "'closed' or 'defaulted' instead, to keep the payment history and ledger entries intact.",
         )
+
+    # Reverse original disbursement ledger entry
+    original_entry = find_journal_entry_by_reference(db, loan.account_id, f"loan-disbursement-{loan.id}")
+    if original_entry:
+        try:
+            reverse_journal_entry(db, loan.account_id, original_entry, created_by=current_user.username,
+                                   reason=f"Loan {loan_id} deleted")
+        except FiscalPeriodLockedError as e:
+            raise HTTPException(status_code=400, detail=f"Cannot delete: disbursement entry is in a locked period. {e}")
+        except ValueError as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_reversal_failed", str(e))
+
     db.delete(loan)
     db.commit()
-    log_activity_for_user(db, current_user, "loan_delete", f"Deleted loan {loan_id}")
+    log_activity_for_user(db, current_user, "loan_delete", f"Deleted loan {loan_id} and reversed ledger entries")
     return {"detail": "Loan deleted"}
 
 
