@@ -42,6 +42,7 @@ export default function BankLoans() {
   const [error, setError] = useState('')
   const [listLoading, setListLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
 
@@ -98,7 +99,24 @@ export default function BankLoans() {
     loadMetaData()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openNew = () => { setForm(emptyForm()); setError(''); setOpen(true) }
+  const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
+
+  const openEdit = (loan) => {
+    setEditingId(loan.id);
+    setForm({
+      lender_name: loan.lender_name,
+      principal: loan.principal,
+      interest_type: loan.interest_type,
+      annual_rate: loan.annual_rate,
+      start_date: loan.start_date.slice(0, 10),
+      due_day_of_month: loan.due_day_of_month,
+      term_months: loan.term_months ? String(loan.term_months) : '',
+      grace_period_days: loan.grace_period_days,
+      notes: loan.notes,
+    });
+    setError('');
+    setOpen(true);
+  }
 
   const save = async () => {
     setError(''); setSaving(true)
@@ -106,7 +124,8 @@ export default function BankLoans() {
       if (!form.lender_name.trim()) throw new Error(t('bankLoans.lenderRequired'))
       if (!form.principal || Number(form.principal) <= 0) throw new Error(t('bankLoans.principalRequired'))
       if (!form.start_date) throw new Error(t('bankLoans.startDateRequired'))
-      await api.post('/bank-loans/', {
+
+      const payload = {
         lender_name: form.lender_name,
         principal: Number(form.principal),
         interest_type: form.interest_type,
@@ -116,7 +135,13 @@ export default function BankLoans() {
         term_months: form.term_months ? Number(form.term_months) : null,
         grace_period_days: Number(form.grace_period_days) || 0,
         notes: form.notes,
-      })
+      }
+
+      if (editingId) {
+        await api.put(`/bank-loans/${editingId}`, payload)
+      } else {
+        await api.post('/bank-loans/', payload)
+      }
       setOpen(false)
       load()
     } catch (e) { setError(e.message) }
@@ -201,7 +226,8 @@ export default function BankLoans() {
       key: 'actions', header: '', stopRowClick: true,
       render: (r) => (
         <RowActionsMenu items={[
-          { label: t('common.viewEdit'), icon: '👁', onClick: () => openDetail(r) },
+          { label: t('common.view'), icon: '👁', onClick: () => openDetail(r) },
+          { label: t('common.edit'), icon: '✎', onClick: () => openEdit(r), hidden: r.payments?.length > 0 },
           { label: t('common.delete'), icon: '✕', onClick: () => remove(r), danger: true, hidden: r.payments?.length > 0 },
         ]} />
       ),
@@ -243,7 +269,7 @@ export default function BankLoans() {
 
       {open && (
         <Modal
-          title={t('bankLoans.newLoan')}
+          title={editingId ? t('bankLoans.editLoan') || 'Edit Loan' : t('bankLoans.newLoan')}
           onClose={() => setOpen(false)}
           footer={(<>
             <button className="btn btn-outline" onClick={() => setOpen(false)}>{t('common.cancel')}</button>
