@@ -10,6 +10,7 @@ from schemas import RecurringExpenseCreate, RecurringExpenseUpdate, RecurringExp
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_expense_entry
+from date_utils import calculate_next_date
 
 router = APIRouter(prefix="/api/recurring-expenses", tags=["recurring-expenses"])
 
@@ -46,6 +47,7 @@ def create_recurring_expense(
 
     # Set initial next_generation date
     next_gen = payload.start_date
+    now = datetime.utcnow()
 
     recurring = RecurringExpense(
         account_id=account_id,
@@ -64,9 +66,20 @@ def create_recurring_expense(
         created_by=current_user.username,
     )
     db.add(recurring)
+    db.flush()
+
+    # Catch-up: generate instances from start_date up to now
+    instances_created = 0
+    while recurring.next_generation <= now:
+        _generate_expense_from_recurring(db, recurring, recurring.next_generation)
+        recurring.last_generated = recurring.next_generation
+        recurring.next_generation = calculate_next_date(recurring.next_generation, recurring.frequency, recurring.interval)
+        instances_created += 1
+
     db.commit()
     db.refresh(recurring)
-    log_activity_for_user(db, current_user, "recurring_expense_create", f"Created recurring expense: {payload.description}")
+    log_activity_for_user(db, current_user, "recurring_expense_create", 
+                         f"Created recurring expense: {payload.description} (Generated {instances_created} past instance(s))")
     return recurring
 
 

@@ -25,6 +25,7 @@ from models import (
 from activity import log_activity
 import email_utils
 from ledger import post_loan_interest_accrual_entry, post_sale_entry, post_expense_entry
+from date_utils import add_months, calculate_next_date
 _REMINDER_ACTION = "invoice_reminder_sent"
 _DEADLINE_REMINDER_ACTION = "deadline_reminder_sent"
 _LOAN_REMINDER_ACTION = "loan_reminder_sent"
@@ -123,11 +124,7 @@ def _already_reminded_today_for(db, action: str, marker: str) -> bool:
 
 
 def _add_months(d: datetime, months: int) -> datetime:
-    month = d.month - 1 + months
-    year = d.year + month // 12
-    month = month % 12 + 1
-    day = min(d.day, 28)
-    return d.replace(year=year, month=month, day=day)
+    return add_months(d, months)
 
 
 def send_compliance_deadline_reminders():
@@ -280,12 +277,13 @@ def purge_expired_deleted_accounts():
 def process_recurring_records():
     """Finds active recurring invoice and expense templates whose next_generation
     date is in the past, generates the real record, and advances the template's
-    next_generation date."""
+    next_generation date. If multiple intervals have passed since last run,
+    it generates multiple records to catch up."""
     db = SessionLocal()
     try:
         now = datetime.utcnow()
 
-        # Recurring Expenses
+        # 1. Recurring Expenses
         recurring_expenses = db.query(RecurringExpense).filter(
             RecurringExpense.is_active.is_(True),
             RecurringExpense.next_generation <= now
@@ -294,33 +292,39 @@ def process_recurring_records():
         from routers.recurring_expenses import _generate_expense_from_recurring
 
         for re in recurring_expenses:
-            # Generate the expense
-            _generate_expense_from_recurring(db, re, re.next_generation)
-            
-            re.last_generated = re.next_generation
-            # Advance next_generation
-            re.next_generation = _calculate_next_date(re.next_generation, re.frequency, re.interval)
-            
-            log_activity(db, username="system", action="recurring_expense_generated",
-                         details=f"rec_id={re.id} desc={re.description}", account_id=re.account_id)
+            while re.next_generation <= now:
+                _generate_expense_from_recurring(db, re, re.next_generation)
+                re.last_generated = re.next_generation
+                re.next_generation = calculate_next_date(re.next_generation, re.frequency, re.interval)
+                
+                log_activity(db, username="system", action="recurring_expense_generated",
+                             details=f"rec_id={re.id} desc={re.description} for_date={re.last_generated.date()}", 
+                             account_id=re.account_id)
+
+        # 2. Recurring Invoices
+        recurring_invoices = db.query(RecurringInvoice).filter(
+            RecurringInvoice.is_active.is_(True),
+            RecurringInvoice.next_generation <= now
+        ).all()
+
+        from routers.invoices import _generate_invoice_from_template
+
+        for ri in recurring_invoices:
+            while ri.next_generation <= now:
+                _generate_invoice_from_template(db, ri, ri.next_generation)
+                ri.last_generated = ri.next_generation
+                ri.next_generation = calculate_next_date(ri.next_generation, ri.frequency, ri.interval)
+
+                log_activity(db, username="system", action="recurring_invoice_generated",
+                             details=f"rec_id={ri.id} name={ri.name} for_date={ri.last_generated.date()}",
+                             account_id=ri.account_id)
 
         db.commit()
     finally:
         db.close()
 
 
-def _calculate_next_date(current: datetime, frequency: str, interval: int) -> datetime:
-    if frequency == "weekly":
-        return current + timedelta(weeks=interval)
-    if frequency == "biweekly":
-        return current + timedelta(weeks=2 * interval)
-    if frequency == "monthly":
-        return _add_months(current, interval)
-    if frequency == "quarterly":
-        return _add_months(current, 3 * interval)
-    if frequency == "yearly":
-        return _add_months(current, 12 * interval)
-    return current + timedelta(days=30)
+# _calculate_next_date removed, replaced by calculate_next_date from date_utils
 
 
 _scheduler = None

@@ -16,6 +16,7 @@ from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
 from ledger import get_locked_period, post_sale_entry
+from date_utils import calculate_next_date
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
@@ -657,22 +658,14 @@ def create_recurring_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_up),
 ):
-    """Create a new recurring invoice template."""
+    """Create a new recurring invoice template and catch up past instances."""
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create recurring invoices")
 
     import json
     line_items_json = json.dumps(payload.line_items)
-
-    # Calculate next generation date based on frequency
-    next_gen = payload.start_date
-    if payload.frequency == "weekly":
-        # For weekly, set to the specified day of week
-        pass  # Simplified - would need date calculation logic
-    elif payload.frequency == "monthly" and payload.day_of_month:
-        # Set to the specified day of month
-        pass  # Simplified
+    now = datetime.utcnow()
 
     recurring = RecurringInvoice(
         account_id=account_id,
@@ -686,13 +679,24 @@ def create_recurring_invoice(
         day_of_week=payload.day_of_week,
         start_date=payload.start_date,
         end_date=payload.end_date,
-        next_generation=next_gen,
+        next_generation=payload.start_date,
         created_by=current_user.username,
     )
     db.add(recurring)
+    db.flush()
+
+    # Catch-up: generate instances from start_date up to now
+    instances_created = 0
+    while recurring.next_generation <= now:
+        _generate_invoice_from_template(db, recurring, recurring.next_generation)
+        recurring.last_generated = recurring.next_generation
+        recurring.next_generation = calculate_next_date(recurring.next_generation, recurring.frequency, recurring.interval)
+        instances_created += 1
+
     db.commit()
     db.refresh(recurring)
-    log_activity_for_user(db, current_user, "recurring_invoice_create", f"Created recurring invoice: {payload.name}")
+    log_activity_for_user(db, current_user, "recurring_invoice_create", 
+                         f"Created recurring invoice: {payload.name} (Generated {instances_created} past instance(s))")
     return recurring
 
 
@@ -759,6 +763,63 @@ def delete_recurring_invoice(
     return {"message": "Recurring invoice deleted"}
 
 
+def _generate_invoice_from_template(db: Session, rec: RecurringInvoice, generation_date: datetime):
+    """Internal: generates a single Invoice instance from a recurring template."""
+    import json
+    line_items = json.loads(rec.line_items)
+
+    # 1. Determine invoice number and customer info
+    prefix = "INV"
+    account = db.query(Account).filter(Account.id == rec.account_id).first()
+    if account:
+        prefix = account.invoice_prefix or "INV"
+
+    # Get customer name from Debtors/AR table
+    from models import Debtor
+    customer = db.query(Debtor).filter(Debtor.id == rec.customer_id).first()
+    customer_name = customer.name if customer else "Walk-in"
+
+    existing_count = db.query(Invoice).filter(Invoice.account_id == rec.account_id).count()
+    invoice_no = f"{prefix}-{existing_count + 1:04d}"
+    
+    # 2. Calculate totals
+    subtotal = sum(float(l['quantity']) * float(l['unit_price']) for l in line_items)
+    tax_rate = account.tax_rate if account else 0
+    tax_amount = subtotal * (tax_rate / 100.0)
+    total = subtotal + tax_amount
+
+    # 3. Create Invoice
+    invoice = Invoice(
+        account_id=rec.account_id,
+        invoice_no=invoice_no,
+        customer_name=customer_name,
+        verify_token=uuid.uuid4().hex,
+        subtotal=subtotal,
+        tax_rate=tax_rate,
+        tax_amount=tax_amount,
+        total=total,
+        status=DocumentStatus.sent,
+        created_by="system",
+        created_at=generation_date
+    )
+    db.add(invoice)
+    db.flush()
+
+    # 4. Add items
+    for l in line_items:
+        db.add(InvoiceItem(
+            account_id=rec.account_id,
+            invoice_id=invoice.id,
+            item_id=l.get('item_id'),
+            description=l.get('description', ''),
+            quantity=l.get('quantity', 1),
+            unit_price=l.get('unit_price', 0),
+            total=float(l.get('quantity', 1)) * float(l.get('unit_price', 0))
+        ))
+
+    return invoice
+
+
 @router.post("/recurring/{recurring_id}/generate")
 def generate_invoice_from_template(
     recurring_id: int,
@@ -774,14 +835,11 @@ def generate_invoice_from_template(
     if not recurring:
         raise HTTPException(status_code=404, detail="Recurring invoice not found")
 
-    import json
-    line_items = json.loads(recurring.line_items)
-
-    # Create invoice from template
-    # This would call the existing invoice creation logic
-    # For now, return a placeholder response
-    return {
-        "message": "Invoice generation from template - to be implemented with existing invoice creation logic",
-        "recurring_invoice_id": recurring_id,
-        "line_items": line_items,
-    }
+    now = datetime.utcnow()
+    invoice = _generate_invoice_from_template(db, recurring, now)
+    
+    recurring.last_generated = now
+    db.commit()
+    
+    log_activity_for_user(db, current_user, "recurring_invoice_force_generate", f"Manually generated invoice from template: {recurring.name}")
+    return {"message": "Invoice generated", "invoice_id": invoice.id}
