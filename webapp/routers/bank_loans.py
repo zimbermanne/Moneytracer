@@ -44,6 +44,16 @@ def _monthly_rate(loan: BankLoan) -> float:
 
 def _calculate_loan_state(loan: BankLoan, at_date: Optional[datetime.datetime] = None):
     now = at_date or datetime.datetime.utcnow()
+    # Loan dates round-tripped through the DB (loan.start_date, payment.paid_at
+    # on existing rows) come back timezone-naive. A freshly-parsed request
+    # payload datetime (e.g. the frontend sends paid_at as
+    # `new Date(...).toISOString()`, which always has a trailing "Z") comes in
+    # timezone-AWARE instead — comparing the two directly raises
+    # "can't compare offset-naive and offset-aware datetimes". Normalize to
+    # naive UTC here so every comparison below is apples-to-apples regardless
+    # of which kind of datetime the caller passed in.
+    if now.tzinfo is not None:
+        now = now.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     start_date = loan.start_date
     daily_rate = (loan.annual_rate / 100) / 365
 
@@ -275,6 +285,12 @@ def log_payment(loan_id: int, payload: BankLoanPaymentCreate, db: Session = Depe
         raise HTTPException(status_code=400, detail="Payment amount must be positive")
 
     payment_date = payload.paid_at or datetime.datetime.utcnow()
+    # Normalize before storing too — not just before the _calculate_loan_state
+    # call below — so what actually lands in BankLoanPayment.paid_at is the
+    # same naive-UTC shape as everything else in this table (see the
+    # tzinfo note inside _calculate_loan_state for why this matters).
+    if payment_date.tzinfo is not None:
+        payment_date = payment_date.astimezone(datetime.timezone.utc).replace(tzinfo=None)
     state = _calculate_loan_state(loan, at_date=payment_date)
     current_balance = state["outstanding_principal"]
     accrued_interest = state["accrued_interest"]
