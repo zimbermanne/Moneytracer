@@ -103,6 +103,10 @@ _SCHEMA_MIGRATIONS = {
         # Which till/bank/mobile-money account the expense was paid from —
         # see models.Expense.payment_method_id.
         ("payment_method_id", "INTEGER", "NULL"),
+        # Who was paid (freetext one-off or ref)
+        ("vendor_name", "VARCHAR(150)", "''"),
+        # The actual date the expense occurred, allowing for backdating.
+        ("expense_date", "TIMESTAMP", "now()"),
     ],
     ("business", "sales"): [
         # Snapshot of the item's cost at time of sale, so historical gross

@@ -207,7 +207,7 @@ export default function Inventory() {
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. PPR Pipe - 3/4\""
+              placeholder='e.g. PPR Pipe - 3/4"'
             />
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
               <strong>Standard Format:</strong> [Category] [Item Name] - [Size] (e.g., PPR Pipe - 1/2")

@@ -358,7 +358,7 @@ def post_expense_entry(db: Session, account_id: int, expense, created_by: str = 
         lines=lines,
         reference=f"expense-{expense.id}",
         created_by=created_by,
-        date=expense.created_at,
+        date=getattr(expense, "expense_date", None) or expense.created_at,
     )
 
 

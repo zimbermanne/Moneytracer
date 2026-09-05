@@ -454,7 +454,18 @@ class PurchaseOut(BaseModel):
 class ExpenseCreate(BaseModel):
     category: Optional[str] = "General"
     description: Optional[str] = ""
+    vendor_name: Optional[str] = ""
     amount: float
+    expense_date: Optional[datetime] = None
+    payment_method_id: Optional[int] = None
+
+
+class ExpenseUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    vendor_name: Optional[str] = None
+    amount: Optional[float] = None
+    expense_date: Optional[datetime] = None
     payment_method_id: Optional[int] = None
 
 
@@ -463,10 +474,63 @@ class ExpenseOut(BaseModel):
     id: int
     category: str
     description: str
+    vendor_name: str
     amount: float
+    expense_date: datetime
     payment_method_id: Optional[int] = None
     payment_method_name: Optional[str] = None
     created_at: datetime
+
+
+class RecurringExpenseCreate(BaseModel):
+    category: Optional[str] = "General"
+    description: Optional[str] = ""
+    vendor_name: Optional[str] = ""
+    amount: float
+    payment_method_id: Optional[int] = None
+    frequency: str  # "weekly", "biweekly", "monthly", "quarterly", "yearly"
+    interval: int = 1
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+
+
+class RecurringExpenseUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    vendor_name: Optional[str] = None
+    amount: Optional[float] = None
+    payment_method_id: Optional[int] = None
+    frequency: Optional[str] = None
+    interval: Optional[int] = None
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+
+class RecurringExpenseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    account_id: int
+    category: str
+    description: str
+    vendor_name: str
+    amount: float
+    payment_method_id: Optional[int] = None
+    frequency: str
+    interval: int
+    day_of_month: Optional[int] = None
+    day_of_week: Optional[str] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    last_generated: Optional[datetime] = None
+    next_generation: Optional[datetime] = None
+    is_active: bool
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
 
 # ---------- Personal overview ----------

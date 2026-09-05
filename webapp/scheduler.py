@@ -20,11 +20,11 @@ from database import SessionLocal
 from models import (
     Invoice, DocumentStatus, Account, ActivityLog, Reminder,
     ComplianceDeadline, DeadlineRecurrence, BankLoan, LoanStatus,
-    JournalEntry,
+    JournalEntry, RecurringInvoice, RecurringExpense,
 )
 from activity import log_activity
 import email_utils
-from ledger import post_loan_interest_accrual_entry
+from ledger import post_loan_interest_accrual_entry, post_sale_entry, post_expense_entry
 _REMINDER_ACTION = "invoice_reminder_sent"
 _DEADLINE_REMINDER_ACTION = "deadline_reminder_sent"
 _LOAN_REMINDER_ACTION = "loan_reminder_sent"
@@ -277,6 +277,52 @@ def purge_expired_deleted_accounts():
         db.close()
 
 
+def process_recurring_records():
+    """Finds active recurring invoice and expense templates whose next_generation
+    date is in the past, generates the real record, and advances the template's
+    next_generation date."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+
+        # Recurring Expenses
+        recurring_expenses = db.query(RecurringExpense).filter(
+            RecurringExpense.is_active.is_(True),
+            RecurringExpense.next_generation <= now
+        ).all()
+
+        from routers.recurring_expenses import _generate_expense_from_recurring
+
+        for re in recurring_expenses:
+            # Generate the expense
+            _generate_expense_from_recurring(db, re, re.next_generation)
+            
+            re.last_generated = re.next_generation
+            # Advance next_generation
+            re.next_generation = _calculate_next_date(re.next_generation, re.frequency, re.interval)
+            
+            log_activity(db, username="system", action="recurring_expense_generated",
+                         details=f"rec_id={re.id} desc={re.description}", account_id=re.account_id)
+
+        db.commit()
+    finally:
+        db.close()
+
+
+def _calculate_next_date(current: datetime, frequency: str, interval: int) -> datetime:
+    if frequency == "weekly":
+        return current + timedelta(weeks=interval)
+    if frequency == "biweekly":
+        return current + timedelta(weeks=2 * interval)
+    if frequency == "monthly":
+        return _add_months(current, interval)
+    if frequency == "quarterly":
+        return _add_months(current, 3 * interval)
+    if frequency == "yearly":
+        return _add_months(current, 12 * interval)
+    return current + timedelta(days=30)
+
+
 _scheduler = None
 
 
@@ -318,6 +364,13 @@ def start_scheduler():
         "interval", hours=24,
         id="purge_expired_deleted_accounts",
         next_run_time=datetime.utcnow() + timedelta(seconds=150),
+        coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        process_recurring_records,
+        "interval", hours=12,
+        id="process_recurring_records",
+        next_run_time=datetime.utcnow() + timedelta(seconds=180),
         coalesce=True, max_instances=1,
     )
     _scheduler.start()

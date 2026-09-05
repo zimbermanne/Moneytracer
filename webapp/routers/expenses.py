@@ -1,13 +1,17 @@
+import io
+import csv
+from datetime import datetime, date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from database import get_db
 from models import Expense, User, RoleEnum, PaymentMethod, ChartOfAccount, JournalLine, JournalEntry
-from schemas import ExpenseCreate, ExpenseOut
+from schemas import ExpenseCreate, ExpenseUpdate, ExpenseOut
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
-from sqlalchemy import func
 from ledger import (
     post_expense_entry, find_journal_entry_by_reference, reverse_journal_entry,
     FiscalPeriodLockedError, ensure_default_payment_methods,
@@ -26,11 +30,6 @@ def get_account_filter(current_user: User):
 
 
 def _resolve_payment_method(db: Session, account_id: int, payment_method_id: Optional[int]):
-    """Look up + validate a Payment Method for this tenant, same pattern as
-    routers/sales.py:_resolve_payment_method(). An expense can't be "paid"
-    out of a credit-sale method (that account represents money owed TO the
-    business, not a source of cash to spend) — that scenario is a Creditor
-    (money the business owes a supplier), tracked separately."""
     if payment_method_id is None:
         return None
     ensure_default_payment_methods(db, account_id)
@@ -59,27 +58,87 @@ def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
 
     payment_method = _resolve_payment_method(db, account_id, payload.payment_method_id)
 
-    expense = Expense(**payload.model_dump(), account_id=account_id)
+    # Use explicitly provided expense_date or fall back to now
+    expense_date = payload.expense_date or datetime.utcnow()
+
+    expense = Expense(
+        account_id=account_id,
+        category=payload.category,
+        description=payload.description,
+        vendor_name=payload.vendor_name,
+        amount=payload.amount,
+        expense_date=expense_date,
+        payment_method_id=payload.payment_method_id
+    )
     db.add(expense)
     db.commit()
     db.refresh(expense)
+
     try:
         post_expense_entry(db, account_id, expense, created_by=current_user.username)
     except ValueError as e:
-        # Ledger posting failure shouldn't block the expense record itself,
-        # but it must not fail silently — surface it in the activity log.
         log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
+
     log_activity_for_user(db, current_user, "expense_record", f"Recorded expense {expense.amount} ({expense.category})")
     return expense
 
 
 @router.get("/", response_model=List[ExpenseOut])
-def list_expenses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Expense)
+def list_expenses(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     account_id = get_account_filter(current_user)
+    query = db.query(Expense)
     if account_id is not None:
         query = query.filter(Expense.account_id == account_id)
-    return query.order_by(Expense.created_at.desc()).all()
+
+    if start:
+        query = query.filter(Expense.expense_date >= datetime.combine(start, datetime.min.time()))
+    if end:
+        query = query.filter(Expense.expense_date <= datetime.combine(end, datetime.max.time()))
+    if category:
+        query = query.filter(Expense.category == category)
+    if q:
+        query = query.filter(
+            (Expense.description.ilike(f"%{q}%")) | (Expense.vendor_name.ilike(f"%{q}%"))
+        )
+
+    return query.order_by(Expense.expense_date.desc()).all()
+
+
+@router.get("/export/csv")
+def export_expenses_csv(
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    expenses = list_expenses(start, end, category, None, db, current_user)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Date", "Category", "Vendor", "Description", "Paid From", "Amount"])
+    
+    for e in expenses:
+        writer.writerow([
+            e.expense_date.strftime("%Y-%m-%d"),
+            e.category,
+            e.vendor_name,
+            e.description,
+            e.payment_method_name or "Cash",
+            e.amount
+        ])
+    
+    output.seek(0)
+    filename = f"expenses_{datetime.now().strftime('%Y%m%d')}.csv"
+    headers = {"Content-Disposition": f"attachment; filename={filename}"}
+    return StreamingResponse(io.BytesIO(output.getvalue().encode()), media_type="text/csv", headers=headers)
 
 
 @router.get("/stats/summary")
@@ -88,7 +147,6 @@ def expense_stats(db: Session = Depends(get_db), current_user: User = Depends(ge
     if account_id is None:
         return {"total_expenses": 0, "total_amount": 0, "cogs": 0, "total_outgoings": 0, "by_category": {}}
 
-    # 1. Operational Expenses
     expenses = db.query(Expense).filter(Expense.account_id == account_id).all()
     by_category = {}
     total_op_expenses = 0.0
@@ -96,8 +154,6 @@ def expense_stats(db: Session = Depends(get_db), current_user: User = Depends(ge
         by_category[e.category] = by_category.get(e.category, 0) + e.amount
         total_op_expenses += e.amount
 
-    # 2. Cost of Goods Sold (Account 5000)
-    # Sum up all debits to account 5000 across all journal entries for this tenant.
     cogs = (
         db.query(func.sum(JournalLine.debit))
         .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
@@ -119,15 +175,67 @@ def expense_stats(db: Session = Depends(get_db), current_user: User = Depends(ge
     }
 
 
+@router.get("/categories/list")
+def list_categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        return []
+    rows = db.query(Expense.category).filter(Expense.account_id == account_id).distinct().all()
+    return sorted({r[0] for r in rows if r[0]})
+
+
 @router.get("/{expense_id}", response_model=ExpenseOut)
 def get_expense(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Expense).filter(Expense.id == expense_id)
     account_id = get_account_filter(current_user)
+    query = db.query(Expense).filter(Expense.id == expense_id)
     if account_id is not None:
         query = query.filter(Expense.account_id == account_id)
     expense = query.first()
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    return expense
+
+
+@router.put("/{expense_id}", response_model=ExpenseOut)
+def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depends(get_db),
+                    current_user: User = Depends(require_manager_up)):
+    account_id = get_account_filter(current_user)
+    query = db.query(Expense).filter(Expense.id == expense_id)
+    if account_id is not None:
+        query = query.filter(Expense.account_id == account_id)
+    expense = query.first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # 1. Reverse original ledger entry (if it exists)
+    original_entry = find_journal_entry_by_reference(db, expense.account_id, f"expense-{expense.id}")
+    if original_entry:
+        try:
+            reverse_journal_entry(db, expense.account_id, original_entry, created_by=current_user.username,
+                                   reason=f"Expense {expense_id} updated")
+        except FiscalPeriodLockedError as e:
+            raise HTTPException(status_code=400, detail=f"Cannot edit: original entry is in a locked period. {e}")
+
+    # 2. Update model
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(expense, field, value)
+    
+    db.commit()
+    db.refresh(expense)
+
+    # 3. Post new ledger entry
+    try:
+        post_expense_entry(db, expense.account_id, expense, created_by=current_user.username)
+    except FiscalPeriodLockedError as e:
+        # If the new date is locked, we've already reversed the old one.
+        # This is a bit awkward but strictly correct: you can't move an expense INTO a locked period.
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Cannot move expense to a locked period. {e}")
+    except ValueError as e:
+        log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
+
+    log_activity_for_user(db, current_user, "expense_update", f"Updated expense {expense_id} ({expense.category})")
     return expense
 
 

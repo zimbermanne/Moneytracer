@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 
@@ -23,9 +23,9 @@ export default function Attachments({ entityType, entityId, onAttachmentChange }
   }
 
   // Load attachments when entityType or entityId changes
-  useState(() => {
+  useEffect(() => {
     loadAttachments()
-  }, [entityType, entityId])
+  }, [entityType, entityId]) // eslint-disable-line
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]

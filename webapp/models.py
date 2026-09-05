@@ -396,7 +396,11 @@ class Expense(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     category = Column(String(80), default="General")
     description = Column(String(255), default="")
+    vendor_name = Column(String(150), default="")  # Who was paid (freetext one-off or ref)
     amount = Column(Float, default=0)
+    # The actual date the expense occurred, allowing for backdating.
+    # Defaults to today's date if not provided.
+    expense_date = Column(DateTime, default=datetime.utcnow, index=True)
     # Which till/bank/mobile-money account the money actually left — the
     # same PaymentMethod used on the POS checkout dropdown, so an expense
     # posts (Dr Expense / Cr <that account>) instead of always assuming
@@ -411,6 +415,38 @@ class Expense(Base):
     @property
     def payment_method_name(self):
         return self.payment_method.name if self.payment_method else None
+
+
+class RecurringExpense(Base):
+    """Template for automatically generating expenses on a recurring schedule.
+    Mirrors RecurringInvoice in structure and logic."""
+    __tablename__ = "recurring_expenses"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    category = Column(String(80), default="General")
+    description = Column(String(255), default="")
+    vendor_name = Column(String(150), default="")
+    amount = Column(Float, default=0)
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
+
+    # Schedule (mirroring RecurringInvoice)
+    frequency = Column(String(50), nullable=False)  # "weekly", "biweekly", "monthly", "quarterly", "yearly"
+    interval = Column(Integer, default=1)  # e.g., 2 for "every 2 months"
+    day_of_month = Column(Integer, nullable=True)  # For monthly: 1-31
+    day_of_week = Column(String(20), nullable=True)  # For weekly: "monday", "tuesday", etc.
+
+    # Control
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)  # Optional end date
+    last_generated = Column(DateTime, nullable=True)  # Last time an expense was generated
+    next_generation = Column(DateTime, nullable=True, index=True)  # Next scheduled generation
+    is_active = Column(Boolean, default=True, index=True)
+
+    created_by = Column(String(80), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Debtor(Base):
