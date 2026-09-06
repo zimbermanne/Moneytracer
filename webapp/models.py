@@ -1103,12 +1103,14 @@ class LoanStatus(str, enum.Enum):
 
 
 # ---------------------------------------------------------------------------
-# Assets — a flat value-tracker (house, vehicle, equipment, etc). No
-# depreciation schedule for v1; estimated_value is whatever the owner last
-# updated it to. account_id is intentionally not restricted to business-type
-# accounts — personal-type tenants use these same endpoints/tables directly
-# (the personal/business/community separation is enforced elsewhere, e.g.
-# community.py's ownership check; it was never actually enforced here).
+# Assets — house, vehicle, equipment, etc. estimated_value is the current
+# carrying value: adjustable by hand (revaluation, manual depreciation) or
+# automatically via the scheduler if auto_depreciate is on — see
+# scheduler.run_monthly_depreciation (straight-line). account_id is
+# intentionally not restricted to business-type accounts — personal-type
+# tenants use these same endpoints/tables directly (the personal/business/
+# community separation is enforced elsewhere, e.g. community.py's ownership
+# check; it was never actually enforced here).
 # ---------------------------------------------------------------------------
 
 class AssetType(str, enum.Enum):
@@ -1142,6 +1144,11 @@ class Asset(Base):
     useful_life_years = Column(Integer, default=5)
     acquired_date = Column(DateTime, nullable=True)
     last_revaluation_date = Column(DateTime, nullable=True)
+    # Opt-in: post a straight-line depreciation entry automatically each
+    # month via the scheduler, instead of relying on someone remembering
+    # to hit "Depreciate" by hand. Off by default so existing assets
+    # aren't suddenly affected without the owner choosing this.
+    auto_depreciate = Column(Boolean, default=False)
     notes = Column(String(255), default="")
     created_by = Column(String(80), default="")
     created_at = Column(DateTime, default=datetime.utcnow)

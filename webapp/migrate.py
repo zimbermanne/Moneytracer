@@ -97,6 +97,11 @@ _MIGRATIONS = {
 # These tables live in the per-track Postgres schema (a no-op filter under
 # SQLite, where everything is unqualified — see database.USE_SCHEMAS).
 _SCHEMA_MIGRATIONS = {
+    ("business", "assets"): [
+        # Opt-in automatic monthly straight-line depreciation — see
+        # models.Asset.auto_depreciate and scheduler.run_monthly_depreciation.
+        ("auto_depreciate", "BOOLEAN", "false"),
+    ],
     ("business", "debtors"): [
         # Reconciliation key alongside phone — see models.Debtor.tin_number
         # and routers/ledgers.py:reconcile_party().

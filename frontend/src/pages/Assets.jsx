@@ -32,6 +32,7 @@ const emptyForm = () => ({
   estimated_value: '',
   salvage_value: '0',
   useful_life_years: '5',
+  auto_depreciate: false,
   acquired_date: '',
   notes: ''
 })
@@ -75,6 +76,7 @@ export default function Assets() {
       estimated_value: a.estimated_value,
       salvage_value: a.salvage_value,
       useful_life_years: a.useful_life_years,
+      auto_depreciate: a.auto_depreciate || false,
       acquired_date: a.acquired_date ? a.acquired_date.slice(0, 10) : '',
       notes: a.notes || '',
     })
@@ -106,6 +108,7 @@ export default function Assets() {
         estimated_value: Number(form.estimated_value) || Number(form.acquisition_cost) || 0,
         salvage_value: Number(form.salvage_value) || 0,
         useful_life_years: Number(form.useful_life_years) || 5,
+        auto_depreciate: !!form.auto_depreciate,
         acquired_date: form.acquired_date ? new Date(form.acquired_date).toISOString() : null,
         notes: form.notes || '',
       }
@@ -260,6 +263,15 @@ export default function Assets() {
               <div style={{ gridColumn: 'span 2', fontSize: 11, color: 'var(--text-muted)' }}>
                 Monthly Depreciation: {money(calculateDepreciation(form.acquisition_cost, form.salvage_value, form.useful_life_years).monthlyDepreciation)}
               </div>
+              <label style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={form.auto_depreciate}
+                  onChange={(e) => setForm({ ...form, auto_depreciate: e.target.checked })}
+                  style={{ width: 16, height: 16 }}
+                />
+                Auto-depreciate monthly (straight-line) — posts to the ledger automatically on the 1st of each month
+              </label>
             </div>
           )}
 

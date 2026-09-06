@@ -1,6 +1,8 @@
-"""Asset tracking — house, vehicle, equipment, or other. A flat value
-tracker for v1: no depreciation schedule, estimated_value is whatever the
-owner last set it to. Shared by business and personal account types alike.
+"""Asset tracking — house, vehicle, equipment, or other. estimated_value is
+the current carrying value, adjustable by hand (revaluation, manual
+depreciation) or automatically via the scheduler if an asset has
+auto_depreciate turned on — see scheduler.run_monthly_depreciation for the
+straight-line schedule. Shared by business and personal account types alike.
 """
 from datetime import datetime
 from typing import List, Optional
@@ -55,6 +57,7 @@ def create_asset(payload: AssetCreate, db: Session = Depends(get_db),
         salvage_value=payload.salvage_value,
         useful_life_years=payload.useful_life_years,
         acquired_date=payload.acquired_date,
+        auto_depreciate=payload.auto_depreciate,
         notes=payload.notes or "",
         created_by=current_user.username,
     )

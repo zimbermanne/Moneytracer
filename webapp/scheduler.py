@@ -21,10 +21,11 @@ from models import (
     Invoice, DocumentStatus, Account, ActivityLog, Reminder,
     ComplianceDeadline, DeadlineRecurrence, BankLoan, LoanStatus,
     JournalEntry, RecurringInvoice, RecurringExpense,
+    Asset, AssetType,
 )
 from activity import log_activity
 import email_utils
-from ledger import post_loan_interest_accrual_entry, post_sale_entry, post_expense_entry
+from ledger import post_loan_interest_accrual_entry, post_sale_entry, post_expense_entry, post_depreciation_entry, find_journal_entry_by_reference
 from date_utils import add_months, calculate_next_date
 _REMINDER_ACTION = "invoice_reminder_sent"
 _DEADLINE_REMINDER_ACTION = "deadline_reminder_sent"
@@ -256,6 +257,66 @@ def accrue_loan_interest():
         db.close()
 
 
+def run_monthly_depreciation():
+    """Runs daily like the other jobs here, but only actually posts on the
+    1st of the month — straight-line depreciation is a monthly concept, a
+    daily accrual would just be needless noise in the ledger. Idempotent
+    via the same reference-string convention post_depreciation_entry
+    already uses (asset-depr-{id}-{YYYYMM}), so a redeploy or a missed/
+    re-run day can't double-post for a month already covered.
+
+    Only fixed_asset rows with auto_depreciate=True are touched — assets
+    someone manages by hand (post_manual_depreciation) or that are
+    financial_investment/intangible are left alone."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        if now.day != 1:
+            return
+        month_key = now.strftime("%Y%m")
+
+        assets = db.query(Asset).filter(
+            Asset.asset_type == AssetType.fixed_asset,
+            Asset.auto_depreciate == True,
+            Asset.useful_life_years > 0,
+        ).all()
+
+        for asset in assets:
+            if asset.acquired_date and asset.acquired_date > now:
+                continue  # not yet in service
+
+            reference = f"asset-depr-{asset.id}-{month_key}"
+            if find_journal_entry_by_reference(db, asset.account_id, reference) is not None:
+                continue  # already posted for this month
+
+            depreciable_base = asset.acquisition_cost - asset.salvage_value
+            if depreciable_base <= 0:
+                continue
+            monthly_amount = round(depreciable_base / (asset.useful_life_years * 12), 2)
+            # Don't depreciate past salvage value even if this month's
+            # straight-line slice would overshoot it (e.g. rounding on the
+            # final month of the schedule).
+            remaining = round(asset.estimated_value - asset.salvage_value, 2)
+            monthly_amount = min(monthly_amount, remaining)
+            if monthly_amount <= 0.01:
+                continue
+
+            try:
+                asset.estimated_value = round(asset.estimated_value - monthly_amount, 2)
+                post_depreciation_entry(db, asset.account_id, asset, monthly_amount, now, created_by="system")
+                log_activity(db, username="system", action="asset_auto_depreciated",
+                             details=f"asset_id={asset.id} month={month_key} amount={monthly_amount:.2f}",
+                             account_id=asset.account_id)
+            except Exception as e:
+                log_activity(db, username="system", action="CRITICAL: asset_auto_depreciation_failed",
+                             details=f"asset_id={asset.id} month={month_key} error={e}",
+                             account_id=asset.account_id)
+
+        db.commit()
+    finally:
+        db.close()
+
+
 def purge_expired_deleted_accounts():
     """Permanently deletes accounts whose ~90-day post-deletion grace
     period (see routers/accounts.py delete_account / DELETION_GRACE_DAYS)
@@ -361,6 +422,13 @@ def start_scheduler():
         "interval", hours=24,
         id="accrue_loan_interest",
         next_run_time=datetime.utcnow() + timedelta(seconds=120),
+        coalesce=True, max_instances=1,
+    )
+    _scheduler.add_job(
+        run_monthly_depreciation,
+        "interval", hours=24,
+        id="run_monthly_depreciation",
+        next_run_time=datetime.utcnow() + timedelta(seconds=135),
         coalesce=True, max_instances=1,
     )
     _scheduler.add_job(

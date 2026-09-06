@@ -633,6 +633,7 @@ class AssetCreate(BaseModel):
     salvage_value: float = 0
     useful_life_years: int = 5
     acquired_date: Optional[datetime] = None
+    auto_depreciate: bool = False
     notes: Optional[str] = ""
 
 
@@ -645,6 +646,7 @@ class AssetUpdate(BaseModel):
     salvage_value: Optional[float] = None
     useful_life_years: Optional[int] = None
     acquired_date: Optional[datetime] = None
+    auto_depreciate: Optional[bool] = None
     notes: Optional[str] = None
 
 
@@ -660,6 +662,7 @@ class AssetOut(BaseModel):
     useful_life_years: int
     acquired_date: Optional[datetime] = None
     last_revaluation_date: Optional[datetime] = None
+    auto_depreciate: bool = False
     notes: str
     created_at: datetime
     revaluation_history: List[AssetRevaluationHistoryOut] = []
