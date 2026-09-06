@@ -1,6 +1,6 @@
 import io
 import csv
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -49,6 +49,30 @@ def _resolve_payment_method(db: Session, account_id: int, payment_method_id: Opt
     return method
 
 
+def _find_duplicate_expense(db: Session, account_id: int, amount: float, description: str, expense_date: datetime, exclude_id: Optional[int] = None):
+    """Same date (calendar day) + same description (case/whitespace-
+    insensitive) + same amount = almost certainly the same transaction
+    entered twice — the classic double-entry mistake (submit button
+    tapped twice, imported alongside a manual entry, etc.). Matching on
+    all three together, rather than any one alone, keeps this from
+    flagging genuinely different expenses that happen to share just an
+    amount or just a description."""
+    day_start = datetime(expense_date.year, expense_date.month, expense_date.day)
+    day_end = day_start + timedelta(days=1)
+    description_key = (description or "").strip().lower()
+
+    query = db.query(Expense).filter(
+        Expense.account_id == account_id,
+        Expense.amount == amount,
+        Expense.expense_date >= day_start,
+        Expense.expense_date < day_end,
+        func.lower(func.trim(Expense.description)) == description_key,
+    )
+    if exclude_id is not None:
+        query = query.filter(Expense.id != exclude_id)
+    return query.first()
+
+
 @router.post("/", response_model=ExpenseOut)
 def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
                     current_user: User = Depends(get_current_user)):
@@ -60,6 +84,16 @@ def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
 
     # Use explicitly provided expense_date or fall back to now
     expense_date = payload.expense_date or datetime.utcnow()
+
+    if not payload.allow_duplicate:
+        duplicate = _find_duplicate_expense(db, account_id, payload.amount, payload.description, expense_date)
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"DUPLICATE:An expense of {payload.amount:,.2f} for "
+                       f"'{payload.description or payload.category}' on "
+                       f"{expense_date.date()} is already recorded (#{duplicate.id}).",
+            )
 
     expense = Expense(
         account_id=account_id,
@@ -252,6 +286,28 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 
+    # Check for duplicates against the *resulting* state (merged existing +
+    # incoming changes) before touching anything — same reasoning as
+    # record_expense, but must run before the ledger reversal below so a
+    # rejected save doesn't leave the original entry half-reversed.
+    data = payload.model_dump(exclude_unset=True)
+    allow_duplicate = data.pop("allow_duplicate", False)
+    if not allow_duplicate:
+        effective_amount = data.get("amount", expense.amount)
+        effective_description = data.get("description", expense.description)
+        effective_date = data.get("expense_date", expense.expense_date)
+        duplicate = _find_duplicate_expense(
+            db, expense.account_id, effective_amount, effective_description, effective_date,
+            exclude_id=expense.id,
+        )
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"DUPLICATE:An expense of {effective_amount:,.2f} for "
+                       f"'{effective_description or expense.category}' on "
+                       f"{effective_date.date()} is already recorded (#{duplicate.id}).",
+            )
+
     # 1. Reverse original ledger entry (if it exists)
     original_entry = find_journal_entry_by_reference(db, expense.account_id, f"expense-{expense.id}")
     if original_entry:
@@ -262,7 +318,6 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
             raise HTTPException(status_code=400, detail=f"Cannot edit: original entry is in a locked period. {e}")
 
     # 2. Update model
-    data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(expense, field, value)
     

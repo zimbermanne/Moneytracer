@@ -153,7 +153,34 @@ export default function Expenses() {
       load()
       loadMetaData()
     } catch (e) {
-      setError(e.message)
+      // Backend flags a likely duplicate (same date + description + amount)
+      // with a 'DUPLICATE:' prefixed message rather than silently blocking
+      // it outright — a legitimate same-day repeat is real (fuel bought
+      // twice, etc.), so offer to save anyway instead of a dead end.
+      if (e.message.startsWith('DUPLICATE:')) {
+        const reason = e.message.slice('DUPLICATE:'.length)
+        if (confirm(`${reason}\n\nSave it anyway?`)) {
+          try {
+            const payload = {
+              ...form,
+              expense_date: new Date(form.expense_date).toISOString(),
+              allow_duplicate: true,
+            }
+            if (editingId) {
+              await api.put(`/expenses/${editingId}`, payload)
+            } else {
+              await api.post('/expenses/', payload)
+            }
+            setOpen(false)
+            load()
+            loadMetaData()
+          } catch (e2) {
+            setError(e2.message)
+          }
+        }
+      } else {
+        setError(e.message)
+      }
     } finally {
       setSaving(false)
     }

@@ -458,6 +458,11 @@ class ExpenseCreate(BaseModel):
     amount: float
     expense_date: Optional[datetime] = None
     payment_method_id: Optional[int] = None
+    # When a duplicate is detected (same date + description + amount as an
+    # existing expense), the first save attempt is rejected so it can be
+    # confirmed rather than silently double-counted. Set True to save anyway
+    # — a legitimate same-day repeat (e.g. fuel bought twice) exists.
+    allow_duplicate: bool = False
 
 
 class ExpenseUpdate(BaseModel):
@@ -467,6 +472,7 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[float] = None
     expense_date: Optional[datetime] = None
     payment_method_id: Optional[int] = None
+    allow_duplicate: bool = False
 
 
 # ---------- Bank reconciliation ----------
