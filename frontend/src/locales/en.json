@@ -7,16 +7,22 @@
     "add": "Add",
     "search": "Search",
     "loading": "Loading...",
+    "loadingEllipsis": "Loading...",
     "noResults": "No results found",
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",
     "submit": "Submit",
     "close": "Close",
+    "view": "View",
     "yes": "Yes",
     "no": "No",
     "or": "or",
-    "and": "and"
+    "and": "and",
+    "date": "Date",
+    "amount": "Amount",
+    "optional": "Optional",
+    "notes": "Notes"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -75,7 +81,10 @@
     "debtorsGroup": "Debtors",
     "creditorsGroup": "Creditors",
     "accountingReportsGroup": "Accounting & Reports",
-    "expensesGroup": "Expenses Ledger"
+    "expensesGroup": "Expenses Ledger",
+    "debtorsAging": "Debtors Aging",
+    "creditorsAging": "Creditors Aging",
+    "bankReconciliation": "Bank Reconciliation"
   },
   "auth": {
     "login": "Login",
@@ -101,7 +110,11 @@
     "loadingDemo": "Loading demo…",
     "dontHaveAccount": "Don't have an account?",
     "createOne": "Create one",
-    "tagline": "Payroll, compliance, and books — handled quietly."
+    "tagline": "Payroll, compliance, and books — handled quietly.",
+    "quickSignupSettingUp": "Setting up your account…",
+    "quickSignupSubtitle": "You'll be able to add your name and business details afterwards.",
+    "quickSignupFailedTitle": "Something went wrong",
+    "backToLogin": "Back to login"
   },
   "onboarding": {
     "title": "Setup Your Business",
@@ -437,6 +450,7 @@
     "totalOutstanding": "Total Outstanding",
     "activeLoans": "Active Loans",
     "noLoans": "No loans recorded yet.",
+    "editLoan": "Edit Loan",
     "outstanding": "outstanding",
     "logPayment": "Log a Payment",
     "markClosed": "Mark as Closed",

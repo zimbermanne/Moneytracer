@@ -7,16 +7,22 @@
     "add": "Ongeza",
     "search": "Tafuta",
     "loading": "Inapakia...",
+    "loadingEllipsis": "Inapakia...",
     "noResults": "Hakato matokeo",
     "confirm": "Thibitisha",
     "back": "Rudi",
     "next": "Endelea",
     "submit": "Wasilisha",
     "close": "Funga",
+    "view": "Angalia",
     "yes": "Ndio",
     "no": "Hapana",
     "or": "au",
-    "and": "na"
+    "and": "na",
+    "date": "Tarehe",
+    "amount": "Kiasi",
+    "optional": "Si lazima",
+    "notes": "Maelezo"
   },
   "nav": {
     "dashboard": "Dashibodi",
@@ -64,7 +70,10 @@
     "debtorsGroup": "Wadaiwa",
     "creditorsGroup": "Wadai",
     "accountingReportsGroup": "Uhasibu na Ripoti",
-    "expensesGroup": "Daftari la Matumizi"
+    "expensesGroup": "Daftari la Matumizi",
+    "debtorsAging": "Umri wa Madeni ya Wadaiwa",
+    "creditorsAging": "Umri wa Madeni ya Wadai",
+    "bankReconciliation": "Upatanisho wa Benki"
   },
   "auth": {
     "login": "Ingia",
@@ -426,6 +435,7 @@
     "totalOutstanding": "Jumla Isiyolipwa",
     "activeLoans": "Mikopo Inayoendelea",
     "noLoans": "Hakuna mikopo iliyorekodiwa bado.",
+    "editLoan": "Hariri Mkopo",
     "outstanding": "haijalipwa",
     "logPayment": "Rekodi Malipo",
     "markClosed": "Weka Imefungwa",
