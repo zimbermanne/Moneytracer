@@ -425,6 +425,7 @@ class PurchaseCreate(BaseModel):
     supplier: Optional[str] = ""
     quantity: float = 1
     unit_cost: float = 0
+    payment_method_id: Optional[int] = None
 
 
 class PurchaseUpdate(BaseModel):
@@ -432,6 +433,7 @@ class PurchaseUpdate(BaseModel):
     supplier: Optional[str] = None
     quantity: Optional[float] = None
     unit_cost: Optional[float] = None
+    payment_method_id: Optional[int] = None
 
 
 class PurchaseMultiCreate(BaseModel):
@@ -447,6 +449,7 @@ class PurchaseOut(BaseModel):
     quantity: float
     unit_cost: float
     total: float
+    payment_method_id: Optional[int] = None
     created_at: datetime
 
 

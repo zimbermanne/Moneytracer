@@ -319,9 +319,12 @@ class Purchase(Base):
     quantity = Column(Float, default=1)
     unit_cost = Column(Float, default=0)
     total = Column(Float, default=0)
+    # Which account the purchase was paid from (Cash, Bank, etc.)
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     item = relationship("InventoryItem")
+    payment_method = relationship("PaymentMethod")
 
 
 class PurchaseOrder(Base):
@@ -1718,3 +1721,7 @@ class Message(Base):
     thread = relationship("MessageThread", back_populates="messages")
     sender_user = relationship("User")
     sender_account = relationship("Account")
+
+    @property
+    def sender_username(self):
+        return self.sender_user.username if self.sender_user else "Unknown"
