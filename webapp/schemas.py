@@ -1738,6 +1738,8 @@ class ChartOfAccountOut(BaseModel):
 
 
 ChartOfAccountOut.model_rebuild()
+CustomerProfile.model_rebuild()
+SupplierProfile.model_rebuild()
 
 
 class PaymentMethodOut(BaseModel):

@@ -8,7 +8,7 @@ function money(n) {
  * to the linked inventory item. Collapses automatically after a
  * successful save.
  */
-export default function PurchaseDetailPanel({ purchase, form, onChange, matchedItem, saving, error, onCancel, onSave }) {
+export default function PurchaseDetailPanel({ purchase, form, onChange, matchedItem, paymentMethods = [], saving, error, onCancel, onSave }) {
   if (!purchase) return null
 
   return (
@@ -48,6 +48,19 @@ export default function PurchaseDetailPanel({ purchase, form, onChange, matchedI
           </div>
 
           <div className="form-row"><label>Supplier</label><input value={form.supplier} onChange={(e) => onChange({ ...form, supplier: e.target.value })} /></div>
+
+          <div className="form-row">
+            <label>Paid From (Source Account)</label>
+            <select
+              value={form.payment_method_id ?? ''}
+              onChange={(e) => onChange({ ...form, payment_method_id: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">Cash (unspecified)</option>
+              {paymentMethods.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
             <div className="form-row" style={{ flex: 1 }}><label>Quantity</label><input type="number" value={form.quantity} onChange={(e) => onChange({ ...form, quantity: Number(e.target.value) })} /></div>

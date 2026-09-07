@@ -81,6 +81,7 @@ def record_purchase(payload: PurchaseCreate, db: Session = Depends(get_db),
         quantity=payload.quantity,
         unit_cost=payload.unit_cost,
         total=total,
+        payment_method_id=payload.payment_method_id
     )
     db.add(purchase)
     item = _apply_inventory_for_purchase(db, account_id, payload.item_name, payload.quantity, payload.unit_cost)
@@ -117,6 +118,7 @@ def record_purchases_multi(payload: PurchaseMultiCreate, db: Session = Depends(g
             quantity=entry.quantity,
             unit_cost=entry.unit_cost,
             total=total,
+            payment_method_id=entry.payment_method_id
         )
         db.add(purchase)
         item = _apply_inventory_for_purchase(db, account_id, entry.item_name, entry.quantity, entry.unit_cost)
@@ -159,6 +161,8 @@ def update_purchase(purchase_id: int, payload: PurchaseUpdate, db: Session = Dep
         purchase.quantity = payload.quantity
     if payload.unit_cost is not None:
         purchase.unit_cost = payload.unit_cost
+    if payload.payment_method_id is not None:
+        purchase.payment_method_id = payload.payment_method_id
     purchase.total = purchase.quantity * purchase.unit_cost
 
     item = _apply_inventory_for_purchase(db, purchase.account_id, purchase.item_name, purchase.quantity, purchase.unit_cost)
@@ -233,6 +237,7 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
             quantity=quantity,
             unit_cost=unit_cost,
             total=quantity * unit_cost,
+            payment_method_id=None # Default to None for batch imports for now
         )
         db.add(purchase)
         item = _apply_inventory_for_purchase(db, account_id, item_name, quantity, unit_cost)

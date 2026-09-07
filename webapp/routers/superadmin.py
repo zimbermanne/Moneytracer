@@ -335,17 +335,7 @@ def list_support_threads(
 
     out = []
     for t in threads:
-        obj = MessageThreadOut(
-            id=t.id,
-            creator_account_id=t.creator_account_id,
-            recipient_account_id=t.recipient_account_id,
-            subject=t.subject,
-            status=t.status,
-            last_message_at=t.last_message_at,
-            last_message_preview=t.last_message_preview,
-            created_at=t.created_at,
-            messages=[]
-        )
+        obj = MessageThreadOut.model_validate(t)
         obj.partner_name = t.creator_account.name if t.creator_account else "Unknown"
         obj.is_support = True
         obj.unread = t.unread_by_recipient
@@ -379,7 +369,7 @@ def get_support_thread(thread_id: int, db: Session = Depends(get_db),
         MessageOut(
             id=m.id,
             thread_id=m.thread_id,
-            sender_username=m.sender_user.username,
+            sender_username=m.sender_username,
             sender_account_id=m.sender_account_id,
             is_from_superadmin=m.is_from_superadmin,
             body=m.body,

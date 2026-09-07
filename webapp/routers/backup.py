@@ -40,6 +40,14 @@ def list_backups(admin: User = Depends(require_admin)):
     return [{"filename": f, "size_kb": round(os.path.getsize(os.path.join(BACKUP_DIR, f)) / 1024, 1)} for f in files]
 
 
+@router.get("/download/{filename}")
+def download_backup(filename: str, admin: User = Depends(require_admin)):
+    path = os.path.join(BACKUP_DIR, filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Backup not found")
+    return FileResponse(path, filename=filename)
+
+
 @router.post("/restore/{filename}")
 def restore_backup(filename: str, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     src = os.path.join(BACKUP_DIR, filename)

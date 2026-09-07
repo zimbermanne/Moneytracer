@@ -16,10 +16,12 @@ export default function Purchases() {
   const [error, setError] = useState('')
   const [listLoading, setListLoading] = useState(true)
   const [inventory, setInventory] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
 
   // Add-multiple-items modal state
   const [open, setOpen] = useState(false)
   const [supplier, setSupplier] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState(null)
   const [rows, setRows] = useState([emptyRow()])
   const [saving, setSaving] = useState(false)
 
@@ -33,6 +35,11 @@ export default function Purchases() {
     api.get('/purchases/').then(setPurchases).catch((e) => setError(e.message)).finally(() => setListLoading(false))
     api.get('/purchases/stats/summary').then(setStats).catch(() => {})
     api.get('/inventory/').then(setInventory).catch(() => {})
+    api.get('/ledgers/payment-methods').then(methods => {
+      const filtered = methods.filter(m => !m.is_credit)
+      setPaymentMethods(filtered)
+      if (filtered.length > 0) setPaymentMethodId(filtered[0].id)
+    }).catch(() => {})
   }
 
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -65,7 +72,13 @@ export default function Purchases() {
   const saveAll = async () => {
     const items = rows
       .filter((r) => r.item_name.trim())
-      .map((r) => ({ item_name: r.item_name, supplier, quantity: Number(r.quantity) || 0, unit_cost: Number(r.unit_cost) || 0 }))
+      .map((r) => ({
+        item_name: r.item_name,
+        supplier,
+        quantity: Number(r.quantity) || 0,
+        unit_cost: Number(r.unit_cost) || 0,
+        payment_method_id: paymentMethodId
+      }))
     if (items.length === 0) {
       setError('Add at least one item before saving.')
       return
@@ -92,6 +105,7 @@ export default function Purchases() {
       supplier: purchase.supplier,
       quantity: purchase.quantity,
       unit_cost: purchase.unit_cost,
+      payment_method_id: purchase.payment_method_id
     })
     setError('')
   }
@@ -157,7 +171,20 @@ export default function Purchases() {
             <button className="btn btn-primary" onClick={saveAll} disabled={saving}>{saving ? 'Saving…' : 'Save All'}</button>
           </>)}
         >
-          <div className="form-row"><label>Supplier</label><input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Applies to all items below" /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="form-row">
+              <label>Supplier</label>
+              <input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Who are you buying from?" />
+            </div>
+            <div className="form-row">
+              <label>Paid From (Source Account)</label>
+              <select value={paymentMethodId ?? ''} onChange={(e) => setPaymentMethodId(Number(e.target.value))}>
+                {paymentMethods.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           {rows.map((row, idx) => {
             const match = findMatch(row.item_name)
@@ -203,6 +230,7 @@ export default function Purchases() {
         form={editForm}
         onChange={setEditForm}
         matchedItem={findMatch(editForm.item_name)}
+        paymentMethods={paymentMethods}
         saving={savingEdit}
         error={error}
         onCancel={() => setEditPurchase(null)}

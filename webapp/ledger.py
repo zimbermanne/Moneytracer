@@ -306,8 +306,14 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     lines = []
     cost_code = "5000" if _get_cogs_method(db, account_id) == CogsMethod.cash else "1210"
 
+    payment_method = getattr(purchase, "payment_method", None)
+    funding_account_code = (
+        payment_method.chart_account.code
+        if payment_method is not None and payment_method.chart_account is not None
+        else "1000" # default to Cash
+    )
+
     # Get tax rate from purchase if available (for future VAT support)
-    # Currently Purchase model doesn't have tax_rate/tax_amount, but we'll add the structure
     tax_rate = getattr(purchase, "tax_rate", 0) or 0
     tax_amount = getattr(purchase, "tax_amount", 0) or 0
     
@@ -320,7 +326,7 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
         # Non-VAT purchase: full amount to cost/inventory
         lines.append((cost_code, purchase.total, 0))
     
-    lines.append(("1000", 0, purchase.total))
+    lines.append((funding_account_code, 0, purchase.total))
     
     return post_journal_entry(
         db, account_id,

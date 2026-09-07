@@ -133,6 +133,8 @@ _SCHEMA_MIGRATIONS = {
     ("business", "purchases"): [
         # Proper FK to inventory instead of relying solely on name-matching.
         ("item_id", "INTEGER", None),
+        # Which specific account the purchase was paid from.
+        ("payment_method_id", "INTEGER", "NULL"),
     ],
     ("business", "invoices"): [
         # Fields for the redesigned Tanzania-style tax invoice template.

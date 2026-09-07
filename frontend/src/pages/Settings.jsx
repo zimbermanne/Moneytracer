@@ -7,6 +7,7 @@ import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import AppearanceSettings from '../components/AppearanceSettings.jsx'
 import { useNavigate } from 'react-router-dom'
+import { apiUrl } from '../api-config.js'
 
 export default function Settings() {
   const { user, logout, completeProfile, refreshAccount } = useAuth()
@@ -231,6 +232,18 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Backup and Restore card (Admin only) */}
+      {isAdmin && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h3 style={{ marginTop: 0 }}>💾 Data Backup & Recovery</h3>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+            Download a full backup of your account data. If the server is ever lost or compromised,
+            you can upload this file to restore your entire profile.
+          </div>
+          <BackupControls />
+        </div>
+      )}
+
       {/* Appearance: theme mode, accent color */}
       <AppearanceSettings />
 
@@ -423,6 +436,121 @@ export default function Settings() {
           {resetMsg && <div style={{ color: resetMsg.startsWith('Error') ? 'var(--danger)' : 'var(--success)', fontSize: 13 }}>{resetMsg}</div>}
         </Modal>
       )}
+    </div>
+  )
+}
+
+function BackupControls() {
+  const api = useApi()
+  const [backups, setBackups] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    api.get('/backup/list')
+      .then(setBackups)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, []) // eslint-disable-line
+
+  const create = async () => {
+    setBusy(true)
+    try {
+      await api.post('/backup/create', {})
+      load()
+    } catch (e) { alert(e.message) }
+    finally { setBusy(false) }
+  }
+
+  const download = (filename) => {
+    const url = apiUrl(`/api/backup/download/${filename}`)
+    window.open(url, '_blank')
+  }
+
+  const upload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (!confirm('Uploading a backup will replace your current file. Continue?')) return
+
+    setBusy(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      await api.post('/backup/upload', formData)
+      load()
+      alert('Backup uploaded successfully. To apply it, you must use the Restore function.')
+    } catch (e) { alert(e.message) }
+    finally { setBusy(false) }
+  }
+
+  const restore = async (filename) => {
+    if (!confirm(`RESTORE from ${filename}? This will OVERWRITE your current data with the contents of the backup. This cannot be undone.`)) return
+    setBusy(true)
+    try {
+      const res = await api.post(`/backup/restore/${filename}`, {})
+      alert(res.detail)
+      window.location.reload()
+    } catch (e) { alert(e.message) }
+    finally { setBusy(false) }
+  }
+
+  const remove = async (filename) => {
+    if (!confirm(`Delete ${filename}?`)) return
+    try {
+      await api.del(`/backup/${filename}`)
+      load()
+    } catch (e) { alert(e.message) }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button className="btn btn-primary" onClick={create} disabled={busy}>
+          {busy ? 'Processing...' : 'Create New Backup'}
+        </button>
+        <div style={{ position: 'relative' }}>
+          <button className="btn btn-outline" disabled={busy}>Upload Backup</button>
+          <input
+            type="file"
+            onChange={upload}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+            accept=".db"
+            disabled={busy}
+          />
+        </div>
+      </div>
+
+      <div className="responsive-table">
+        <table style={{ width: '100%', fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Size</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? <tr><td colSpan="3">Loading backups...</td></tr> :
+             backups.length === 0 ? <tr><td colSpan="3">No backups yet.</td></tr> :
+             backups.map(b => (
+              <tr key={b.filename}>
+                <td style={{ fontWeight: 600 }}>{b.filename}</td>
+                <td>{b.size_kb} KB</td>
+                <td style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => download(b.filename)}>⬇ Download</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => restore(b.filename)} style={{ color: 'var(--accent)' }}>🔄 Restore</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => remove(b.filename)} style={{ color: 'var(--danger)' }}>✕</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

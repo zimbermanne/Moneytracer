@@ -51,18 +51,7 @@ def list_my_threads(db: Session = Depends(get_db), current_user: User = Depends(
 
     out = []
     for t in threads:
-        # Manually construct to avoid loading all messages
-        obj = MessageThreadOut(
-            id=t.id,
-            creator_account_id=t.creator_account_id,
-            recipient_account_id=t.recipient_account_id,
-            subject=t.subject,
-            status=t.status,
-            last_message_at=t.last_message_at,
-            last_message_preview=t.last_message_preview,
-            created_at=t.created_at,
-            messages=[] # list view doesn't need messages
-        )
+        obj = MessageThreadOut.model_validate(t)
 
         # Set unread flag from current tenant's perspective
         if t.creator_account_id == current_user.account_id:
@@ -115,7 +104,7 @@ def get_thread(thread_id: int, db: Session = Depends(get_db),
         MessageOut(
             id=m.id,
             thread_id=m.thread_id,
-            sender_username=m.sender_user.username,
+            sender_username=m.sender_username,
             sender_account_id=m.sender_account_id,
             is_from_superadmin=m.is_from_superadmin,
             body=m.body,
