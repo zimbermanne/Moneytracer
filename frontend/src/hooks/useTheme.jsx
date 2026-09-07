@@ -7,7 +7,7 @@ const ACCENT = { accent: '#ED9121', hover: '#D67F16', soft: '#FBE3C7', softDark:
 
 const DEFAULTS = {
   mode: 'system',           // 'light' | 'dark' | 'system'
-  style: 'glass',           // 'glass' (liquid glass) | 'classic' (original flat look)
+  style: 'classic',         // 'glass' (liquid glass) | 'classic' (original flat look)
   customBgImage: null,      // data URL string, or null to use the theme's default hero image
 }
 

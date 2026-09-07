@@ -51,7 +51,25 @@ def list_my_threads(db: Session = Depends(get_db), current_user: User = Depends(
 
     out = []
     for t in threads:
-        obj = MessageThreadOut.model_validate(t)
+        # Built manually rather than MessageThreadOut.model_validate(t) —
+        # that auto-pulls the ORM `messages` relationship and validates
+        # every nested Message (including sender_username, which historical
+        # rows can have NULL for), which is both wasteful for a list view
+        # that only needs last_message_preview, and exactly what was
+        # crashing this endpoint with a 500 on every request. get_thread()
+        # below is where full message history actually gets built, with a
+        # defensive fallback for that same column.
+        obj = MessageThreadOut(
+            id=t.id,
+            creator_account_id=t.creator_account_id,
+            recipient_account_id=t.recipient_account_id,
+            subject=t.subject,
+            status=t.status,
+            last_message_at=t.last_message_at,
+            last_message_preview=t.last_message_preview,
+            created_at=t.created_at,
+            messages=[],
+        )
 
         # Set unread flag from current tenant's perspective
         if t.creator_account_id == current_user.account_id:
@@ -104,7 +122,11 @@ def get_thread(thread_id: int, db: Session = Depends(get_db),
         MessageOut(
             id=m.id,
             thread_id=m.thread_id,
-            sender_username=m.sender_user.username,
+            # Prefer the denormalized column (set at send time as of this
+            # fix); fall back to the live relationship, then a plain
+            # placeholder — covers historical rows from before this column
+            # was populated, and the rare case of a since-deleted sender.
+            sender_username=m.sender_username or (m.sender_user.username if m.sender_user else None) or "Unknown",
             sender_account_id=m.sender_account_id,
             is_from_superadmin=m.is_from_superadmin,
             body=m.body,
@@ -156,6 +178,7 @@ def create_thread(payload: SupportThreadCreate, db: Session = Depends(get_db),
         thread_id=thread.id,
         sender_user_id=current_user.id,
         sender_account_id=current_user.account_id,
+        sender_username=current_user.username,
         body=body,
         attachment_type=payload.attachment_type,
         attachment_id=payload.attachment_id,
@@ -192,6 +215,7 @@ def reply_to_thread(thread_id: int, payload: MessageCreate, db: Session = Depend
         thread_id=thread.id,
         sender_user_id=current_user.id,
         sender_account_id=current_user.account_id,
+        sender_username=current_user.username,
         body=body,
         attachment_type=payload.attachment_type,
         attachment_id=payload.attachment_id,

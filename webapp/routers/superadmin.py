@@ -338,7 +338,19 @@ def list_support_threads(
 
     out = []
     for t in threads:
-        obj = MessageThreadOut.model_validate(t)
+        # See routers/support.py::list_my_threads for why this is built
+        # manually rather than via model_validate(t) — same crash, same fix.
+        obj = MessageThreadOut(
+            id=t.id,
+            creator_account_id=t.creator_account_id,
+            recipient_account_id=t.recipient_account_id,
+            subject=t.subject,
+            status=t.status,
+            last_message_at=t.last_message_at,
+            last_message_preview=t.last_message_preview,
+            created_at=t.created_at,
+            messages=[],
+        )
         obj.partner_name = t.creator_account.name if t.creator_account else "Unknown"
         obj.is_support = True
         obj.unread = t.unread_by_recipient
@@ -372,7 +384,7 @@ def get_support_thread(thread_id: int, db: Session = Depends(get_db),
         MessageOut(
             id=m.id,
             thread_id=m.thread_id,
-            sender_username=m.sender_user.username,
+            sender_username=m.sender_username or (m.sender_user.username if m.sender_user else None) or "Unknown",
             sender_account_id=m.sender_account_id,
             is_from_superadmin=m.is_from_superadmin,
             body=m.body,
@@ -406,6 +418,7 @@ def reply_to_support_thread(thread_id: int, payload: SupportMessageCreate, db: S
         thread_id=thread.id,
         sender_user_id=superadmin.id,
         sender_account_id=superadmin.account_id or 0, # Superadmins might not have an account
+        sender_username=superadmin.username,
         is_from_superadmin=True,
         body=body,
         created_at=now,
