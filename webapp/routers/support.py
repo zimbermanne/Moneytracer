@@ -51,7 +51,17 @@ def list_my_threads(db: Session = Depends(get_db), current_user: User = Depends(
 
     out = []
     for t in threads:
-        obj = MessageThreadOut.model_validate(t)
+        obj = MessageThreadOut(
+            id=t.id,
+            creator_account_id=t.creator_account_id,
+            recipient_account_id=t.recipient_account_id,
+            subject=t.subject,
+            status=t.status,
+            last_message_at=t.last_message_at,
+            last_message_preview=t.last_message_preview,
+            created_at=t.created_at,
+            messages=[]
+        )
 
         # Set unread flag from current tenant's perspective
         if t.creator_account_id == current_user.account_id:
@@ -99,20 +109,29 @@ def get_thread(thread_id: int, db: Session = Depends(get_db),
         .all()
     )
 
-    obj = MessageThreadOut.model_validate(thread)
-    obj.messages = [
-        MessageOut(
-            id=m.id,
-            thread_id=m.thread_id,
-            sender_username=m.sender_username,
-            sender_account_id=m.sender_account_id,
-            is_from_superadmin=m.is_from_superadmin,
-            body=m.body,
-            attachment_type=m.attachment_type,
-            attachment_id=m.attachment_id,
-            created_at=m.created_at
-        ) for m in messages
-    ]
+    obj = MessageThreadOut(
+        id=thread.id,
+        creator_account_id=thread.creator_account_id,
+        recipient_account_id=thread.recipient_account_id,
+        subject=thread.subject,
+        status=thread.status,
+        last_message_at=thread.last_message_at,
+        last_message_preview=thread.last_message_preview,
+        created_at=thread.created_at,
+        messages=[
+            MessageOut(
+                id=m.id,
+                thread_id=m.thread_id,
+                sender_username=m.sender_username,
+                sender_account_id=m.sender_account_id,
+                is_from_superadmin=m.is_from_superadmin,
+                body=m.body,
+                attachment_type=m.attachment_type,
+                attachment_id=m.attachment_id,
+                created_at=m.created_at
+            ) for m in messages
+        ]
+    )
 
     partner = thread.recipient_account if thread.creator_account_id == current_user.account_id else thread.creator_account
     obj.partner_name = partner.name if partner else "Moneytracer Support"

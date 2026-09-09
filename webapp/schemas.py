@@ -1128,11 +1128,21 @@ class MessageOut(BaseModel):
     thread_id: int
     sender_username: str
     sender_account_id: Optional[int] = None
-    is_from_superadmin: bool
+    is_from_superadmin: bool = False
     body: str
     attachment_type: Optional[str] = None
     attachment_id: Optional[int] = None
     created_at: datetime
+
+    @field_validator("sender_username", "body", mode="before")
+    @classmethod
+    def _none_to_empty(cls, v):
+        return "" if v is None else v
+
+    @field_validator("is_from_superadmin", mode="before")
+    @classmethod
+    def _none_to_false(cls, v):
+        return False if v is None else v
 
 
 class MessageThreadOut(BaseModel):
@@ -1151,6 +1161,16 @@ class MessageThreadOut(BaseModel):
     # Partner info
     partner_name: str = ""
     is_support: bool = False
+
+    @field_validator("subject", "status", "last_message_preview", "partner_name", mode="before")
+    @classmethod
+    def _none_to_empty(cls, v):
+        return "" if v is None else v
+
+    @field_validator("unread", "is_support", mode="before")
+    @classmethod
+    def _none_to_false(cls, v):
+        return False if v is None else v
 
 
 # SupportThreadOut — restored 2026-09-03: the "Unified Messaging" refactor
