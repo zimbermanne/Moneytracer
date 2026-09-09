@@ -1208,8 +1208,8 @@ function renderMessageRows() {
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.innerHTML = `
-      <td>${escapeHtml(t.account_name || ('#' + t.account_id))}</td>
-      <td>${t.unread_by_superadmin ? '<strong>' : ''}${escapeHtml(t.subject)}${t.unread_by_superadmin ? ' <span class="badge badge-critical">new</span></strong>' : ''}</td>
+      <td>${escapeHtml(t.partner_name || ('#' + t.account_id))}</td>
+      <td>${t.unread ? '<strong>' : ''}${escapeHtml(t.subject)}${t.unread ? ' <span class="badge badge-critical">new</span></strong>' : ''}</td>
       <td style="color:var(--text-muted); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(t.last_message_preview)}</td>
       <td><span class="badge ${t.status === 'closed' ? '' : 'badge-active'}">${t.status}</span></td>
       <td style="white-space:nowrap;">${new Date(t.last_message_at).toLocaleString()}</td>
@@ -1253,8 +1253,8 @@ function renderThreadDetail(threadId) {
   const t = threadDetailCache[threadId];
   if (!t) return `<div class="empty">Loading…</div>`;
   const bubbles = t.messages.map(m => `
-    <div style="margin-bottom:10px; display:flex; ${m.sender_is_superadmin ? 'justify-content:flex-end;' : ''}">
-      <div style="max-width:70%; padding:8px 12px; border-radius:12px; background:${m.sender_is_superadmin ? 'var(--accent)' : 'var(--surface-sunken)'}; color:${m.sender_is_superadmin ? '#fff' : 'inherit'};">
+    <div style="margin-bottom:10px; display:flex; ${m.is_from_superadmin ? 'justify-content:flex-end;' : ''}">
+      <div style="max-width:70%; padding:8px 12px; border-radius:12px; background:${m.is_from_superadmin ? 'var(--accent)' : 'var(--surface-sunken)'}; color:${m.is_from_superadmin ? '#fff' : 'inherit'};">
         <div style="font-size:11px; opacity:0.75; margin-bottom:2px;">${escapeHtml(m.sender_username)} · ${new Date(m.created_at).toLocaleString()}</div>
         <div style="white-space:pre-wrap;">${escapeHtml(m.body)}</div>
       </div>

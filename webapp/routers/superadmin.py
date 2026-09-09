@@ -402,7 +402,7 @@ def reply_to_support_thread(thread_id: int, payload: SupportMessageCreate, db: S
     message = Message(
         thread_id=thread.id,
         sender_user_id=superadmin.id,
-        sender_account_id=superadmin.account_id or 0, # Superadmins might not have an account
+        sender_account_id=superadmin.account_id, # Can be None for superadmin
         is_from_superadmin=True,
         body=body,
         created_at=now,

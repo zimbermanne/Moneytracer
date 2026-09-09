@@ -26,14 +26,24 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     username: str
-    full_name: str
-    email: str
+    full_name: str = ""
+    email: str = ""
     role: RoleEnum
     account_id: Optional[int] = None
-    is_active: bool
-    is_demo: bool
+    is_active: bool = True
+    is_demo: bool = False
     profile_incomplete: bool = False
     created_at: datetime
+
+    @field_validator("full_name", "email", mode="before")
+    @classmethod
+    def _none_to_empty(cls, v):
+        return "" if v is None else v
+
+    @field_validator("is_active", "is_demo", "profile_incomplete", mode="before")
+    @classmethod
+    def _none_to_false(cls, v):
+        return False if v is None else v
 
 
 class SuperadminUserOut(UserOut):
@@ -228,33 +238,55 @@ class AccountOut(BaseModel):
     account_type: AccountType
     business_structure: BusinessStructure
     name: str
-    tin: Optional[str]
-    vrn: Optional[str] = None
+    tin: Optional[str] = ""
+    vrn: Optional[str] = ""
     owner_full_name: str
-    business_type: str
+    business_type: str = "retail"
     country_id: Optional[int] = None
     revenue_authority_id: Optional[int] = None
-    region: str
-    district: str
-    street_address: str
-    phone: str
-    email: str
-    logo_url: str
-    tax_rate: float
+    region: str = ""
+    district: str = ""
+    street_address: str = ""
+    phone: str = ""
+    email: str = ""
+    logo_url: str = ""
+    tax_rate: float = 0
     currency: str = "TZS"
-    invoice_prefix: str
-    payment_terms_days: int
+    invoice_prefix: str = "INV"
+    payment_terms_days: int = 7
     bank_name: Optional[str] = ""
     bank_account_name: Optional[str] = ""
     bank_account_number: Optional[str] = ""
     bank_branch: Optional[str] = ""
-    is_active: bool
-    is_suspended: bool
-    onboarding_completed: bool
+    is_active: bool = True
+    is_suspended: bool = False
+    onboarding_completed: bool = False
     created_at: datetime
     plan: Optional[str] = "free"
     cogs_method: CogsMethod = CogsMethod.accrual
     show_quote_profit: bool = False
+
+    @field_validator(
+        "name", "owner_full_name", "business_type", "region", "district",
+        "street_address", "phone", "email", "logo_url", "currency", "invoice_prefix",
+        mode="before",
+    )
+    @classmethod
+    def _none_to_empty_str(cls, v):
+        return "" if v is None else v
+
+    @field_validator(
+        "tax_rate", "payment_terms_days",
+        mode="before",
+    )
+    @classmethod
+    def _none_to_zero(cls, v):
+        return 0 if v is None else v
+
+    @field_validator("is_active", "is_suspended", "onboarding_completed", "show_quote_profit", mode="before")
+    @classmethod
+    def _none_to_false(cls, v):
+        return False if v is None else v
 
 
 class AccountWithUsersOut(AccountOut):

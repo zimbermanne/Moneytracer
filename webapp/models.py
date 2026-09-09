@@ -1704,7 +1704,7 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     thread_id = Column(Integer, ForeignKey("message_threads.id"), nullable=False, index=True)
     sender_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
 
     # If sender_account_id matches thread.creator_account_id, it's from the "creator" side.
     # Otherwise, it's from the "recipient" side (or superadmin if recipient_account_id is null).
