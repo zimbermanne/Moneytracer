@@ -1127,7 +1127,7 @@ class MessageOut(BaseModel):
     id: int
     thread_id: int
     sender_username: str
-    sender_account_id: int
+    sender_account_id: Optional[int] = None
     is_from_superadmin: bool
     body: str
     attachment_type: Optional[str] = None
