@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid
+} from 'recharts'
 import { useApi } from '../hooks/useApi.js'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
+
+const BREAKDOWN_COLORS = ['#C15F3C', '#4C6B8A', '#6B8F5E', '#B9862E', '#B4453A', '#8a63ff', '#ff6b6b', '#34c07a']
 
 export default function Personal() {
   const api = useApi()
@@ -97,47 +103,151 @@ function OverviewTab({ api }) {
 
   return (
     <div className="overview-tab">
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 24 }}>
-        {/* Net Worth & Health Card */}
-        <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--surface)' }}>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Net Worth</div>
-          <div style={{ fontSize: 36, fontWeight: 800, color: netWorth >= 0 ? 'var(--success)' : 'var(--danger)', marginBottom: 4 }}>
-            {money(netWorth)}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Across {money(totalAssets)} in assets and {money(totalLiabilities)} in liabilities.
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 24 }}>
+        {/* Financial Health Ratios */}
+        <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Financial Health</div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Savings Rate</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: data.health_ratios.savings_rate > 20 ? 'var(--success)' : 'inherit' }}>
+              {data.health_ratios.savings_rate}%
+            </span>
           </div>
 
-          <div style={{ marginTop: 24, padding: '16px 0', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>Emergency Fund Progress</span>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>{Math.round(data.savings_goal_progress || 0)}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Debt-to-Income</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: data.health_ratios.debt_to_income > 0.4 ? 'var(--danger)' : 'inherit' }}>
+              {data.health_ratios.debt_to_income}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Runway</span>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>
+              {data.health_ratios.runway_months} months
+            </span>
+          </div>
+
+          <div style={{ marginTop: 'auto', fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>
+            Calculated from this month's activity and current debt levels.
+          </div>
+        </div>
+
+        {/* Net Worth Card */}
+        <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Net Worth</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: netWorth >= 0 ? 'var(--success)' : 'var(--danger)', marginBottom: 4 }}>
+            {money(netWorth)}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {money(totalAssets)} assets / {money(totalLiabilities)} debt
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>Emergency Fund Progress</span>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>{Math.round(data.savings_goal_progress || 0)}%</span>
             </div>
-            <div style={{ height: 8, background: 'var(--surface-sunken)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: 6, background: 'var(--surface-sunken)', borderRadius: 3, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${data.savings_goal_progress || 0}%`, background: 'var(--accent)', transition: 'width 1s ease' }} />
             </div>
           </div>
         </div>
 
         {/* Monthly Cash Flow Card */}
-        <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Monthly Pulse (MTD)</div>
 
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Inflow</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>+{money(data.inflow_this_month)}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Inflow</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--success)' }}>+{money(data.inflow_this_month)}</span>
           </div>
 
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Outflow</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--danger)' }}>-{money(data.expenses_this_month)}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Outflow</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--danger)' }}>-{money(data.expenses_this_month)}</span>
           </div>
 
-          <div style={{ marginTop: 'auto', padding: '10px 12px', background: cashFlow >= 0 ? 'var(--success-bg)' : 'var(--danger-bg)', borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>Net Cash Flow</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+          <div style={{ marginTop: 'auto', padding: '8px 12px', background: cashFlow >= 0 ? 'var(--success-bg)' : 'var(--danger-bg)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>Net Flow</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: cashFlow >= 0 ? 'var(--success)' : 'var(--danger)' }}>
               {cashFlow >= 0 ? '+' : ''}{money(cashFlow)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20, marginBottom: 24 }}>
+        {/* Spending Breakdown */}
+        <div className="card" style={{ padding: 20 }}>
+          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Spending Breakdown (MTD)</h3>
+          {data.expense_breakdown.length > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', height: 280 }}>
+              <div style={{ flex: 1, height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.expense_breakdown}
+                      dataKey="amount"
+                      nameKey="category_name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={3}
+                    >
+                      {data.expense_breakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => money(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div style={{ flex: 1, paddingLeft: 20 }}>
+                {data.expense_breakdown.slice(0, 6).map((item, i) => (
+                  <div key={item.category_name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: BREAKDOWN_COLORS[i % BREAKDOWN_COLORS.length] }} />
+                      <span style={{ color: 'var(--text-muted)' }}>{item.category_name}</span>
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{item.percentage.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
+          ) : (
+            <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>
+              No spending recorded this month.
+            </div>
+          )}
+        </div>
+
+        {/* Cash Flow History */}
+        <div className="card" style={{ padding: 20 }}>
+          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Income vs Spending</h3>
+          <div style={{ height: 280 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.cash_flow_history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--success)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--success)" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--danger)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--danger)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v} />
+                <Tooltip formatter={(v) => money(v)} />
+                <Area type="monotone" dataKey="inflow" stroke="var(--success)" fillOpacity={1} fill="url(#colorIn)" />
+                <Area type="monotone" dataKey="outflow" stroke="var(--danger)" fillOpacity={1} fill="url(#colorOut)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

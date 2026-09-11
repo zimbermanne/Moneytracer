@@ -22,7 +22,8 @@ from schemas import (
     SpendingGroupProgress,
     SavingsSchemeProfileCreate, SavingsSchemeProfileUpdate, SavingsSchemeProfileOut,
     CategorySuggestion, RecurringExpense, SpendingAlert, SmartInsights,
-    PersonalOverview, VikobaMembershipSummary,
+    PersonalOverview, VikobaMembershipSummary, CategorySpend, HealthRatios,
+    MonthlyFlow
 )
 from auth import require_account_user
 from activity import log_activity_for_user
@@ -652,18 +653,74 @@ def personal_overview(db: Session = Depends(get_db), user: User = Depends(requir
             is_operated=False
         ))
 
-    # Savings Goal progress (Emergency Fund)
-    savings_goal_progress = None
+    # Expense Breakdown
+    category_totals = defaultdict(float)
+    monthly_txns = db.query(SpendingTransaction).filter(
+        SpendingTransaction.account_id == account_id,
+        SpendingTransaction.spent_at >= month_start
+    ).all()
+    for t in monthly_txns:
+        category_totals[t.category.name if t.category else "Other"] += t.amount
+
+    breakdown = []
+    for name, amt in category_totals.items():
+        breakdown.append(CategorySpend(
+            category_name=name,
+            amount=amt,
+            percentage=(amt / expenses_this_month * 100) if expenses_this_month else 0
+        ))
+    breakdown.sort(key=lambda x: x.amount, reverse=True)
+
+    # Financial Health Ratios
+    # Savings Rate: % of inflow that is not spent
+    savings_rate = ((inflow_this_month - expenses_this_month) / inflow_this_month * 100) if inflow_this_month > 0 else 0
+
+    # Debt to Income: Total debt / (Inflow * 12) - simplified
+    total_liabilities = total_bank_debt + total_creditors + sum(m.active_loan_balance for m in vikoba_summaries)
+    debt_to_income = (total_liabilities / (inflow_this_month * 12)) if inflow_this_month > 0 else 0
+
+    # Runway: Emergency Fund / Avg Expenses
+    total_saved_goal = 0
     goal_group = db.query(SpendingGroup).filter(
         SpendingGroup.created_by_account_id == account_id,
         SpendingGroup.name == "Emergency Fund"
     ).first()
     if goal_group:
-        contributions = db.query(SpendingGroupContribution).filter(
+        total_saved_goal = sum(c.amount for c in db.query(SpendingGroupContribution).filter(
             SpendingGroupContribution.group_id == goal_group.id
-        ).all()
-        total_saved = sum(c.amount for c in contributions)
-        savings_goal_progress = (total_saved / goal_group.goal_amount * 100) if goal_group.goal_amount else 0
+        ).all())
+
+    runway = (total_saved_goal / expenses_this_month) if expenses_this_month > 0 else 0
+
+    health = HealthRatios(
+        savings_rate=round(savings_rate, 1),
+        debt_to_income=round(debt_to_income, 2),
+        runway_months=round(runway, 1)
+    )
+
+    # Savings Goal progress (Emergency Fund)
+    savings_goal_progress = (total_saved_goal / goal_group.goal_amount * 100) if goal_group and goal_group.goal_amount else 0
+
+    # Cash Flow History (Last 6 months)
+    history = []
+    for i in range(5, -1, -1):
+        m_date = now - timedelta(days=i * 30)
+        m_start = m_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        m_end = (m_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+
+        m_inflow = sum(s.total for s in db.query(Sale).filter(
+            Sale.account_id == account_id, Sale.created_at >= m_start, Sale.created_at <= m_end
+        ).all())
+
+        m_outflow = sum(e.amount for e in db.query(Expense).filter(
+            Expense.account_id == account_id, Expense.created_at >= m_start, Expense.created_at <= m_end
+        ).all())
+
+        history.append(MonthlyFlow(
+            month=m_start.strftime("%b"),
+            inflow=m_inflow,
+            outflow=m_outflow
+        ))
 
     return PersonalOverview(
         total_assets_value=total_assets,
@@ -673,5 +730,8 @@ def personal_overview(db: Session = Depends(get_db), user: User = Depends(requir
         expenses_this_month=expenses_this_month,
         inflow_this_month=inflow_this_month,
         vikoba_memberships=vikoba_summaries,
-        savings_goal_progress=savings_goal_progress
+        savings_goal_progress=savings_goal_progress,
+        expense_breakdown=breakdown,
+        health_ratios=health,
+        cash_flow_history=history
     )

@@ -636,6 +636,24 @@ class VikobaMembershipSummary(BaseModel):
     next_contribution_amount: Optional[float] = None
 
 
+class CategorySpend(BaseModel):
+    category_name: str
+    amount: float
+    percentage: float
+
+
+class HealthRatios(BaseModel):
+    savings_rate: float
+    debt_to_income: float
+    runway_months: float
+
+
+class MonthlyFlow(BaseModel):
+    month: str
+    inflow: float
+    outflow: float
+
+
 class PersonalOverview(BaseModel):
     total_assets_value: float
     total_bank_debt: float
@@ -645,6 +663,9 @@ class PersonalOverview(BaseModel):
     inflow_this_month: float = 0
     vikoba_memberships: List[VikobaMembershipSummary]
     savings_goal_progress: Optional[float] = None
+    expense_breakdown: List[CategorySpend] = []
+    health_ratios: Optional[HealthRatios] = None
+    cash_flow_history: List[MonthlyFlow] = []
 
 
 # ---------- Assets ----------
