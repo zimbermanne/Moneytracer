@@ -424,3 +424,63 @@ def delete_item(item_id: int, db: Session = Depends(get_db), current_user: User 
     db.commit()
     log_activity_for_user(db, current_user, "inventory_delete", f"Deleted item {item.name}")
     return {"detail": "Item deleted"}
+
+
+@router.get("/{item_id}/traceability")
+def get_item_traceability(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Fetch complete chronological history of an item: Purchases (In) and Sales (Out)
+    with linked supplier/customer names and margin calculations."""
+    account_id = get_account_filter(current_user)
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id, InventoryItem.account_id == account_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    from models import Purchase, Sale
+
+    # 1. Fetch Purchases
+    purchases = db.query(Purchase).filter(Purchase.item_id == item_id, Purchase.account_id == account_id).all()
+
+    # 2. Fetch Sales
+    sales = db.query(Sale).filter(Sale.item_id == item_id, Sale.account_id == account_id).all()
+
+    history = []
+
+    for p in purchases:
+        history.append({
+            "date": p.created_at,
+            "type": "purchase",
+            "party": p.supplier or "Unknown Supplier",
+            "quantity": p.quantity,
+            "unit_price": p.unit_cost,
+            "total": p.total,
+            "profit": None,
+            "margin_pct": None,
+            "ref": f"PUR-{p.id}"
+        })
+
+    for s in sales:
+        cost = (s.cost_price_at_sale or item.cost_price or 0) * s.quantity
+        profit = s.total - cost
+        margin_pct = (profit / s.total * 100) if s.total > 0 else 0
+
+        history.append({
+            "date": s.created_at,
+            "type": "sale",
+            "party": s.customer_name or "Walk-in",
+            "quantity": s.quantity,
+            "unit_price": s.unit_price,
+            "total": s.total,
+            "profit": round(profit, 2),
+            "margin_pct": round(margin_pct, 1),
+            "ref": s.receipt_no or f"SALE-{s.id}"
+        })
+
+    # Sort by date descending
+    history.sort(key=lambda x: x["date"], reverse=True)
+
+    return {
+        "item_name": item.name,
+        "sku": item.sku,
+        "current_stock": item.quantity,
+        "history": history
+    }

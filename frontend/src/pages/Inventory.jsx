@@ -22,6 +22,9 @@ export default function Inventory() {
   const [redundant, setRedundant] = useState(null)
   const [checkingRedundant, setCheckingRedundant] = useState(false)
   const [merging, setMerging] = useState(null)
+  const [traceItem, setTraceItem] = useState(null)
+  const [traceData, setTraceData] = useState(null)
+  const [traceLoading, setTraceLoading] = useState(false)
 
   const load = () => { setListLoading(true); api.get('/inventory/').then(setItems).catch((e) => setError(e.message)).finally(() => setListLoading(false)) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -108,6 +111,16 @@ export default function Inventory() {
     finally { setMerging(null) }
   }
 
+  const openTraceability = async (item) => {
+    setTraceItem(item)
+    setTraceLoading(true)
+    try {
+      const data = await api.get(`/inventory/${item.id}/traceability`)
+      setTraceData(data)
+    } catch (e) { setError(e.message) }
+    finally { setTraceLoading(false) }
+  }
+
   const columns = [
     { key: 'name', header: 'Name' },
     { key: 'category', header: 'Category' },
@@ -124,6 +137,7 @@ export default function Inventory() {
       render: (r) => (
         <RowActionsMenu items={[
           { label: 'Edit', icon: '✎', onClick: () => openEdit(r) },
+          { label: 'View Traceability', icon: '🔍', onClick: () => openTraceability(r) },
           { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true },
         ]} />
       ),
@@ -245,6 +259,54 @@ export default function Inventory() {
             <label>Reorder Point</label>
             <input type="number" value={form.reorder_point} onChange={(e) => setForm({ ...form, reorder_point: Number(e.target.value) })} />
           </div>
+        </Modal>
+      )}
+
+      {traceItem && (
+        <Modal
+          title={`Traceability: ${traceItem.name}`}
+          onClose={() => { setTraceItem(null); setTraceData(null) }}
+          wide={true}
+          footer={<button className="btn btn-outline" onClick={() => { setTraceItem(null); setTraceData(null) }}>Close</button>}
+        >
+          {traceLoading ? <div className="spinner-block">Loading item history…</div> : (
+            <>
+              <div className="card-grid" style={{ marginBottom: 20 }}>
+                <div className="card metric-card">
+                  <div className="label">Current Stock</div>
+                  <div className="value">{traceData?.current_stock} {traceItem.unit}</div>
+                </div>
+                <div className="card metric-card">
+                  <div className="label">SKU</div>
+                  <div className="value">{traceData?.sku || '—'}</div>
+                </div>
+              </div>
+
+              <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                <Table
+                  columns={[
+                    { key: 'date', header: 'Date', render: (h) => new Date(h.date).toLocaleString() },
+                    { key: 'type', header: 'Event', render: (h) => (
+                      <span className={`badge ${h.type === 'purchase' ? 'badge-partial' : 'badge-paid'}`}>
+                        {h.type === 'purchase' ? 'IN (Purchase)' : 'OUT (Sale)'}
+                      </span>
+                    )},
+                    { key: 'party', header: 'Supplier / Customer' },
+                    { key: 'quantity', header: 'Qty' },
+                    { key: 'unit_price', header: 'Unit Price', render: (h) => `TZS ${h.unit_price.toLocaleString()}` },
+                    { key: 'profit', header: 'Profit', render: (h) => h.profit !== null ? (
+                      <span style={{ color: h.profit >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
+                        TZS {h.profit.toLocaleString()}
+                      </span>
+                    ) : <span style={{ color: 'var(--text-faint)' }}>—</span> },
+                    { key: 'margin', header: 'Margin', render: (h) => h.margin_pct !== null ? `${h.margin_pct}%` : '—' },
+                  ]}
+                  rows={traceData?.history || []}
+                  emptyText="No transactions found for this item."
+                />
+              </div>
+            </>
+          )}
         </Modal>
       )}
     </div>
