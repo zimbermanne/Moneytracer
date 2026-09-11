@@ -170,5 +170,51 @@ def post_manual_depreciation(asset_id: int, amount: float, db: Session = Depends
     return asset
 
 
+@router.get("/reconciliation")
+def get_asset_reconciliation(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Compare the Asset Register (this module) against the General Ledger (Chart of Accounts).
+    Captures the live financial truth from accounts 1300 and 1400."""
+    account_id = get_account_filter(current_user)
+
+    # 1. Register Truth: Sum of all assets in our detailed list
+    register_fixed = sum(a.estimated_value for a in db.query(Asset).filter(
+        Asset.account_id == account_id, Asset.asset_type == AssetType.fixed_asset
+    ).all())
+    register_invest = sum(a.estimated_value for a in db.query(Asset).filter(
+        Asset.account_id == account_id, Asset.asset_type == AssetType.financial_investment
+    ).all())
+
+    # 2. Ledger Truth: Balances of 1300 and 1400 from Journal Entries
+    from models import JournalLine, JournalEntry, ChartOfAccount
+    def get_gl_balance(code):
+        chart_acc = db.query(ChartOfAccount).filter(
+            ChartOfAccount.account_id == account_id, ChartOfAccount.code == code
+        ).first()
+        if not chart_acc: return 0.0
+
+        balance = db.query(func.sum(JournalLine.debit) - func.sum(JournalLine.credit)).join(JournalEntry).filter(
+            JournalEntry.account_id == account_id,
+            JournalLine.chart_account_id == chart_acc.id,
+            JournalEntry.is_voided == False
+        ).scalar() or 0.0
+        return float(balance)
+
+    ledger_fixed = get_gl_balance("1300")
+    ledger_invest = get_gl_balance("1400")
+
+    return {
+        "fixed_assets": {
+            "register": round(register_fixed, 2),
+            "ledger": round(ledger_fixed, 2),
+            "diff": round(register_fixed - ledger_fixed, 2)
+        },
+        "investments": {
+            "register": round(register_invest, 2),
+            "ledger": round(ledger_invest, 2),
+            "diff": round(register_invest - ledger_invest, 2)
+        }
+    }
+
+
 def money_format(n):
     return f"TZS {n:,.2f}"

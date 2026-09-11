@@ -285,7 +285,7 @@ def post_sale_entry(db: Session, account_id: int, sale, created_by: str = None) 
     # post as one entry so debits/credits both include the cost pair.
     return post_journal_entry(
         db, account_id,
-        description=f"Sale: {sale.item_name or 'item'} x{sale.quantity}",
+        description=f"Sale Receipt: {sale.receipt_no or f'#{sale.id}'}",
         lines=lines,
         reference=sale.receipt_no or f"sale-{sale.id}",
         created_by=created_by,
@@ -330,7 +330,7 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     
     return post_journal_entry(
         db, account_id,
-        description=f"Purchase: {purchase.item_name or 'item'} x{purchase.quantity} from {purchase.supplier or 'supplier'}",
+        description=f"Purchase Record: {purchase.id} ({purchase.supplier or 'unspecified'})",
         lines=lines,
         reference=f"purchase-{purchase.id}",
         created_by=created_by,
@@ -360,7 +360,7 @@ def post_expense_entry(db: Session, account_id: int, expense, created_by: str = 
     ]
     return post_journal_entry(
         db, account_id,
-        description=f"Expense: {expense.category} — {expense.description or ''}".strip(" —"),
+        description=f"Expense Payment: {expense.id} ({expense.category})",
         lines=lines,
         reference=f"expense-{expense.id}",
         created_by=created_by,

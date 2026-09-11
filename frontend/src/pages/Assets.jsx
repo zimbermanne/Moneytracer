@@ -58,9 +58,13 @@ export default function Assets() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyAsset, setHistoryAsset] = useState(null)
 
+  // Reconciliation state
+  const [recon, setRecon] = useState(null)
+
   const load = () => {
     setListLoading(true)
     api.get('/assets/').then(setAssets).catch((e) => setError(e.message)).finally(() => setListLoading(false))
+    api.get('/assets/reconciliation').then(setRecon).catch(() => {})
   }
 
   useEffect(() => { load() }, []) // eslint-disable-line
@@ -203,6 +207,27 @@ export default function Assets() {
         </div>
         <button className="btn btn-primary" onClick={openNew}>+ Add Asset</button>
       </div>
+
+      {recon && (
+        <div className="card-grid" style={{ marginBottom: 20 }}>
+          <div className="card" style={{ padding: 16, borderLeft: recon.fixed_assets.diff === 0 ? '4px solid var(--success)' : '4px solid var(--warning)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Fixed Assets (GL 1300)</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{money(recon.fixed_assets.ledger)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 4 }}>
+              Register: {money(recon.fixed_assets.register)}
+              {recon.fixed_assets.diff !== 0 && <span style={{ color: 'var(--danger)', marginLeft: 8 }}>⚠️ Diff: {money(recon.fixed_assets.diff)}</span>}
+            </div>
+          </div>
+          <div className="card" style={{ padding: 16, borderLeft: recon.investments.diff === 0 ? '4px solid var(--success)' : '4px solid var(--warning)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Investments (GL 1400)</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{money(recon.investments.ledger)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 4 }}>
+              Register: {money(recon.investments.register)}
+              {recon.investments.diff !== 0 && <span style={{ color: 'var(--danger)', marginLeft: 8 }}>⚠️ Diff: {money(recon.investments.diff)}</span>}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Table columns={columns} rows={assets} loading={listLoading} emptyText="No assets recorded yet." onRowClick={openEdit} />
 
