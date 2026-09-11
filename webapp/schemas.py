@@ -1148,18 +1148,18 @@ class MessageOut(BaseModel):
 class MessageThreadOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    creator_account_id: int
+    creator_account_id: Optional[int] = None
     recipient_account_id: Optional[int] = None
-    subject: str
-    status: str
+    subject: Optional[str] = ""
+    status: Optional[str] = "open"
     unread: bool = False  # Set by router based on user perspective
-    last_message_at: datetime
-    last_message_preview: str
-    created_at: datetime
+    last_message_at: Optional[datetime] = None
+    last_message_preview: Optional[str] = ""
+    created_at: Optional[datetime] = None
     messages: List[MessageOut] = []
 
     # Partner info
-    partner_name: str = ""
+    partner_name: Optional[str] = ""
     is_support: bool = False
 
     @field_validator("subject", "status", "last_message_preview", "partner_name", mode="before")

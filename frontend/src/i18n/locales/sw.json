@@ -73,7 +73,8 @@
     "expensesGroup": "Daftari la Matumizi",
     "debtorsAging": "Umri wa Madeni ya Wadaiwa",
     "creditorsAging": "Umri wa Madeni ya Wadai",
-    "bankReconciliation": "Upatanisho wa Benki"
+    "bankReconciliation": "Upatanisho wa Benki",
+    "messages": "Ujumbe"
   },
   "auth": {
     "login": "Ingia",

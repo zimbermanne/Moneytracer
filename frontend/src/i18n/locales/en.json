@@ -84,7 +84,8 @@
     "expensesGroup": "Expenses Ledger",
     "debtorsAging": "Debtors Aging",
     "creditorsAging": "Creditors Aging",
-    "bankReconciliation": "Bank Reconciliation"
+    "bankReconciliation": "Bank Reconciliation",
+    "messages": "Messages"
   },
   "auth": {
     "login": "Login",

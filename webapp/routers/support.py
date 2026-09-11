@@ -235,16 +235,56 @@ def reply_to_thread(thread_id: int, payload: MessageCreate, db: Session = Depend
 
 
 @router.get("/directory")
-def search_businesses(q: str = Query(...), db: Session = Depends(get_db), current_user: User = Depends(require_account_user)):
-    """Search for other businesses to message by name or email."""
+def search_directory(q: str = Query(...), db: Session = Depends(get_db), current_user: User = Depends(require_account_user)):
+    """Search for other businesses OR users to message. Returns matched accounts
+    with the reason (matched business name vs matched employee name)."""
     if len(q) < 3:
         return []
 
-    return db.query(Account.id, Account.name, Account.email).filter(
+    like = f"%{q}%"
+
+    # 1. Matches on Account name/email
+    account_matches = db.query(Account).filter(
         Account.id != current_user.account_id,
         Account.is_active == True,
         or_(
-            Account.name.ilike(f"%{q}%"),
-            Account.email.ilike(f"%{q}%")
+            Account.name.ilike(like),
+            Account.email.ilike(like)
         )
-    ).limit(10).all()
+    ).limit(5).all()
+
+    # 2. Matches on User name/username (who belong to an active account)
+    user_matches = db.query(User).join(Account).filter(
+        Account.id != current_user.account_id,
+        Account.is_active == True,
+        or_(
+            User.full_name.ilike(like),
+            User.username.ilike(like)
+        )
+    ).limit(5).all()
+
+    results = []
+    seen_ids = set()
+
+    for a in account_matches:
+        results.append({
+            "id": a.id,
+            "name": a.name,
+            "email": a.email,
+            "match_type": "business",
+            "matched_value": a.name
+        })
+        seen_ids.add(a.id)
+
+    for u in user_matches:
+        if u.account_id not in seen_ids:
+            results.append({
+                "id": u.account_id,
+                "name": u.account.name,
+                "email": u.email or u.account.email,
+                "match_type": "user",
+                "matched_value": u.full_name or u.username
+            })
+            seen_ids.add(u.account_id)
+
+    return results

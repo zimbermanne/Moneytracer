@@ -143,7 +143,7 @@ function buildNav(t) {
     { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business'] },
     { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal', accountTypes: ['business', 'personal'] },
-    { type: 'item', label: 'Messages', icon: 'messages', path: '/app/messages' },
+    { type: 'item', label: t('nav.messages'), icon: 'messages', path: '/app/messages' },
     { type: 'item', label: t('nav.deadlines'), icon: 'deadline', path: '/app/deadlines' },
     { type: 'item', label: t('nav.activityLogsItem'), icon: 'activity-logs', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
     { type: 'item', label: t('nav.groupLedger'), icon: 'personal-accounting', path: '/app/community/ledger', accountTypes: ['community'] },
@@ -207,7 +207,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/personal': 'nav.personal',
   '/app/community/ledger': 'nav.groupLedger',
   '/app/deadlines': 'nav.deadlines',
-  '/app/messages': 'Messages',
+  '/app/messages': 'nav.messages',
   '/app/activity': 'nav.activityLogsItem',
   '/app/settings': 'nav.settingsItem',
 }

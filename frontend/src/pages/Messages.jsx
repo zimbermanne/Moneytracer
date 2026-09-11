@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -6,6 +7,7 @@ import SearchBar from '../components/SearchBar.jsx'
 import PageLoader from '../components/PageLoader.jsx'
 
 export default function Messages() {
+  const { t } = useTranslation()
   const api = useApi()
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -109,12 +111,12 @@ export default function Messages() {
     }
   }
 
-  if (loading) return <PageLoader label="Loading conversations..." />
+  if (loading) return <PageLoader label={t('common.loading')} />
 
   return (
     <div className="page" style={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
       <div className="page-header" style={{ flexShrink: 0 }}>
-        <h1>Messaging</h1>
+        <h1>{t('nav.messages')}</h1>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-outline" onClick={() => setShowSearch(true)}>Search Businesses</button>
           <button className="btn btn-primary" onClick={startSupportThread}>Contact Support</button>
@@ -216,7 +218,15 @@ export default function Messages() {
                     style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                     className="hover-bg"
                   >
-                    <strong>{b.name}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <strong>{b.name}</strong>
+                      {b.match_type === 'user' && (
+                        <span className="badge badge-outline" style={{ fontSize: 10 }}>User match</span>
+                      )}
+                    </div>
+                    {b.match_type === 'user' && (
+                      <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{b.matched_value}</div>
+                    )}
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
                   </div>
                 ))
