@@ -88,7 +88,11 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create purchase orders")
-    if not payload.items:
+
+    status = PurchaseOrderStatus.sent
+    if payload.status == "draft":
+        status = PurchaseOrderStatus.draft
+    elif not payload.items:
         raise HTTPException(status_code=400, detail="Purchase order must have at least one line item")
 
     # A dedicated "PO" prefix, not the account's invoice_prefix — combining
@@ -116,7 +120,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         expected_date=payload.expected_date,
         subtotal=subtotal, tax_rate=payload.tax_rate, tax_amount=tax_amount,
         discount=payload.discount, total=total, notes=payload.notes or "",
-        status=PurchaseOrderStatus.sent, created_by=current_user.username,
+        status=status, created_by=current_user.username,
     )
     db.add(po); db.flush()
     for line in payload.items:

@@ -234,7 +234,6 @@ function PrivateRoutes() {
         <Route path="/purchase-orders" element={<PurchaseOrders />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/debtors" element={<Debtors />} />
-        <Route path="/ar-dashboard" element={<ARDashboard />} />
         <Route path="/creditors" element={<Creditors />} />
         <Route path="/reports/profit-loss" element={<Reports key="profit-loss" view="profit-loss" />} />
         <Route path="/reports/financial-summary" element={<Reports key="financial-summary" view="financial-summary" />} />

@@ -93,19 +93,12 @@ function buildNav(t) {
       children: [
         { label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
         { label: t('nav.debtorsReport'), icon: 'debts', path: '/app/reports/debtors' },
-        { label: t('nav.debtorsAging'), icon: 'debts', path: '/app/reports/debtors-aging' },
-        // Not part of your list — kept here for now so it isn't lost. You
-        // said this should live on Home instead; that's a Dashboard page
-        // change, separate from this sidebar reorg. Say the word and I'll
-        // wire it into the Home dashboard and remove it from here.
-        { label: t('nav.arDashboard'), icon: 'debtors', path: '/app/ar-dashboard' },
       ],
     },
     {
       type: 'group', label: t('nav.creditorsGroup'), key: 'creditors', accountTypes: ['business', 'personal'],
       children: [
         { label: t('nav.creditorsReport'), icon: 'creditors', path: '/app/reports/creditors' },
-        { label: t('nav.creditorsAging'), icon: 'creditors', path: '/app/reports/creditors-aging' },
         { label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
       ],
     },
@@ -177,7 +170,6 @@ export const PAGE_TITLE_KEYS = {
   '/app/sales': 'nav.salesHistory',
   '/app/customers': 'nav.customers',
   '/app/debtors': 'nav.clientsDebtors',
-  '/app/ar-dashboard': 'nav.arDashboard',
   '/app/purchases': 'nav.purchasesLedger',
   '/app/purchase-orders': 'nav.purchaseOrders',
   '/app/suppliers': 'nav.suppliers',
@@ -189,9 +181,7 @@ export const PAGE_TITLE_KEYS = {
   '/app/reports/financial-summary': 'nav.financialSummary',
   '/app/reports/cashflow': 'nav.cashFlow',
   '/app/reports/debtors': 'nav.debtorsReport',
-  '/app/reports/debtors-aging': 'nav.debtorsAging',
   '/app/reports/creditors': 'nav.creditorsReport',
-  '/app/reports/creditors-aging': 'nav.creditorsAging',
   '/app/reports/inventory-valuation': 'nav.inventoryValuation',
   '/app/reports/trial-balance': 'nav.trialBalance',
   '/app/reports/balance-sheet': 'nav.balanceSheet',

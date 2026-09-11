@@ -84,7 +84,11 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create invoices")
     
-    if not payload.items:
+    # Drafts can be saved without line items; real invoices cannot.
+    status = DocumentStatus.sent
+    if payload.status == "draft":
+        status = DocumentStatus.draft
+    elif not payload.items:
         raise HTTPException(status_code=400, detail="Invoice must have at least one line item")
     
     # Get account settings for invoice prefix
@@ -116,7 +120,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
         verify_token=uuid.uuid4().hex,
         subtotal=subtotal, tax_rate=payload.tax_rate, tax_amount=tax_amount,
         discount=payload.discount, total=total, notes=payload.notes or "",
-        status=DocumentStatus.sent, created_by=current_user.username,
+        status=status, created_by=current_user.username,
     )
     db.add(invoice); db.flush()
     for line in payload.items:

@@ -248,11 +248,16 @@ def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(g
         ({"name": d.name, "outstanding": round(d.total_owed - d.amount_paid, 2), "status": d.status.value} for d in debtors),
         key=lambda r: r["outstanding"], reverse=True
     )[:10]
+
+    # Include aging info inline
+    aging = debtors_aging_report(db, current_user)
+
     return {
         "total_outstanding": round(total_owed, 2),
         "count": len(debtors),
         "by_status": dict(by_status),
         "top_debtors": top,
+        "aging": aging
     }
 
 
@@ -301,11 +306,16 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
         ({"name": c.name, "outstanding": round(c.total_owed - c.amount_paid, 2), "status": c.status.value} for c in creditors),
         key=lambda r: r["outstanding"], reverse=True
     )[:10]
+
+    # Include aging info inline
+    aging = creditors_aging_report(db, current_user)
+
     return {
         "total_outstanding": round(total_owed, 2),
         "count": len(creditors),
         "by_status": dict(by_status),
         "top_creditors": top,
+        "aging": aging
     }
 
 

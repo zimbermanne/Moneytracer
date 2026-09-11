@@ -116,7 +116,7 @@ export default function Documents({ kind }) {
     setOpen(true)
   }
 
-  const save = async () => {
+  const save = async (isDraft = false) => {
     setError('')
     setSaving(true)
     try {
@@ -128,15 +128,17 @@ export default function Documents({ kind }) {
           customer_tin, customer_vrn, po_number,
           due_date: due_date ? new Date(due_date).toISOString() : null,
         } : { valid_days }),
+        ...(isDraft ? { status: 'draft' } : {}),
       }
-      if (!payload.items.length) { setError('Add at least one line item'); setSaving(false); return }
+      if (!isDraft && !payload.items.length) { setError('Add at least one line item'); setSaving(false); return }
       if (editingId) {
         await api.put(`/${kind}/${editingId}`, payload)
       } else {
         await api.post(`/${kind}/`, payload)
       }
       setOpen(false); setEditingId(null); setForm(emptyForm()); load()
-    } catch (e) { setError(e.message) }
+      return true // success
+    } catch (e) { setError(e.message); return false }
     finally { setSaving(false) }
   }
 

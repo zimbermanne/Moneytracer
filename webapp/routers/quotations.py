@@ -67,9 +67,8 @@ def create_quotation(payload: QuotationCreate, db: Session = Depends(get_db),
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create quotations")
     
-    if not payload.items:
-        raise HTTPException(400, "Quotation must have at least one line item")
-    sub, tax, total = _calc(payload.items, payload.tax_rate, payload.discount)
+    # Quotations start as drafts, so we can relax the items requirement here.
+    sub, tax, total = _calc(payload.items or [], payload.tax_rate, payload.discount)
     valid_until = datetime.utcnow() + timedelta(days=payload.valid_days or 14)
     q = Quotation(
         account_id=account_id,

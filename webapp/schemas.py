@@ -1283,7 +1283,8 @@ class InvoiceCreate(BaseModel):
     tax_rate: float = 0
     discount: float = 0
     notes: Optional[str] = ""
-    items: List[DocumentLineIn]
+    items: List[DocumentLineIn] = []
+    status: Optional[str] = None # Optional status override (e.g. 'draft')
 
 
 class InvoiceOut(BaseModel):
@@ -1336,7 +1337,8 @@ class PurchaseOrderCreate(BaseModel):
     tax_rate: float = 0
     discount: float = 0
     notes: Optional[str] = ""
-    items: List[DocumentLineIn]
+    items: List[DocumentLineIn] = []
+    status: Optional[str] = None # Optional status override (e.g. 'draft')
 
 
 class PurchaseOrderOut(BaseModel):
@@ -1409,7 +1411,7 @@ class QuotationCreate(BaseModel):
     discount: float = 0
     notes: Optional[str] = ""
     valid_days: Optional[int] = 14
-    items: List[DocumentLineIn]
+    items: List[DocumentLineIn] = []
 
 
 class QuotationOut(BaseModel):

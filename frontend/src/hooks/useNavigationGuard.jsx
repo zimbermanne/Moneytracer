@@ -102,15 +102,17 @@ export function NavigationGuardProvider({ children }) {
             <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 24 }}>
               {message}
             </p>
-            <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
-              {onSaveDraft && (
-                <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '10px' }} onClick={saveDraftAndLeave}>
-                  💾 Save as Draft & Leave
-                </button>
-              )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }} onClick={cancelLeave}>Stay on page</button>
-                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }} onClick={confirmLeave}>Discard & Leave</button>
+            <div style={{ display: 'flex', gap: 12, flexDirection: 'column' }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }} onClick={cancelLeave}>Keep Editing</button>
+                {onSaveDraft ? (
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={saveDraftAndLeave}>
+                    💾 Save as Draft
+                  </button>
+                ) : (
+                  <div style={{ flex: 1 }} />
+                )}
+                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }} onClick={confirmLeave}>Discard</button>
               </div>
             </div>
           </div>

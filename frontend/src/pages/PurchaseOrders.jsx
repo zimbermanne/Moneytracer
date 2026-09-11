@@ -9,6 +9,7 @@ import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import PurchaseOrderPreview from '../components/PurchaseOrderPreview.jsx'
 import { useSearch } from '../hooks/useSearch.js'
+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
@@ -23,6 +24,7 @@ export default function PurchaseOrders() {
   const api = useApi()
   const { user } = useAuth()
   const canApprove = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager'
+  const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
 
   const [docs, setDocs] = useState([])
   const [error, setError] = useState('')
@@ -36,6 +38,27 @@ export default function PurchaseOrders() {
   const [previewDoc, setPreviewDoc] = useState(null)
   const [company, setCompany] = useState(null)
   const [suppliers, setSuppliers] = useState([])
+
+  useEffect(() => {
+    if (open) {
+      const hasData = form.supplier_name.trim() !== '' || form.items.some(l => l.description.trim() !== '')
+      if (hasData) {
+        setDirtyMessage('You have an unsaved purchase order in progress. Leaving this page will discard your changes.')
+        setDirty(true)
+        setOnSaveDraft(() => () => save(true))
+      } else {
+        setDirty(false)
+        setOnSaveDraft(null)
+      }
+    } else {
+      setDirty(false)
+      setOnSaveDraft(null)
+    }
+    return () => {
+      setDirty(false)
+      setOnSaveDraft(null)
+    }
+  }, [open, form, setDirty, setDirtyMessage, setOnSaveDraft])
 
   const isLocked = (doc) => doc.status === 'received' || doc.status === 'approved'
 
@@ -106,7 +129,7 @@ export default function PurchaseOrders() {
     setOpen(true)
   }
 
-  const save = async () => {
+  const save = async (isDraft = false) => {
     setError('')
     setSaving(true)
     try {
@@ -115,15 +138,17 @@ export default function PurchaseOrders() {
         ...rest,
         items: form.items.filter((l) => l.description.trim()),
         expected_date: expected_date ? new Date(expected_date).toISOString() : null,
+        ...(isDraft ? { status: 'draft' } : {}),
       }
-      if (!payload.items.length) { setError('Add at least one line item'); setSaving(false); return }
+      if (!isDraft && !payload.items.length) { setError('Add at least one line item'); setSaving(false); return }
       if (editingId) {
         await api.put(`/purchase-orders/${editingId}`, payload)
       } else {
         await api.post('/purchase-orders/', payload)
       }
       setOpen(false); setEditingId(null); setForm(emptyForm()); load()
-    } catch (e) { setError(e.message) }
+      return true
+    } catch (e) { setError(e.message); return false }
     finally { setSaving(false) }
   }
 

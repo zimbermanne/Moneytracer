@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -17,7 +18,28 @@ export default function InvoiceEditor({
   onClose, onSave, saving, inventoryItems = [], selectInventoryItem, showProfit = false,
 }) {
   const [checkAmount, setCheckAmount] = useState('')
+  const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
   const label = isInvoice ? 'Invoice' : 'Quotation'
+
+  useEffect(() => {
+    // A document is considered "dirty" (work in progress) if it has at least
+    // one line item with a description, or a customer name set.
+    const hasData = form.customer_name.trim() !== '' || form.items.some(l => l.description.trim() !== '')
+    if (hasData) {
+      setDirtyMessage(`You have an unsaved ${label.toLowerCase()} in progress. Leaving this page will discard your changes.`)
+      setDirty(true)
+      // Provide the save function to the navigation guard so the "Save as Draft"
+      // button in the exit prompt actually works.
+      setOnSaveDraft(() => () => onSave(true))
+    } else {
+      setDirty(false)
+      setOnSaveDraft(null)
+    }
+    return () => {
+      setDirty(false)
+      setOnSaveDraft(null)
+    }
+  }, [form, onSave, label, setDirty, setDirtyMessage, setOnSaveDraft])
 
   const checkValue = checkAmount === '' ? null : Number(checkAmount)
   const checkDiff = checkValue === null ? null : Math.round((checkValue - total) * 100) / 100

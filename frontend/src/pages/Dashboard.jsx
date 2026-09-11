@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import MetricCarousel from '../components/MetricCarousel.jsx'
 import { AlertBannerContainer } from '../components/AlertBanner.jsx'
 
 function money(n) {
-  return `TZS ${Number(n || 0).toLocaleString()}`
+  return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 }
+
+// Aging bucket colors run green -> red as invoices get older.
+const AGING_COLORS = ['#34c07a', '#8ac926', '#ffb347', '#ff8c42', '#e63946']
+const PAID_UNPAID_COLORS = { Paid: '#34c07a', Unpaid: '#e0722f' }
+const CUSTOMER_DONUT_COLORS = ['#e0722f', '#4f7cff', '#8a63ff', '#ff6b6b', '#34c07a', '#ffb347']
 
 function KpiCard({ label, value, health, onClick, style }) {
   const isWarning = health === 'warning';
@@ -95,6 +100,125 @@ function CashflowChart({ series }) {
           <Area type="monotone" dataKey="outgoing" name="Outgoing" stroke="var(--danger)" fill="url(#outgoingFill)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+function ActivityRing({ data, centerValue, centerLabel, colors }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <ResponsiveContainer width="100%" height={240}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="amount"
+            nameKey="bucket"
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={90}
+            paddingAngle={3}
+            cornerRadius={6}
+          >
+            {data.map((entry, i) => (
+              <Cell key={entry.bucket} fill={colors[i % colors.length]} stroke="none" />
+            ))}
+          </Pie>
+          <Tooltip formatter={(v) => money(v)} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        textAlign: 'center', pointerEvents: 'none',
+      }}>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{centerLabel}</div>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>{centerValue}</div>
+      </div>
+    </div>
+  )
+}
+
+function ARDashboardWidget() {
+  const api = useApi()
+  const { t } = useTranslation()
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/ar-dashboard')
+      .then(setData)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [api])
+
+  if (loading || !data) return null
+
+  const unpaidDonutData = (() => {
+    const top5 = data.unpaid_by_customer.slice(0, 5)
+    const top5Total = top5.reduce((s, c) => s + c.amount, 0)
+    const other = data.summary.total_unpaid - top5Total
+    return other > 0.5 ? [...top5, { customer: 'Other', amount: other }] : top5
+  })()
+
+  return (
+    <div style={{ marginTop: 24, marginBottom: 24 }}>
+      <h3 style={{ marginBottom: 16 }}>{t('nav.arDashboard')}</h3>
+
+      <div className="card-grid" style={{ marginBottom: 16 }}>
+        <KpiCard label="Total Unpaid" value={money(data.summary.total_unpaid)} health={data.summary.total_unpaid > 0 ? 'warning' : 'healthy'} />
+        <KpiCard label="Total Overdue" value={money(data.summary.total_overdue)} health={data.summary.total_overdue > 0 ? 'critical' : 'healthy'} />
+        <KpiCard label="Avg. Days Overdue" value={`${data.summary.avg_days_overdue} days`} health={data.summary.avg_days_overdue > 30 ? 'critical' : data.summary.avg_days_overdue > 0 ? 'warning' : 'healthy'} />
+        <KpiCard label="Collection Rate" value={`${Math.round((data.summary.total_paid / (data.summary.total_paid + data.summary.total_unpaid)) * 100 || 0)}%`} health="healthy" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        <div className="card">
+          <h4 style={{ marginTop: 0, marginBottom: 12 }}>AR Aging</h4>
+          <ActivityRing
+            data={data.aging}
+            centerValue={money(data.summary.total_unpaid)}
+            centerLabel="Total unpaid"
+            colors={AGING_COLORS}
+          />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', justifyContent: 'center', marginTop: 8 }}>
+            {data.aging.map((b, i) => (
+              <div key={b.bucket} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: AGING_COLORS[i % AGING_COLORS.length], display: 'inline-block' }} />
+                <span style={{ color: 'var(--text-muted)' }}>{b.bucket}</span>
+                <span style={{ fontWeight: 700 }}>{money(b.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <h4 style={{ marginTop: 0, marginBottom: 12 }}>Unpaid by Customer</h4>
+          {unpaidDonutData.length === 0 ? (
+            <div className="doc-sheet-muted">No unpaid invoices.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={unpaidDonutData}
+                  dataKey="amount"
+                  nameKey="customer"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  label={(entry) => `${entry.customer}: ${Math.round((entry.amount / data.summary.total_unpaid) * 100)}%`}
+                >
+                  {unpaidDonutData.map((entry, i) => (
+                    <Cell key={entry.customer} fill={entry.customer === 'Other' ? '#c9c2b4' : CUSTOMER_DONUT_COLORS[i % CUSTOMER_DONUT_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => money(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -434,6 +558,8 @@ function BusinessDashboard() {
           value={salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
         />
       </div>
+
+      <ARDashboardWidget />
 
       <LoansAndDeadlinesWidget loans={loans} deadlines={deadlines} />
 
