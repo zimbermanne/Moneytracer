@@ -39,6 +39,10 @@ export default function Payroll() {
   const [slipForm, setSlipForm] = useState(emptyPayslipForm())
   const [savingSlip, setSavingSlip] = useState(false)
 
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [batchForm, setBatchForm] = useState({ period_start: '', period_end: '', pay_date: '', notes: '' })
+  const [runningBatch, setRunningBatch] = useState(false)
+
   const load = () => {
     setLoading(true)
     Promise.all([api.get('/payroll/employees'), api.get('/payroll/payslips')])
@@ -129,6 +133,22 @@ export default function Payroll() {
     try { await api.put(`/payroll/payslips/${p.id}/mark-paid`); load() } catch (e) { alert(e.message) }
   }
 
+  const runBatch = async () => {
+    if (!batchForm.period_start || !batchForm.period_end || !batchForm.pay_date) {
+      setError('Period and pay date are required.'); return
+    }
+    setRunningBatch(true); setError('')
+    try {
+      await api.post('/payroll/payslips/batch', {
+        period_start: new Date(batchForm.period_start).toISOString(),
+        period_end: new Date(batchForm.period_end).toISOString(),
+        pay_date: new Date(batchForm.pay_date).toISOString(),
+        notes: batchForm.notes,
+      })
+      setBatchOpen(false); load()
+    } catch (e) { setError(e.message) } finally { setRunningBatch(false) }
+  }
+
   const employeeColumns = [
     { key: 'employee_number', header: 'No.' },
     { key: 'name', header: 'Name', render: (e) => <strong>{e.first_name} {e.last_name}</strong> },
@@ -176,7 +196,12 @@ export default function Payroll() {
         </div>
         {tab === 'employees'
           ? <button className="btn btn-primary" onClick={openNewEmployee}>+ Add Employee</button>
-          : <button className="btn btn-primary" onClick={openNewPayslip}>+ Run Payroll</button>}
+          : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-outline" onClick={() => setBatchOpen(true)}>⚙️ Auto-run (Monthly)</button>
+              <button className="btn btn-primary" onClick={openNewPayslip}>+ Manual Payslip</button>
+            </div>
+          )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -286,6 +311,32 @@ export default function Payroll() {
           <input type="number" value={slipForm.other_deductions} onChange={(e) => setSlipForm({ ...slipForm, other_deductions: e.target.value })} />
           <label>Notes</label>
           <input value={slipForm.notes} onChange={(e) => setSlipForm({ ...slipForm, notes: e.target.value })} />
+        </Modal>
+      )}
+
+      {batchOpen && (
+        <Modal
+          title="Auto-run Payroll (Batch Generate)"
+          onClose={() => setBatchOpen(false)}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => setBatchOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={runBatch} disabled={runningBatch}>
+                {runningBatch ? 'Processing…' : 'Generate Drafts'}
+              </button>
+            </>
+          }
+        >
+          <p className="sub">This will automatically create draft payslips for all <strong>active employees</strong> based on their defined monthly salaries. You can review and edit each draft before finalizing.</p>
+          {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
+          <label>Period Start</label>
+          <input type="date" value={batchForm.period_start} onChange={(e) => setBatchForm({ ...batchForm, period_start: e.target.value })} />
+          <label>Period End</label>
+          <input type="date" value={batchForm.period_end} onChange={(e) => setBatchForm({ ...batchForm, period_end: e.target.value })} />
+          <label>Payment Date</label>
+          <input type="date" value={batchForm.pay_date} onChange={(e) => setBatchForm({ ...batchForm, pay_date: e.target.value })} />
+          <label>Common Notes</label>
+          <input placeholder="e.g. Regular monthly payroll" value={batchForm.notes} onChange={(e) => setBatchForm({ ...batchForm, notes: e.target.value })} />
         </Modal>
       )}
     </div>
