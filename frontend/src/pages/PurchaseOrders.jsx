@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
+import Modal from '../components/Modal.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import PurchaseOrderPreview from '../components/PurchaseOrderPreview.jsx'
@@ -30,18 +31,12 @@ export default function PurchaseOrders() {
   const [pdfLoading, setPdfLoading] = useState(null)
   const [listLoading, setListLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
-  const [editingPoNo, setEditingPoNo] = useState('')
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
   const [previewDoc, setPreviewDoc] = useState(null)
   const [company, setCompany] = useState(null)
   const [suppliers, setSuppliers] = useState([])
 
-  // Received POs have real stock/ledger movements and can't be touched.
-  // Approved POs are locked too — a manager signed off on these exact
-  // numbers, so changing quantities/prices afterwards would silently
-  // invalidate that approval. Reset to draft (via the status action) if
-  // it genuinely needs edits, then re-approve.
   const isLocked = (doc) => doc.status === 'received' || doc.status === 'approved'
 
   const load = () => {
@@ -53,8 +48,6 @@ export default function PurchaseOrders() {
   useEffect(() => { api.get('/accounts/company-info').then(setCompany).catch(() => {}) }, []) // eslint-disable-line
   useEffect(() => { api.get('/suppliers/').then(setSuppliers).catch(() => {}) }, []) // eslint-disable-line
 
-  // Selecting a known supplier pre-fills their contact details — the same
-  // "pick from directory instead of retyping" shortcut inventory items get.
   const selectSupplier = (name) => {
     const match = suppliers.find((s) => s.name === name)
     setForm((f) => ({
@@ -73,12 +66,15 @@ export default function PurchaseOrders() {
   }
   const addLine = () => setForm((f) => ({ ...f, items: [...f.items, emptyLine()] }))
   const removeLine = (idx) => setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }))
+  const moveLine = (idx, dir) => {
+    const items = [...form.items]
+    const target = idx + dir
+    if (target < 0 || target >= items.length) return
+    const [removed] = items.splice(idx, 1)
+    items.splice(target, 0, removed)
+    setForm((f) => ({ ...f, items }))
+  }
 
-  // Selecting an inventory item pre-fills description + cost from its
-  // current cost price; choosing "Custom item" clears item_id so the line
-  // is freehand — either a one-off cost, or something new you're stocking
-  // for the first time (the backend will create it in inventory once this
-  // PO is marked received).
   const selectInventoryItem = (idx, itemId) => {
     if (!itemId) {
       setForm((f) => ({ ...f, items: f.items.map((l, i) => i === idx ? { ...l, item_id: null } : l) }))
@@ -94,10 +90,9 @@ export default function PurchaseOrders() {
     }))
   }
 
-  const openNew = () => { setEditingId(null); setEditingPoNo(''); setForm(emptyForm()); setError(''); setOpen(true) }
+  const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
   const openEdit = (doc) => {
     setEditingId(doc.id)
-    setEditingPoNo(doc.po_no)
     setForm({
       supplier_name: doc.supplier_name || '', supplier_phone: doc.supplier_phone || '',
       supplier_email: doc.supplier_email || '',
@@ -127,18 +122,18 @@ export default function PurchaseOrders() {
       } else {
         await api.post('/purchase-orders/', payload)
       }
-      setOpen(false); setEditingId(null); setEditingPoNo(''); setForm(emptyForm()); load()
+      setOpen(false); setEditingId(null); setForm(emptyForm()); load()
     } catch (e) { setError(e.message) }
     finally { setSaving(false) }
   }
 
-  const remove = async (id) => {
+  const removePO = async (id) => {
     if (!confirm('Delete this purchase order?')) return
     try { await api.del(`/purchase-orders/${id}`); load() } catch (e) { setError(e.message) }
   }
 
   const approvePO = async (doc) => {
-    if (!confirm(`Approve ${doc.po_no}? This authorizes the purchase but does not add stock yet — you'll still need to "Mark as Received" once the goods actually arrive.`)) return
+    if (!confirm(`Approve ${doc.po_no}? This authorizes the purchase but does not add stock yet.`)) return
     try {
       await api.post(`/purchase-orders/${doc.id}/approve`, {})
       load()
@@ -146,7 +141,7 @@ export default function PurchaseOrders() {
   }
 
   const markReceived = async (doc) => {
-    if (!confirm(`Mark ${doc.po_no} as received? This adds the items to inventory and records the purchase — it can't be undone.`)) return
+    if (!confirm(`Mark ${doc.po_no} as received? This adds items to inventory and records the purchase.`)) return
     try {
       await api.patch(`/purchase-orders/${doc.id}/status?status=received`)
       load()
@@ -159,7 +154,7 @@ export default function PurchaseOrders() {
 
   const columns = [
     { key: 'no', header: 'No.', render: (r) => <span className="cheque-number">{r.po_no}</span> },
-    { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
+    { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleDateString() },
     { key: 'supplier_name', header: 'Supplier' },
     { key: 'total', header: 'Total', render: (r) => money(r.total) },
     { key: 'status', header: 'Status', render: (r) => <span className={`badge badge-${r.status}`}>{r.status}</span> },
@@ -169,29 +164,22 @@ export default function PurchaseOrders() {
       render: (r) => (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {isLocked(r) && (
-            <span title={r.status === 'received' ? 'A received purchase order cannot be edited' : 'An approved purchase order cannot be edited — reset to draft first if changes are needed'}
-                  style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              🔒 Locked
-            </span>
+            <span title="Locked" style={{ fontSize: 12, color: 'var(--text-muted)' }}>🔒</span>
           )}
           <RowActionsMenu items={[
-            { label: 'Preview', icon: '👁', onClick: () => setPreviewDoc(r) },
+            { label: 'View', icon: '👁', onClick: () => setPreviewDoc(r) },
             { label: 'Edit', icon: '✎', onClick: () => openEdit(r), hidden: isLocked(r) },
             { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
             { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
-            { label: pdfLoading === r.id ? 'Downloading…' : 'PDF', icon: '⬇', onClick: () => downloadPdf(r), disabled: pdfLoading === r.id },
-            { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true, hidden: r.status === 'received' },
+            { label: 'PDF', icon: '⬇', onClick: () => downloadPdf(r) },
+            { label: 'Delete', icon: '✕', onClick: () => removePO(r.id), danger: true, hidden: r.status === 'received' },
           ]} />
         </div>
       ),
     },
   ]
 
-  const { query, setQuery, filtered } = useSearch(docs, [
-    'supplier_name',
-    'po_no',
-    (r) => new Date(r.created_at).toLocaleDateString(),
-  ])
+  const { query, setQuery, filtered } = useSearch(docs, ['supplier_name', 'po_no'])
 
   const subtotal = form.items.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0)
   const taxAmt   = subtotal * ((Number(form.tax_rate) || 0) / 100)
@@ -203,201 +191,171 @@ export default function PurchaseOrders() {
         <h1>Purchase Orders</h1>
         <button className="btn btn-primary" onClick={openNew}>+ New Purchase Order</button>
       </div>
+
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
+
       <div style={{ display: 'flex', marginBottom: 14 }}>
-        <SearchBar value={query} onChange={setQuery} placeholder="Search by supplier, number, or date…" />
+        <SearchBar value={query} onChange={setQuery} placeholder="Search by supplier or order number…" />
       </div>
-      <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading purchase orders…"
-        emptyText={query ? 'No purchase orders match your search.' : 'No purchase orders yet.'}
-        onRowClick={(row) => setPreviewDoc(row)} />
+
+      <Table columns={columns} rows={filtered} loading={listLoading} loadingText="Loading..."
+        emptyText="No purchase orders found." onRowClick={(row) => setPreviewDoc(row)} />
 
       {open && (
-        <div className="invoice-editor-overlay">
-          <div className="invoice-editor">
-            <div className="invoice-editor-topbar">
+        <Modal
+          title={editingId ? 'Edit Purchase Order' : 'New Purchase Order'}
+          onClose={() => setOpen(false)}
+          wide={true}
+          footer={(<>
+            <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Purchase Order'}
+            </button>
+          </>)}
+        >
+          <div className="doc-sheet doc-numerals" style={{ boxShadow: 'none', border: 'none', padding: 0 }}>
+            {/* Header Mirroring Document Style */}
+            <div className="doc-sheet-head" style={{ marginBottom: 24 }}>
               <div>
-                <div className="doc-sheet-muted">{editingId ? 'Edit Purchase Order' : 'New Purchase Order'}</div>
-                <h2 style={{ margin: 0 }}>{form.supplier_name || 'New supplier'}</h2>
+                <div className="doc-sheet-company">{company?.name || 'Your Company'}</div>
+                <div className="doc-sheet-muted">{company?.address || ''}</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-                {editingId && (
-                  <>
-                    <button className="btn btn-outline"
-                            onClick={() => setPreviewDoc(docs.find((d) => d.id === editingId))}>
-                      👁 Preview
-                    </button>
-                    <button className="btn btn-outline" onClick={() => downloadPdf({ id: editingId, po_no: editingPoNo })}
-                            disabled={pdfLoading === editingId}>
-                      {pdfLoading === editingId ? 'Downloading…' : '⬇ PDF'}
-                    </button>
-                  </>
-                )}
-                <button className="btn btn-primary" onClick={save} disabled={saving}>
-                  {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
-                </button>
+              <div style={{ textAlign: 'right' }}>
+                <div className="doc-sheet-title">Purchase Order</div>
+                <div className="doc-sheet-muted">Date: {new Date().toLocaleDateString()}</div>
               </div>
             </div>
 
-            {error && <div className="error-text" style={{ padding: '0 24px' }}>{error}</div>}
+            {/* Supplier & Delivery Grid */}
+            <div className="debtor-section-label">Supplier Information</div>
+            <div className="debtor-form-grid" style={{ marginBottom: 24 }}>
+              <div className="form-row">
+                <label>Supplier Name *</label>
+                <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
+                  list="po-supplier-list" placeholder="Pick or type supplier..." />
+                <datalist id="po-supplier-list">
+                  {suppliers.map((s) => <option key={s.id} value={s.name} />)}
+                </datalist>
+              </div>
+              <div className="form-row">
+                <label>Phone</label>
+                <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} />
+              </div>
+              <div className="form-row">
+                <label>Email</label>
+                <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })} />
+              </div>
+              <div className="form-row">
+                <label>Expected Delivery</label>
+                <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} />
+              </div>
+              <div className="form-row span-2">
+                <label>Address</label>
+                <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} />
+              </div>
+              <div className="form-row">
+                <label>Supplier TIN</label>
+                <input value={form.supplier_tin} onChange={(e) => setForm({ ...form, supplier_tin: e.target.value })} />
+              </div>
+              <div className="form-row">
+                <label>Supplier VRN</label>
+                <input value={form.supplier_vrn} onChange={(e) => setForm({ ...form, supplier_vrn: e.target.value })} />
+              </div>
+            </div>
 
-            <div className="invoice-editor-body">
-              <div className="invoice-editor-form">
-                <div className="invoice-editor-section-label">Supplier</div>
-                <div className="form-row"><label>Supplier Name *</label>
-                  <input value={form.supplier_name} onChange={(e) => selectSupplier(e.target.value)}
-                    list="po-supplier-list" placeholder="Type or pick a known supplier" />
-                  <datalist id="po-supplier-list">
-                    {suppliers.map((s) => <option key={s.id} value={s.name} />)}
-                  </datalist>
-                </div>
-                <div className="form-row"><label>Phone</label>
-                  <input value={form.supplier_phone} onChange={(e) => setForm({ ...form, supplier_phone: e.target.value })} /></div>
-                <div className="form-row"><label>Email</label>
-                  <input type="email" value={form.supplier_email} onChange={(e) => setForm({ ...form, supplier_email: e.target.value })}
-                    placeholder="For easy PO delivery from the preview screen" /></div>
-                <div className="form-row"><label>Address</label>
-                  <input value={form.supplier_address} onChange={(e) => setForm({ ...form, supplier_address: e.target.value })} /></div>
-                <div className="form-row"><label>Supplier TIN</label>
-                  <input value={form.supplier_tin} onChange={(e) => setForm({ ...form, supplier_tin: e.target.value })} /></div>
-                <div className="form-row"><label>Supplier VRN</label>
-                  <input value={form.supplier_vrn} onChange={(e) => setForm({ ...form, supplier_vrn: e.target.value })} /></div>
-                <div className="form-row"><label>Expected Delivery</label>
-                  <input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} /></div>
-
-                <div className="invoice-editor-section-label">Line Items</div>
-                {form.items.map((line, idx) => {
-                  const isCustom = !line.item_id
-                  return (
-                    <div key={idx} className="invoice-editor-line">
-                      <div className="invoice-line-reorder">
-                        <button
-                          type="button"
-                          className="invoice-line-reorder-btn"
-                          onClick={() => moveLine(idx, -1)}
-                          disabled={idx === 0}
-                          aria-label="Move item up"
-                          title="Move up"
-                        >▲</button>
-                        <button
-                          type="button"
-                          className="invoice-line-reorder-btn"
-                          onClick={() => moveLine(idx, 1)}
-                          disabled={idx === form.items.length - 1}
-                          aria-label="Move item down"
-                          title="Move down"
-                        >▼</button>
-                      </div>
-                      <div className="invoice-line-item-picker">
+            {/* Line Items Section */}
+            <div className="debtor-section-label">Order Items</div>
+            <div style={{ overflowX: 'auto', marginBottom: 16 }}>
+              <table className="doc-sheet-items">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40 }}></th>
+                    <th>Item Description</th>
+                    <th style={{ width: 100 }}>Qty</th>
+                    <th style={{ width: 140 }}>Unit Cost</th>
+                    <th style={{ width: 140, textAlign: 'right' }}>Total</th>
+                    <th style={{ width: 40 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.items.map((line, idx) => (
+                    <tr key={idx}>
+                      <td style={{ verticalAlign: 'middle' }}>
+                        <div className="invoice-line-reorder" style={{ flexDirection: 'row', gap: 2 }}>
+                          <button type="button" className="invoice-line-reorder-btn" onClick={() => moveLine(idx, -1)} disabled={idx === 0}>▲</button>
+                          <button type="button" className="invoice-line-reorder-btn" onClick={() => moveLine(idx, 1)} disabled={idx === form.items.length - 1}>▼</button>
+                        </div>
+                      </td>
+                      <td>
                         <select
                           className="invoice-line-item-select"
+                          style={{ marginBottom: 4 }}
                           value={line.item_id ?? ''}
                           onChange={(e) => selectInventoryItem(idx, e.target.value)}
                         >
-                          <option value="">— Custom / new item (not in inventory) —</option>
+                          <option value="">— Custom / new item —</option>
                           {inventoryItems.map((it) => (
-                            <option key={it.id} value={it.id}>
-                              {it.name} ({it.quantity} in stock)
-                            </option>
+                            <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
                           ))}
                         </select>
-                        {isCustom && (
-                          <input placeholder="Describe the item" value={line.description}
-                            onChange={(e) => updateLine(idx, 'description', e.target.value)} />
-                        )}
-                        {!isCustom && !inventoryItems.find(it => String(it.id) === String(line.item_id)) && (
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                            Linked to: {line.description}
-                          </div>
-                        )}
-                      </div>
-                      <input type="number" placeholder="Qty" value={line.quantity}
-                        onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-                      <input type="number" placeholder="Unit Cost" value={line.unit_price}
-                        onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                      <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
-                      <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
-                    </div>
-                  )
-                })}
-                <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 20 }}>+ Add Line</button>
+                        <input
+                          placeholder="Description..."
+                          value={line.description}
+                          onChange={(e) => updateLine(idx, 'description', e.target.value)}
+                          style={{ border: 'none', background: 'transparent', padding: '4px 0', fontSize: 13 }}
+                        />
+                      </td>
+                      <td>
+                        <input type="number" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                      </td>
+                      <td>
+                        <input type="number" value={line.unit_price} onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
+                      </td>
+                      <td style={{ textAlign: 'right', verticalAlign: 'middle', fontWeight: 600 }}>
+                        {money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}
+                      </td>
+                      <td style={{ verticalAlign: 'middle' }}>
+                        <button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)', borderColor: 'transparent' }} onClick={() => removeLine(idx)}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 24 }}>+ Add Line Item</button>
 
-                <div className="form-row"><label>Tax Rate (%)</label>
-                  <input type="number" value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: Number(e.target.value) })} /></div>
-                <div className="form-row"><label>Discount</label>
-                  <input type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })} /></div>
-                <div className="form-row"><label>Notes</label>
-                  <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-
-                <div className="invoice-editor-checkline">
-                  <div>Subtotal: {money(subtotal)}</div>
-                  <div>Tax: {money(taxAmt)}</div>
-                  <div><strong>Total: {money(total)}</strong></div>
-                </div>
+            {/* Totals & Notes Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 40 }}>
+              <div className="form-row">
+                <label>Notes / Terms</label>
+                <textarea
+                  placeholder="Special instructions for the supplier..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={4}
+                />
               </div>
-
-              <div className="invoice-editor-preview">
-                <div className="invoice-editor-preview-label">Live Preview</div>
-                <div className="doc-sheet doc-sheet-live">
-                  <div className="doc-sheet-head">
-                    <div>
-                      <div className="doc-sheet-company">{company?.name || 'Your Company'}</div>
-                      {company?.address && <div className="doc-sheet-muted">{company.address}</div>}
-                      {company?.email && <div className="doc-sheet-muted">{company.email}</div>}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="doc-sheet-title">Purchase Order</div>
-                      <div className="doc-sheet-muted">{editingId ? '(editing)' : '# (assigned on save)'}</div>
-                    </div>
-                  </div>
-
-                  <div className="doc-sheet-meta">
-                    <div>
-                      <div className="doc-sheet-label">Supplier</div>
-                      <div style={{ fontWeight: 600 }}>{form.supplier_name || '—'}</div>
-                      {form.supplier_phone && <div className="doc-sheet-muted">{form.supplier_phone}</div>}
-                      {form.supplier_address && <div className="doc-sheet-muted">{form.supplier_address}</div>}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="doc-sheet-label">Date</div>
-                      <div>{new Date().toLocaleDateString()}</div>
-                    </div>
-                  </div>
-
-                  <table className="doc-sheet-items">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Description</th>
-                        <th style={{ textAlign: 'right' }}>Qty</th>
-                        <th style={{ textAlign: 'right' }}>Unit Cost</th>
-                        <th style={{ textAlign: 'right' }}>Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {form.items.filter(l => l.description.trim()).map((line, i) => (
-                        <tr key={i}>
-                          <td>{i + 1}</td>
-                          <td>{line.description}</td>
-                          <td style={{ textAlign: 'right' }}>{line.quantity}</td>
-                          <td style={{ textAlign: 'right' }}>{money(line.unit_price)}</td>
-                          <td style={{ textAlign: 'right' }}>{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <div className="doc-sheet-totals">
-                    <div><span>Subtotal</span><span>{money(subtotal)}</span></div>
-                    {form.tax_rate > 0 && <div><span>Tax ({form.tax_rate}%)</span><span>{money(taxAmt)}</span></div>}
-                    {form.discount > 0 && <div><span>Discount</span><span>-{money(form.discount)}</span></div>}
-                    <div className="doc-sheet-total-row"><span>Total</span><span>{money(total)}</span></div>
-                  </div>
+              <div className="doc-sheet-totals" style={{ marginTop: 0, width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span>Subtotal</span>
+                  <span>{money(subtotal)}</span>
+                </div>
+                <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <label style={{ margin: 0, flex: 1 }}>Tax Rate (%)</label>
+                  <input type="number" style={{ width: 80, margin: 0 }} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: Number(e.target.value) })} />
+                </div>
+                <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <label style={{ margin: 0, flex: 1 }}>Discount</label>
+                  <input type="number" style={{ width: 100, margin: 0 }} value={form.discount} onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })} />
+                </div>
+                <div className="doc-sheet-total-row" style={{ borderTop: '2px solid var(--accent)', paddingTop: 12 }}>
+                  <span>Total Due</span>
+                  <span style={{ color: 'var(--accent)' }}>{money(total)}</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {previewDoc && (
