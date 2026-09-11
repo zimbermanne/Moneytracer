@@ -2073,6 +2073,13 @@ class PayslipCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class BatchPayrollCreate(BaseModel):
+    period_start: datetime
+    period_end: datetime
+    pay_date: datetime
+    notes: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Approvals & Budgets (Phase 6)
 # ---------------------------------------------------------------------------

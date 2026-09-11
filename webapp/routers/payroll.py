@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Employee, Payslip, User, RoleEnum
-from schemas import EmployeeCreate, EmployeeUpdate, EmployeeOut, PayslipCreate, PayslipOut
+from schemas import (
+    EmployeeCreate, EmployeeUpdate, EmployeeOut, PayslipCreate, PayslipOut,
+    BatchPayrollCreate
+)
 from auth import get_current_user, require_manager_up
 from activity import log_activity_for_user
 from ledger import post_journal_entry
@@ -214,6 +217,76 @@ def create_payslip(
 
     log_activity_for_user(db, current_user, "payslip_create", f"Created payslip for employee {payload.employee_id}")
     return payslip
+
+
+@router.post("/payslips/batch", response_model=List[PayslipOut])
+def batch_generate_payslips(
+    payload: BatchPayrollCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_up),
+):
+    """Automatically generate draft payslips for all active employees based on their salary."""
+    account_id = get_account_filter(current_user)
+    if account_id is None:
+        raise HTTPException(status_code=403, detail="Superadmin cannot run payroll")
+
+    active_employees = db.query(Employee).filter(
+        Employee.account_id == account_id,
+        Employee.is_active == True
+    ).all()
+
+    if not active_employees:
+        raise HTTPException(status_code=400, detail="No active employees found to generate payslips for.")
+
+    payslips = []
+    for emp in active_employees:
+        # Check if a payslip already exists for this employee and period
+        existing = db.query(Payslip).filter(
+            Payslip.employee_id == emp.id,
+            Payslip.period_start == payload.period_start,
+            Payslip.period_end == payload.period_end
+        ).first()
+
+        if existing:
+            continue
+
+        # Basic payroll math
+        # Gross = Salary (since it's recurring/automated, we assume no one-off OT/bonuses yet)
+        # Net = Gross (we assume deductions are handled manually or during finalization for now)
+        # Note: In a full-blown system, we'd apply tax formulas here.
+        gross_pay = emp.salary
+        net_pay = gross_pay
+
+        payslip = Payslip(
+            account_id=account_id,
+            employee_id=emp.id,
+            period_start=payload.period_start,
+            period_end=payload.period_end,
+            pay_date=payload.pay_date,
+            gross_pay=gross_pay,
+            basic_salary=emp.salary,
+            overtime=0,
+            bonuses=0,
+            allowances=0,
+            paye_tax=0,
+            social_security=0,
+            pension=0,
+            other_deductions=0,
+            total_deductions=0,
+            net_pay=net_pay,
+            status="draft",
+            notes=payload.notes,
+            created_by=current_user.username,
+        )
+        db.add(payslip)
+        payslips.append(payslip)
+
+    db.commit()
+    for p in payslips:
+        db.refresh(p)
+
+    log_activity_for_user(db, current_user, "payslip_batch_generate", f"Batch generated {len(payslips)} draft payslip(s)")
+    return payslips
 
 
 @router.put("/payslips/{payslip_id}/finalize")
