@@ -14,7 +14,7 @@ from models import (
     Sale, Purchase, Expense, Debtor, Creditor, InventoryItem, User, LedgerStatus, RoleEnum,
     ChartOfAccount, JournalEntry, JournalLine,
 )
-from auth import get_current_user
+from auth import get_current_user, require_accountant_up
 from ledger import signed_balance
 from activity import log_activity, log_activity_for_user
 
@@ -123,7 +123,7 @@ def _compute_core_financials(db: Session, account_id, start: datetime = None, en
 
 @router.get("/financial-summary")
 def financial_summary(start: Optional[date] = None, end: Optional[date] = None,
-                       db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                       db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     start_dt = datetime.combine(start, datetime.min.time()) if start else None
     end_dt = datetime.combine(end, datetime.max.time()) if end else None
@@ -162,7 +162,7 @@ def financial_summary(start: Optional[date] = None, end: Optional[date] = None,
 
 
 @router.get("/cashflow")
-def cashflow(months: int = 12, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def cashflow(months: int = 12, db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """Monthly incoming (sales) vs outgoing (expenses + purchases) for a
     trailing window, plus a running cash balance — used to draw the
     cashflow chart on the Financial Summary page."""
@@ -216,7 +216,7 @@ def cashflow(months: int = 12, db: Session = Depends(get_db), current_user: User
 
 @router.get("/profit-loss")
 def profit_loss(start: Optional[date] = None, end: Optional[date] = None,
-                 db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                 db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     start_dt = datetime.combine(start, datetime.min.time()) if start else None
     end_dt = datetime.combine(end, datetime.max.time()) if end else None
@@ -237,7 +237,7 @@ def profit_loss(start: Optional[date] = None, end: Optional[date] = None,
 
 
 @router.get("/debtors")
-def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     debtors = _scoped(db.query(Debtor), Debtor, account_id).all()
     total_owed = sum(d.total_owed - d.amount_paid for d in debtors)
@@ -262,7 +262,7 @@ def debtors_report(db: Session = Depends(get_db), current_user: User = Depends(g
 
 
 @router.get("/debtors-aging")
-def debtors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def debtors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """Aging: how overdue is each debtor's balance, bucketed by days since
     the debt was recorded (created_at) since there's no separate due_date
     field on Debtor — the standard fallback when credit terms aren't
@@ -295,7 +295,7 @@ def debtors_aging_report(db: Session = Depends(get_db), current_user: User = Dep
 
 
 @router.get("/creditors")
-def creditors_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def creditors_report(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     creditors = _scoped(db.query(Creditor), Creditor, account_id).all()
     total_owed = sum(c.total_owed - c.amount_paid for c in creditors)
@@ -320,7 +320,7 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
 
 
 @router.get("/creditors-aging")
-def creditors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def creditors_aging_report(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """Mirrors debtors_aging_report — same created_at-based bucketing,
     same fallback reasoning (no separate due_date on Creditor either)."""
     account_id = get_account_filter(current_user)
@@ -351,7 +351,7 @@ def creditors_aging_report(db: Session = Depends(get_db), current_user: User = D
 
 
 @router.get("/inventory-valuation")
-def inventory_valuation(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def inventory_valuation(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     items = _scoped(db.query(InventoryItem), InventoryItem, account_id).all()
     by_category = defaultdict(float)
@@ -461,7 +461,7 @@ def _ledger_account_balances(db: Session, account_id, start: datetime = None, en
 
 @router.get("/trial-balance")
 def trial_balance(start: Optional[date] = None, end: Optional[date] = None,
-                   db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                   db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """Every posted account with its raw debit/credit totals, plus a balance
     check confirming total debits equal total credits across the ledger —
     the fundamental double-entry invariant post_journal_entry is supposed to
@@ -487,7 +487,7 @@ def trial_balance(start: Optional[date] = None, end: Optional[date] = None,
 
 @router.get("/balance-sheet")
 def balance_sheet(as_of: Optional[date] = None, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(require_accountant_up)):
     """Assets, Liabilities, and Equity as of a given date (defaults to now),
     derived directly from posted JournalLine balances — not from Sale/Purchase/
     Expense tables — so this always reflects what's actually in the ledger.
@@ -527,7 +527,7 @@ def balance_sheet(as_of: Optional[date] = None, db: Session = Depends(get_db),
 
 @router.get("/vat-return")
 def vat_return(start: Optional[date] = None, end: Optional[date] = None,
-              db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+              db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """VAT return report: output VAT (sales) minus input VAT (purchases) = net due.
     Computed from the VAT Payable (Output) and VAT Receivable (Input) accounts."""
     account_id = get_account_filter(current_user)
@@ -596,7 +596,7 @@ _EXPORTABLE_REPORTS = {
 @router.get("/export/{report_type}")
 def export_report(report_type: str, start: Optional[date] = None, end: Optional[date] = None,
                    months: int = 12, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(require_accountant_up)):
     """Export any of the report views as an Excel workbook. Reuses each
     report's own endpoint function directly (not over HTTP) so the exported
     numbers can never drift from what's shown on screen."""

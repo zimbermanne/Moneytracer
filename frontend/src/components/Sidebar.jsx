@@ -72,6 +72,7 @@ function buildNav(t) {
     { type: 'item', label: t('nav.home'), icon: 'home', path: '/app' },
     {
       type: 'group', label: t('nav.salesGroup'), key: 'sales', accountTypes: ['business'],
+      roles: ['admin', 'manager', 'sales', 'accountant'],
       children: [
         { label: t('nav.pos'), icon: 'point-of-sale', path: '/app/pos' },
         { label: t('nav.salesHistory'), icon: 'sales-history', path: '/app/sales' },
@@ -82,6 +83,7 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.purchasesGroup'), key: 'purchases', accountTypes: ['business'],
+      roles: ['admin', 'manager', 'inventory', 'accountant'],
       children: [
         { label: t('nav.purchasesLedger'), icon: 'purchases-ledger', path: '/app/purchases' },
         { label: t('nav.purchaseOrders'), icon: 'purchase-order', path: '/app/purchase-orders' },
@@ -90,6 +92,7 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.debtorsGroup'), key: 'debtors', accountTypes: ['business', 'personal'],
+      roles: ['admin', 'manager', 'accountant', 'sales'],
       children: [
         { label: t('nav.clientsDebtors'), icon: 'debtors', path: '/app/debtors' },
         { label: t('nav.debtorsReport'), icon: 'debts', path: '/app/reports/debtors' },
@@ -97,6 +100,7 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.creditorsGroup'), key: 'creditors', accountTypes: ['business', 'personal'],
+      roles: ['admin', 'manager', 'accountant', 'inventory'],
       children: [
         { label: t('nav.creditorsReport'), icon: 'creditors', path: '/app/reports/creditors' },
         { label: t('nav.creditorsLedger'), icon: 'creditors', path: '/app/creditors' },
@@ -104,6 +108,7 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.inventoryGroup'), key: 'inventory', accountTypes: ['business'],
+      roles: ['admin', 'manager', 'inventory', 'accountant'],
       children: [
         { label: t('nav.inventoryLedger'), icon: 'inventory-ledger', path: '/app/inventory' },
         { label: t('nav.inventoryValuation'), icon: 'inventory', path: '/app/reports/inventory-valuation' },
@@ -111,6 +116,7 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.accountingReportsGroup'), key: 'accounting', accountTypes: ['business'],
+      roles: ['admin', 'manager', 'accountant'],
       children: [
         { label: t('nav.chartOfAccounts'), icon: 'chart-of-accounts', path: '/app/accounting/chart-of-accounts' },
         { label: t('nav.generalLedger'), icon: 'trialbalance', path: '/app/accounting/general-ledger' },
@@ -125,22 +131,21 @@ function buildNav(t) {
     },
     {
       type: 'group', label: t('nav.expensesGroup'), key: 'expenses', accountTypes: ['business', 'personal'],
+      roles: ['admin', 'manager', 'accountant'],
       children: [
         { label: t('nav.expensesItem'), icon: 'expenses', path: '/app/expenses' },
       ],
     },
-    { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans', accountTypes: ['business', 'personal'] },
-    { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets', accountTypes: ['business', 'personal'] },
-    // Not on your list either — same story as AR Dashboard above, kept so
-    // payroll doesn't just disappear. Let me know where you'd like it.
-    { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business'] },
-    { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'personal'] },
+    { type: 'item', label: t('nav.bankLoans'), icon: 'bank-loans', path: '/app/bank-loans', accountTypes: ['business', 'personal'], roles: ['admin', 'manager', 'accountant'] },
+    { type: 'item', label: t('nav.assets'), icon: 'assets', path: '/app/assets', accountTypes: ['business', 'personal'], roles: ['admin', 'manager', 'accountant'] },
+    { type: 'item', label: t('nav.payroll'), icon: 'payrol', path: '/app/payroll', accountTypes: ['business'], roles: ['admin', 'manager', 'accountant'] },
+    { type: 'item', label: t('nav.budgets'), icon: 'budgeting', path: '/app/budgets', accountTypes: ['business', 'personal'], roles: ['admin', 'manager', 'accountant'] },
     { type: 'item', label: t('nav.personal'), icon: 'personal-accounting', path: '/app/personal', accountTypes: ['business', 'personal'] },
     { type: 'item', label: t('nav.messages'), icon: 'messages', path: '/app/messages' },
     { type: 'item', label: t('nav.deadlines'), icon: 'deadline', path: '/app/deadlines' },
     { type: 'item', label: t('nav.activityLogsItem'), icon: 'activity-logs', path: '/app/activity', roles: ['manager', 'admin', 'superadmin'] },
     { type: 'item', label: t('nav.groupLedger'), icon: 'personal-accounting', path: '/app/community/ledger', accountTypes: ['community'] },
-    { type: 'item', label: t('nav.settingsItem'), icon: 'settings', path: '/app/settings' },
+    { type: 'item', label: t('nav.settingsItem'), icon: 'settings', path: '/app/settings', roles: ['admin', 'manager'] },
   ]
 }
 

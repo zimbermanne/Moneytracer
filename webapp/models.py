@@ -12,6 +12,9 @@ class RoleEnum(str, enum.Enum):
     admin = "admin"
     manager = "manager"
     employee = "employee"
+    accountant = "accountant"
+    sales = "sales"
+    inventory = "inventory"
     member = "member"  # read-only community-group member login (own records only)
 
 

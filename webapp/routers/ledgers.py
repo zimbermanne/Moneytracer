@@ -20,7 +20,7 @@ from schemas import (
     PaymentMethodOut, PaymentMethodCreate, PaymentMethodUpdate,
     ReconciliationEntry, ReconciliationStatement,
 )
-from auth import get_current_user, require_manager_up, require_admin
+from auth import get_current_user, require_manager_up, require_admin, require_accountant_up
 from activity import log_activity_for_user
 from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods, signed_balance
 from routers.invoices import get_account_details
@@ -526,7 +526,7 @@ def reconcile_party(
 # ---------- Fiscal Periods ----------
 
 @router.get("/fiscal-periods", response_model=List[FiscalPeriodOut])
-def list_fiscal_periods(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_fiscal_periods(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     q = db.query(FiscalPeriod)
     if account_id is not None:
@@ -536,7 +536,7 @@ def list_fiscal_periods(db: Session = Depends(get_db), current_user: User = Depe
 
 @router.post("/fiscal-periods", response_model=FiscalPeriodOut)
 def create_fiscal_period(payload: FiscalPeriodCreate, db: Session = Depends(get_db),
-                          current_user: User = Depends(require_manager_up)):
+                          current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create fiscal periods")
@@ -566,7 +566,7 @@ def create_fiscal_period(payload: FiscalPeriodCreate, db: Session = Depends(get_
 
 @router.post("/fiscal-periods/{period_id}/close", response_model=FiscalPeriodOut)
 def close_fiscal_period(period_id: int, db: Session = Depends(get_db),
-                         current_user: User = Depends(require_manager_up)):
+                         current_user: User = Depends(require_accountant_up)):
     """Locks the period: post_journal_entry will reject any entry dated
     inside it from this point on. Existing entries are untouched — the
     lock only blocks new posts and edits, never mutates history."""
@@ -591,7 +591,7 @@ def close_fiscal_period(period_id: int, db: Session = Depends(get_db),
 
 @router.post("/fiscal-periods/{period_id}/reopen", response_model=FiscalPeriodOut)
 def reopen_fiscal_period(period_id: int, db: Session = Depends(get_db),
-                          current_user: User = Depends(require_manager_up)):
+                          current_user: User = Depends(require_accountant_up)):
     """Reopening is intentionally left available to managers+ (not locked to
     superadmin) since small businesses need to fix a mistaken close without
     filing a support ticket — but every reopen is logged so it's auditable."""
@@ -617,7 +617,7 @@ def reopen_fiscal_period(period_id: int, db: Session = Depends(get_db),
 # ---------- Chart of Accounts ----------
 
 @router.get("/chart-of-accounts", response_model=List[ChartOfAccountOut])
-def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_chart_of_accounts(db: Session = Depends(get_db), current_user: User = Depends(require_accountant_up)):
     """Return ChartOfAccount records as a nested tree grouped by type, with running balances."""
     account_id = get_account_filter(current_user)
     query = db.query(ChartOfAccount)
@@ -820,7 +820,7 @@ def list_journal_entries(
     start_date: Optional[datetime] = Query(None, description="Filter by start date"),
     end_date: Optional[datetime] = Query(None, description="Filter by end date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_accountant_up),
 ):
     """Paginated list of journal entries with optional filtering by account and date range.
 
@@ -916,7 +916,7 @@ def list_journal_entries(
 def create_journal_entry(
     payload: JournalEntryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_up),
+    current_user: User = Depends(require_accountant_up),
 ):
     """Create a manual journal entry. Validates balance and calls existing post_journal_entry."""
     account_id = get_account_filter(current_user)

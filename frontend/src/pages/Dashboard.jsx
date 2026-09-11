@@ -377,6 +377,12 @@ function BusinessDashboard() {
   const api = useApi()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { user } = useAuth()
+
+  const isManagement = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'accountant'
+  const isSalesTeam = user?.role === 'sales'
+  const isInventoryTeam = user?.role === 'inventory'
+
   const [daily, setDaily] = useState(null)
   const [inv, setInv] = useState(null)
   const [fin, setFin] = useState(null)
@@ -414,31 +420,66 @@ function BusinessDashboard() {
   }
 
   useEffect(() => {
-    Promise.all([
+    const calls = [
       api.get('/reports/daily-summary'),
       api.get('/inventory/metrics'),
-      api.get('/reports/financial-summary'),
-      api.get('/reports/cashflow?months=12'),
-      api.get('/sales/stats/summary'),
       api.get('/inventory/low-stock/alerts'),
-      api.get('/bank-loans/').catch(() => []),
-      api.get('/deadlines/').catch(() => []),
       api.get('/reminders/').catch(() => []),
-    ])
-      .then(([d, i, f, c, s, ls, bl, dl, rem]) => {
-        setDaily(d)
-        setInv(i)
-        setFin(f)
-        setCashflow(c)
-        setSalesStats(s)
-        setLowStock(ls)
-        setLoans(bl)
-        setDeadlines(dl)
-        setReminders(rem)
+    ]
+
+    if (isManagement) {
+      calls.push(api.get('/reports/financial-summary'))
+      calls.push(api.get('/reports/cashflow?months=12'))
+      calls.push(api.get('/sales/stats/summary'))
+      calls.push(api.get('/bank-loans/').catch(() => []))
+      calls.push(api.get('/deadlines/').catch(() => []))
+    }
+
+    Promise.all(calls)
+      .then((results) => {
+        setDaily(results[0])
+        setInv(results[1])
+        setLowStock(results[2])
+        setReminders(results[3])
+        if (isManagement) {
+          setFin(results[4])
+          setCashflow(results[5])
+          setSalesStats(results[6])
+          setLoans(results[7])
+          setDeadlines(results[8])
+        }
       })
       .catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isManagement])
+
+  // Filter Carousel items by role
+  const todayMetrics = [
+    { key: 'earnings', label: t('dashboard.todaysEarnings'), value: daily ? `TZS ${daily.earnings.toLocaleString()}` : '—', tone: 'blue', badge: '💰', roles: ['admin', 'manager', 'accountant', 'sales'] },
+    { key: 'itemsSold', label: t('dashboard.itemsSoldToday'), value: daily ? daily.items_sold : '—', tone: 'green', badge: '📦', roles: ['admin', 'manager', 'accountant', 'sales', 'inventory'] },
+    { key: 'topProduct', label: t('dashboard.topProductToday'), value: daily?.top_product || t('dashboard.noSalesYet'), valueFontSize: 19, tone: 'purple', badge: '⭐', roles: ['admin', 'manager', 'accountant', 'sales'] },
+    {
+      key: 'lowStock', label: t('dashboard.lowStockItems'), value: daily ? daily.low_stock_count : '—',
+      tone: 'red', badge: '⚠️', onClick: () => navigate('/app/inventory'), roles: ['admin', 'manager', 'accountant', 'inventory']
+    },
+  ].filter(m => !m.roles || m.roles.includes(user?.role))
+
+  const overallMetrics = [
+    { key: 'invValue', label: t('dashboard.inventoryValue'), value: inv ? `TZS ${inv.total_value.toLocaleString()}` : '—', tone: 'navy', badge: '🏬', roles: ['admin', 'manager', 'accountant', 'inventory'] },
+    { key: 'stockUnits', label: t('dashboard.totalStockUnits'), value: inv ? inv.total_units : '—', tone: 'blue', badge: '📦', roles: ['admin', 'manager', 'accountant', 'inventory'] },
+    { key: 'netProfit', label: t('dashboard.netProfitAllTime'), value: fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—', tone: 'orange', badge: '📊', roles: ['admin', 'manager', 'accountant'] },
+    { key: 'revenue', label: t('dashboard.totalRevenueAllTime'), value: fin ? `TZS ${fin.revenue.toLocaleString()}` : '—', tone: 'green', badge: '💵', roles: ['admin', 'manager', 'accountant'] },
+    {
+      key: 'mostSold', label: t('dashboard.mostSoldItemAllTime'),
+      value: salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet'),
+      valueFontSize: 18, tone: 'blue', badge: '🏆', roles: ['admin', 'manager', 'accountant', 'sales']
+    },
+    {
+      key: 'topRevenue', label: t('dashboard.topRevenueItemAllTime'),
+      value: salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet'),
+      valueFontSize: 18, tone: 'green', badge: '💵', roles: ['admin', 'manager', 'accountant', 'sales']
+    },
+  ].filter(m => !m.roles || m.roles.includes(user?.role))
 
   return (
     <div className="page page-dashboard-home">
@@ -448,10 +489,10 @@ function BusinessDashboard() {
 
       {error && <div className="error-text">{error}</div>}
 
-      <AuditWidget />
+      {isManagement && <AuditWidget />}
       <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
 
-      {lowStock.length > 0 && (
+      {(isManagement || isInventoryTeam) && lowStock.length > 0 && (
         <div
           onClick={() => navigate('/app/inventory')}
           style={{
@@ -471,99 +512,88 @@ function BusinessDashboard() {
         </div>
       )}
 
-      <MetricCarousel
-        sectionLabel="Today"
-        items={[
-          { key: 'earnings', label: t('dashboard.todaysEarnings'), value: daily ? `TZS ${daily.earnings.toLocaleString()}` : '—', tone: 'blue', badge: '💰' },
-          { key: 'itemsSold', label: t('dashboard.itemsSoldToday'), value: daily ? daily.items_sold : '—', tone: 'green', badge: '📦' },
-          { key: 'topProduct', label: t('dashboard.topProductToday'), value: daily?.top_product || t('dashboard.noSalesYet'), valueFontSize: 19, tone: 'purple', badge: '⭐' },
-          {
-            key: 'lowStock', label: t('dashboard.lowStockItems'), value: daily ? daily.low_stock_count : '—',
-            tone: 'red', badge: '⚠️', onClick: () => navigate('/app/inventory'),
-          },
-        ]}
-      />
+      <MetricCarousel sectionLabel="Today" items={todayMetrics} />
 
       <div className="card-grid dashboard-grid-desktop">
-        <KpiCard
-          label={t('dashboard.todaysEarnings')}
-          value={daily ? `TZS ${daily.earnings.toLocaleString()}` : '—'}
-          health={daily?.earnings > 0 ? 'healthy' : null}
-        />
-        <KpiCard
-          label={t('dashboard.itemsSoldToday')}
-          value={daily ? daily.items_sold : '—'}
-          health={daily?.items_sold > 0 ? 'healthy' : null}
-        />
-        <KpiCard
-          label={t('dashboard.topProductToday')}
-          value={daily?.top_product || t('dashboard.noSalesYet')}
-          style={{ fontSize: 16 }}
-        />
-        <KpiCard
-          label={t('dashboard.lowStockItems')}
-          value={daily ? daily.low_stock_count : '—'}
-          health={daily?.low_stock_count > 0 ? 'critical' : 'healthy'}
-          onClick={() => navigate('/app/inventory')}
-        />
+        {(isManagement || isSalesTeam) && (
+          <KpiCard
+            label={t('dashboard.todaysEarnings')}
+            value={daily ? `TZS ${daily.earnings.toLocaleString()}` : '—'}
+            health={daily?.earnings > 0 ? 'healthy' : null}
+          />
+        )}
+        {(isManagement || isSalesTeam || isInventoryTeam) && (
+          <KpiCard
+            label={t('dashboard.itemsSoldToday')}
+            value={daily ? daily.items_sold : '—'}
+            health={daily?.items_sold > 0 ? 'healthy' : null}
+          />
+        )}
+        {(isManagement || isSalesTeam) && (
+          <KpiCard
+            label={t('dashboard.topProductToday')}
+            value={daily?.top_product || t('dashboard.noSalesYet')}
+            style={{ fontSize: 16 }}
+          />
+        )}
+        {(isManagement || isInventoryTeam) && (
+          <KpiCard
+            label={t('dashboard.lowStockItems')}
+            value={daily ? daily.low_stock_count : '—'}
+            health={daily?.low_stock_count > 0 ? 'critical' : 'healthy'}
+            onClick={() => navigate('/app/inventory')}
+          />
+        )}
       </div>
 
-      <MetricCarousel
-        sectionLabel="Overall"
-        items={[
-          { key: 'invValue', label: t('dashboard.inventoryValue'), value: inv ? `TZS ${inv.total_value.toLocaleString()}` : '—', tone: 'navy', badge: '🏬' },
-          { key: 'stockUnits', label: t('dashboard.totalStockUnits'), value: inv ? inv.total_units : '—', tone: 'blue', badge: '📦' },
-          { key: 'netProfit', label: t('dashboard.netProfitAllTime'), value: fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—', tone: 'orange', badge: '📊' },
-          { key: 'revenue', label: t('dashboard.totalRevenueAllTime'), value: fin ? `TZS ${fin.revenue.toLocaleString()}` : '—', tone: 'green', badge: '💵' },
-          {
-            key: 'mostSold', label: t('dashboard.mostSoldItemAllTime'),
-            value: salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet'),
-            valueFontSize: 18, tone: 'blue', badge: '🏆',
-          },
-          {
-            key: 'topRevenue', label: t('dashboard.topRevenueItemAllTime'),
-            value: salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet'),
-            valueFontSize: 18, tone: 'green', badge: '💵',
-          },
-        ]}
-      />
+      <MetricCarousel sectionLabel="Overall" items={overallMetrics} />
 
       <div className="card-grid dashboard-grid-desktop">
-        <KpiCard
-          label={t('dashboard.inventoryValue')}
-          value={inv ? `TZS ${inv.total_value.toLocaleString()}` : '—'}
-        />
-        <KpiCard
-          label={t('dashboard.totalStockUnits')}
-          value={inv ? inv.total_units : '—'}
-        />
-        <KpiCard
-          label={t('dashboard.netProfitAllTime')}
-          value={fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—'}
-          health={fin?.net_profit > 0 ? 'healthy' : fin?.net_profit < 0 ? 'critical' : null}
-        />
-        <KpiCard
-          label={t('dashboard.totalRevenueAllTime')}
-          value={fin ? `TZS ${fin.revenue.toLocaleString()}` : '—'}
-        />
+        {(isManagement || isInventoryTeam) && (
+          <KpiCard
+            label={t('dashboard.inventoryValue')}
+            value={inv ? `TZS ${inv.total_value.toLocaleString()}` : '—'}
+          />
+        )}
+        {(isManagement || isInventoryTeam) && (
+          <KpiCard
+            label={t('dashboard.totalStockUnits')}
+            value={inv ? inv.total_units : '—'}
+          />
+        )}
+        {isManagement && (
+          <>
+            <KpiCard
+              label={t('dashboard.netProfitAllTime')}
+              value={fin ? `TZS ${fin.net_profit.toLocaleString()}` : '—'}
+              health={fin?.net_profit > 0 ? 'healthy' : fin?.net_profit < 0 ? 'critical' : null}
+            />
+            <KpiCard
+              label={t('dashboard.totalRevenueAllTime')}
+              value={fin ? `TZS ${fin.revenue.toLocaleString()}` : '—'}
+            />
+          </>
+        )}
       </div>
 
-      <div className="card-grid dashboard-grid-desktop">
-        <KpiCard
-          label={t('dashboard.mostSoldItemAllTime')}
-          value={salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet')}
-        />
-        <KpiCard
-          label={t('dashboard.topRevenueItemAllTime')}
-          value={salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
-        />
-      </div>
+      {isManagement && (
+        <div className="card-grid dashboard-grid-desktop">
+          <KpiCard
+            label={t('dashboard.mostSoldItemAllTime')}
+            value={salesStats?.most_sold_item ? `${salesStats.most_sold_item.item_name} (${salesStats.most_sold_item.quantity} sold)` : t('dashboard.noSalesYet')}
+          />
+          <KpiCard
+            label={t('dashboard.topRevenueItemAllTime')}
+            value={salesStats?.top_revenue_item ? `${salesStats.top_revenue_item.item_name} (TZS ${salesStats.top_revenue_item.revenue.toLocaleString()})` : t('dashboard.noSalesYet')}
+          />
+        </div>
+      )}
 
-      <ARDashboardWidget />
+      {isManagement && <ARDashboardWidget />}
 
-      <LoansAndDeadlinesWidget loans={loans} deadlines={deadlines} />
+      {isManagement && <LoansAndDeadlinesWidget loans={loans} deadlines={deadlines} />}
 
-      <CashflowChart series={cashflow?.series} />
+      {isManagement && <CashflowChart series={cashflow?.series} />}
     </div>
   )
 }

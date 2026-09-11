@@ -210,6 +210,9 @@ def require_roles(*roles: RoleEnum):
 
 require_admin = require_roles(RoleEnum.admin)
 require_manager_up = require_roles(RoleEnum.admin, RoleEnum.manager)
+require_accountant_up = require_roles(RoleEnum.admin, RoleEnum.manager, RoleEnum.accountant)
+require_sales_up = require_roles(RoleEnum.admin, RoleEnum.manager, RoleEnum.sales, RoleEnum.accountant)
+require_inventory_up = require_roles(RoleEnum.admin, RoleEnum.manager, RoleEnum.inventory, RoleEnum.accountant)
 require_superadmin = require_roles(RoleEnum.superadmin)
 
 
