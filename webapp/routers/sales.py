@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Sale, InventoryItem, Debtor, DebtorItem, User, PaymentMode, LedgerStatus, RoleEnum, PaymentMethod
 from schemas import SaleCreate, SaleOut, CheckoutRequest, CheckoutResponse
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_sales_up
 from activity import log_activity_for_user
 from ledger import (
     post_sale_entry, find_journal_entry_by_reference, reverse_journal_entry,
@@ -137,7 +137,7 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db),
 
 @router.post("/checkout", response_model=CheckoutResponse)
 def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
-             current_user: User = Depends(get_current_user)):
+             current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot perform checkout")
@@ -260,7 +260,7 @@ def list_sales(start: Optional[date] = None, end: Optional[date] = None,
 
 
 @router.get("/stats/summary")
-def sales_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sales_stats(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Sale)
     account_id = get_account_filter(current_user)
     if account_id is not None:

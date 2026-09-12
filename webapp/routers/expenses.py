@@ -10,7 +10,7 @@ from sqlalchemy import func
 from database import get_db
 from models import Expense, User, RoleEnum, PaymentMethod, ChartOfAccount, JournalLine, JournalEntry
 from schemas import ExpenseCreate, ExpenseUpdate, ExpenseOut, OutgoingOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_accountant_up
 from activity import log_activity_for_user
 from ledger import (
     post_expense_entry, find_journal_entry_by_reference, reverse_journal_entry,
@@ -75,7 +75,7 @@ def _find_duplicate_expense(db: Session, account_id: int, amount: float, descrip
 
 @router.post("/", response_model=ExpenseOut)
 def record_expense(payload: ExpenseCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_accountant_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot record expenses")
@@ -125,7 +125,7 @@ def list_expenses(
     q: Optional[str] = None,
     include_purchases: Optional[bool] = True,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_accountant_up)
 ):
     account_id = get_account_filter(current_user)
     outgoings = []

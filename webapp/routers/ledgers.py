@@ -53,7 +53,7 @@ def _update_status(entry):
 
 
 @router.get("/debtors", response_model=List[DebtorOut])
-def list_debtors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_debtors(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Debtor)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -62,7 +62,7 @@ def list_debtors(db: Session = Depends(get_db), current_user: User = Depends(get
 
 
 @router.post("/debtors", response_model=DebtorOut)
-def add_debtor(payload: DebtorCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def add_debtor(payload: DebtorCreate, db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot add debtors")
@@ -336,7 +336,7 @@ def debtor_debit_note_pdf(debtor_id: int, db: Session = Depends(get_db),
 
 
 @router.get("/creditors", response_model=List[CreditorOut])
-def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Creditor)
     account_id = get_account_filter(current_user)
     if account_id is not None:

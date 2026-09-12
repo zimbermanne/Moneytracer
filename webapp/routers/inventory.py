@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from database import get_db
 from models import InventoryItem, User, RoleEnum
 from schemas import InventoryCreate, InventoryUpdate, InventoryOut
-from auth import get_current_user, require_manager_up, require_account_user
+from auth import get_current_user, require_manager_up, require_account_user, require_inventory_up
 from activity import log_activity_for_user
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
@@ -30,7 +30,7 @@ def get_account_filter(current_user: User):
 
 @router.get("/", response_model=List[InventoryOut])
 def list_items(category: Optional[str] = None, q: Optional[str] = None, db: Session = Depends(get_db),
-               current_user: User = Depends(get_current_user)):
+               current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -56,7 +56,7 @@ def _validate_prices(cost_price: float, selling_price: float):
 
 @router.post("/", response_model=InventoryOut)
 def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
-                 current_user: User = Depends(require_manager_up)):
+                 current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create inventory items")

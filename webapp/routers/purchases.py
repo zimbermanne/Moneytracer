@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Purchase, InventoryItem, User, RoleEnum
 from schemas import PurchaseCreate, PurchaseUpdate, PurchaseMultiCreate, PurchaseOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_inventory_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry, find_journal_entry_by_reference, reverse_journal_entry, FiscalPeriodLockedError
 
@@ -68,7 +68,7 @@ def _reverse_inventory_for_purchase(db: Session, account_id: int, item_id, item_
 
 @router.post("/", response_model=PurchaseOut)
 def record_purchase(payload: PurchaseCreate, db: Session = Depends(get_db),
-                     current_user: User = Depends(require_manager_up)):
+                     current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot record purchases")
@@ -189,7 +189,7 @@ def update_purchase(purchase_id: int, payload: PurchaseUpdate, db: Session = Dep
 
 
 @router.get("/", response_model=List[PurchaseOut])
-def list_purchases(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_purchases(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Purchase)
     account_id = get_account_filter(current_user)
     if account_id is not None:

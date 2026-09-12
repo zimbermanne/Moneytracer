@@ -2,7 +2,7 @@ import { useEffect, useState, Fragment } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useSearch } from '../hooks/useSearch.js'
-import Table from '../components/Table.jsx'
+import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import ThermalReceipt from '../components/ThermalReceipt.jsx'
@@ -21,6 +21,8 @@ export default function Sales() {
   const [shareResults, setShareResults] = useState([])
   const [shareSearching, setShareSearching] = useState(false)
 
+  const [expanded, setExpanded] = useState({}) // { receipt_no: true }
+
   const load = () => {
     setListLoading(true)
     api.get('/sales/').then(setSales).catch((e) => setError(e.message)).finally(() => setListLoading(false))
@@ -30,7 +32,7 @@ export default function Sales() {
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const remove = async (id) => {
-    if (!confirm('Delete this sale and restore stock?')) return
+    if (!confirm('Delete this sale line and restore stock?')) return
     try {
       await api.del(`/sales/${id}`)
       load()
@@ -40,15 +42,11 @@ export default function Sales() {
   }
 
   const openReceipt = (r) => {
-    // A single checkout can produce several line items sharing one
-    // receipt_no — group them back together so the reprint shows the
-    // whole original receipt, not just the clicked row's line.
-    const grouped = r.receipt_no ? sales.filter((s) => s.receipt_no === r.receipt_no) : [r]
-    const total = grouped.reduce((sum, s) => sum + s.total, 0)
+    // r is a grouped receipt object
     setPrintReceipt({
-      receipt_no: r.receipt_no || `SALE-${r.id}`,
-      sales: grouped,
-      total,
+      receipt_no: r.receipt_no,
+      sales: r.items,
+      total: r.total,
       customer_name: r.customer_name,
       payment_mode: r.payment_mode,
       created_at: r.created_at,
@@ -60,19 +58,23 @@ export default function Sales() {
     if (q.length < 3) { setShareResults([]); return }
     setShareSearching(true)
     api.get(`/messages/directory?q=${encodeURIComponent(q)}`)
-      .then(setShareResults)
+      .then(setResultsWithMatch)
       .catch(() => {})
       .finally(() => setShareSearching(false))
+  }
+
+  const setResultsWithMatch = (data) => {
+    setShareResults(data)
   }
 
   const doShare = async (business) => {
     try {
       await api.post('/messages/threads', {
         recipient_account_id: business.id,
-        subject: `Shared Receipt: ${shareDoc.receipt_no || ('SALE-'+shareDoc.id)}`,
+        subject: `Shared Receipt: ${shareDoc.receipt_no}`,
         body: `Hello! I am sharing a receipt with you.`,
         attachment_type: 'receipt',
-        attachment_id: shareDoc.id
+        attachment_id: shareDoc.items[0].id // Use the first item ID as ref for sharing
       })
       alert('Receipt shared successfully!')
       setShareDoc(null)
@@ -80,26 +82,6 @@ export default function Sales() {
       setError(e.message)
     }
   }
-
-  const columns = [
-    { key: 'created_at', header: 'Date', render: (r) => new Date(r.created_at).toLocaleString() },
-    { key: 'item_name', header: 'Item' },
-    { key: 'quantity', header: 'Qty' },
-    { key: 'total', header: 'Total', render: (r) => `TZS ${r.total.toLocaleString()}` },
-    { key: 'payment_mode', header: 'Payment' },
-    { key: 'customer_name', header: 'Customer' },
-    { key: 'receipt_no', header: 'Receipt #' },
-    {
-      key: 'actions', header: '', stopRowClick: true,
-      render: (r) => (
-        <RowActionsMenu items={[
-          { label: 'Print Receipt', icon: '🖨️', onClick: () => openReceipt(r) },
-          { label: 'Share', icon: '✉️', onClick: () => setShareDoc(r) },
-          { label: 'Delete', icon: '✕', onClick: () => remove(r.id), danger: true },
-        ]} />
-      ),
-    },
-  ]
 
   const { query, setQuery, filtered } = useSearch(sales, [
     'customer_name',
@@ -128,8 +110,6 @@ export default function Sales() {
   }, {})
 
   const receipts = Object.values(grouped).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-
-  const [expanded, setExpanded] = useState({}) // { receipt_no: true }
 
   const toggleExpand = (no) => {
     setExpanded(prev => ({ ...prev, [no]: !prev[no] }))
@@ -171,7 +151,7 @@ export default function Sales() {
             ) : receipts.map((r) => (
               <Fragment key={r.receipt_no}>
                 <tr onClick={() => toggleExpand(r.receipt_no)} style={{ cursor: 'pointer', background: expanded[r.receipt_no] ? 'var(--surface-sunken)' : 'transparent' }}>
-                  <td>{expanded[r.receipt_no] ? '▼' : '▶'}</td>
+                  <td style={{ color: 'var(--accent)', fontWeight: 800, textAlign: 'center' }}>{expanded[r.receipt_no] ? '−' : '+'}</td>
                   <td>{new Date(r.created_at).toLocaleString()}</td>
                   <td><span className="cheque-number">{r.receipt_no}</span></td>
                   <td>{r.customer_name}</td>
@@ -179,7 +159,7 @@ export default function Sales() {
                   <td style={{ textAlign: 'right', fontWeight: 700 }}>TZS {r.total.toLocaleString()}</td>
                   <td onClick={e => e.stopPropagation()}>
                     <RowActionsMenu items={[
-                      { label: 'Print Receipt', icon: '🖨️', onClick: () => setPrintReceipt(r) },
+                      { label: 'Print Receipt', icon: '🖨️', onClick: () => openReceipt(r) },
                       { label: 'Share', icon: '✉️', onClick: () => setShareDoc(r) },
                     ]} />
                   </td>
@@ -205,7 +185,7 @@ export default function Sales() {
                               <td style={{ padding: '8px 0', textAlign: 'right' }}>TZS {item.unit_price.toLocaleString()}</td>
                               <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 600 }}>TZS {item.total.toLocaleString()}</td>
                               <td style={{ textAlign: 'right' }}>
-                                <button className="btn-icon" style={{ color: 'var(--danger)', fontSize: 12 }} onClick={() => remove(item.id)} title="Delete item & restore stock">✕</button>
+                                <button className="btn-icon" style={{ color: 'var(--danger)', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); remove(item.id); }} title="Delete item & restore stock">✕</button>
                               </td>
                             </tr>
                           ))}
@@ -214,7 +194,7 @@ export default function Sales() {
                     </td>
                   </tr>
                 )}
-              </React.Fragment>
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -238,7 +218,7 @@ export default function Sales() {
             <button className="btn btn-outline" onClick={() => setShareDoc(null)}>Cancel</button>
           )}
         >
-          <p className="sub">Share receipt <strong>{shareDoc.receipt_no || ('SALE-'+shareDoc.id)}</strong> with another business on Moneytracer.</p>
+          <p className="sub">Share receipt <strong>{shareDoc.receipt_no}</strong> with another business on Moneytracer.</p>
           <SearchBar value={shareQuery} onChange={searchShare} placeholder="Search business name or email..." autoFocus />
 
           <div style={{ marginTop: 20, maxHeight: 250, overflowY: 'auto' }}>
@@ -251,8 +231,16 @@ export default function Sales() {
                   style={{ padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                   className="hover-bg"
                 >
-                  <strong>{b.name}</strong>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <strong>{b.name}</strong>
+                      {b.match_type === 'user' && (
+                        <span className="badge badge-outline" style={{ fontSize: 10 }}>User match</span>
+                      )}
+                    </div>
+                    {b.match_type === 'user' && (
+                      <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{b.matched_value}</div>
+                    )}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{b.email}</div>
                 </div>
               ))
             )}

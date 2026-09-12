@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Quotation, QuotationItem, Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem
 from schemas import QuotationCreate, QuotationUpdate, QuotationOut, InvoiceOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_sales_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
 
@@ -62,7 +62,7 @@ def _quotation_items(db: Session, account_id: int, quotation_id: int, lines) -> 
 
 @router.post("/", response_model=QuotationOut)
 def create_quotation(payload: QuotationCreate, db: Session = Depends(get_db),
-                     current_user: User = Depends(get_current_user)):
+                     current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create quotations")
@@ -90,7 +90,7 @@ def create_quotation(payload: QuotationCreate, db: Session = Depends(get_db),
 
 @router.put("/{qid}", response_model=QuotationOut)
 def update_quotation(qid: int, payload: QuotationUpdate, db: Session = Depends(get_db),
-                      current_user: User = Depends(get_current_user)):
+                      current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     query = db.query(Quotation).filter(Quotation.id == qid)
     if account_id is not None:
@@ -139,7 +139,7 @@ def update_quotation(qid: int, payload: QuotationUpdate, db: Session = Depends(g
 
 
 @router.get("/", response_model=List[QuotationOut])
-def list_quotations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_quotations(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Quotation)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -176,7 +176,7 @@ def update_status(qid: int, status: DocumentStatus,
 
 @router.post("/{qid}/convert", response_model=InvoiceOut)
 def convert_to_invoice(qid: int, db: Session = Depends(get_db),
-                       current_user: User = Depends(get_current_user)):
+                       current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot convert quotations")

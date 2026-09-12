@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Invoice, InvoiceItem, User, DocumentStatus, RoleEnum, Account, InventoryItem, Sale, PaymentMode, RecurringInvoice
 from schemas import InvoiceCreate, InvoiceUpdate, InvoiceOut, RecurringInvoiceCreate, RecurringInvoiceUpdate, RecurringInvoiceOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_sales_up
 from activity import log_activity_for_user
 from email_utils import send_email_with_attachment
 from ledger import get_locked_period, post_sale_entry
@@ -79,7 +79,7 @@ def _calc_totals(items, tax_rate, discount):
 
 @router.post("/", response_model=InvoiceOut)
 def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
-                   current_user: User = Depends(get_current_user)):
+                   current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create invoices")
@@ -140,7 +140,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db),
 
 @router.put("/{invoice_id}", response_model=InvoiceOut)
 def update_invoice(invoice_id: int, payload: InvoiceUpdate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     q = db.query(Invoice).filter(Invoice.id == invoice_id)
     if account_id is not None:
@@ -208,7 +208,7 @@ def update_invoice(invoice_id: int, payload: InvoiceUpdate, db: Session = Depend
 @router.get("/", response_model=List[InvoiceOut])
 def list_invoices(start: Optional[date] = None, end: Optional[date] = None,
                   status: Optional[DocumentStatus] = None,
-                  db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                  db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     q = db.query(Invoice)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -289,7 +289,7 @@ def _convert_invoice_to_sales(db: Session, invoice: Invoice, current_user: User)
 
 @router.patch("/{invoice_id}/status", response_model=InvoiceOut)
 def update_status(invoice_id: int, status: DocumentStatus,
-                  db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                  db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     q = db.query(Invoice).filter(Invoice.id == invoice_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:

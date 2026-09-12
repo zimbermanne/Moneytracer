@@ -13,7 +13,7 @@ from models import (
     Account, InventoryItem, Purchase,
 )
 from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
-from auth import get_current_user, require_manager_up
+from auth import get_current_user, require_manager_up, require_inventory_up
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
 from email_utils import send_email_with_attachment
@@ -61,7 +61,7 @@ class _PdfDocAdapter:
 
 @router.get("/", response_model=list[PurchaseOrderOut])
 def list_purchase_orders(status: Optional[PurchaseOrderStatus] = None,
-                         db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                         db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     q = db.query(PurchaseOrder)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -84,7 +84,7 @@ def get_purchase_order(po_id: int, db: Session = Depends(get_db), current_user: 
 
 @router.post("/", response_model=PurchaseOrderOut)
 def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db),
-                          current_user: User = Depends(get_current_user)):
+                          current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot create purchase orders")
@@ -136,7 +136,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
 
 @router.put("/{po_id}", response_model=PurchaseOrderOut)
 def update_purchase_order(po_id: int, payload: PurchaseOrderUpdate, db: Session = Depends(get_db),
-                          current_user: User = Depends(get_current_user)):
+                          current_user: User = Depends(require_inventory_up)):
     q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:
