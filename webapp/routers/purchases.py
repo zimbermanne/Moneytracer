@@ -198,7 +198,7 @@ def list_purchases(db: Session = Depends(get_db), current_user: User = Depends(r
 
 
 @router.get("/stats/summary")
-def purchase_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def purchase_stats(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Purchase)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -249,7 +249,7 @@ async def batch_import(file: UploadFile = File(...), db: Session = Depends(get_d
 
 
 @router.get("/export/spreadsheet")
-def export_purchases(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def export_purchases(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Purchase)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -274,7 +274,7 @@ def export_purchases(db: Session = Depends(get_db), current_user: User = Depends
 
 
 @router.get("/{purchase_id}", response_model=PurchaseOut)
-def get_purchase(purchase_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_purchase(purchase_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Purchase).filter(Purchase.id == purchase_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:

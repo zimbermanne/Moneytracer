@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Sale, Invoice, Quotation, Debtor, Customer, User, RoleEnum, DocumentStatus
-from auth import get_current_user
+from auth import get_current_user, require_sales_up
 from schemas import (
     CustomerCreate, CustomerUpdate, CustomerOut,
     CustomerProfile, CustomerMonthlyIncome,
@@ -49,7 +49,7 @@ def _related(db: Session, model, name_field, customer_name: str, account_id):
 
 @router.get("/lookup", response_model=CustomerOut)
 def lookup_customer_by_name(name: str, db: Session = Depends(get_db),
-                            current_user: User = Depends(get_current_user)):
+                            current_user: User = Depends(require_sales_up)):
     """Used by the receipt printer to pull a customer's phone/TIN by name
     at print time, without changing the Sale/checkout schema -- receipts
     only ever stored customer_name, never phone or TIN."""
@@ -66,7 +66,7 @@ def lookup_customer_by_name(name: str, db: Session = Depends(get_db),
 
 
 @router.get("/", response_model=List[CustomerOut])
-def list_customers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_customers(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     q = db.query(Customer)
     if account_id is not None:
@@ -91,7 +91,7 @@ def list_customers(db: Session = Depends(get_db), current_user: User = Depends(g
 
 @router.post("/", response_model=CustomerOut)
 def create_customer(payload: CustomerCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=400, detail="Superadmin cannot create a customer without a target account")
@@ -116,7 +116,7 @@ def create_customer(payload: CustomerCreate, db: Session = Depends(get_db),
 
 @router.put("/{customer_id}", response_model=CustomerOut)
 def update_customer(customer_id: int, payload: CustomerUpdate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     customer = _scoped_customer(db, customer_id, account_id)
 
@@ -133,7 +133,7 @@ def update_customer(customer_id: int, payload: CustomerUpdate, db: Session = Dep
 
 @router.delete("/{customer_id}")
 def delete_customer(customer_id: int, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     customer = _scoped_customer(db, customer_id, account_id)
     name = customer.name
@@ -150,7 +150,7 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db),
 
 @router.get("/{customer_id}/profile", response_model=CustomerProfile)
 def customer_profile(customer_id: int, db: Session = Depends(get_db),
-                     current_user: User = Depends(get_current_user)):
+                     current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     customer = _scoped_customer(db, customer_id, account_id)
 
@@ -210,7 +210,7 @@ def customer_profile(customer_id: int, db: Session = Depends(get_db),
 
 @router.get("/{customer_id}/statement", response_model=CustomerStatement)
 def customer_statement(customer_id: int, date_from: datetime = None, date_to: datetime = None,
-                       db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                       db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     customer = _scoped_customer(db, customer_id, account_id)
 
@@ -299,7 +299,7 @@ _IGNORED_NAMES = {"", "walk-in", "walk in", "walkin"}
 
 
 @router.post("/sync-existing")
-def sync_existing_customers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sync_existing_customers(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=400, detail="Superadmin cannot sync customers without a target account")

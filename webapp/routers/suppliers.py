@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Purchase, PurchaseOrder, PurchaseOrderStatus, Creditor, Supplier, User, RoleEnum
-from auth import get_current_user
+from auth import get_current_user, require_inventory_up
 from schemas import (
     SupplierCreate, SupplierUpdate, SupplierOut,
     SupplierProfile, SupplierMonthlySpend,
@@ -47,7 +47,7 @@ def _related(db: Session, model, name_field, supplier_name: str, account_id):
 # ---------- Supplier directory (a real record: name, phone, address, TIN/VRN) ----------
 
 @router.get("/", response_model=List[SupplierOut])
-def list_suppliers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_suppliers(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     q = db.query(Supplier)
     if account_id is not None:
@@ -72,7 +72,7 @@ def list_suppliers(db: Session = Depends(get_db), current_user: User = Depends(g
 
 @router.post("/", response_model=SupplierOut)
 def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=400, detail="Superadmin cannot create a supplier without a target account")
@@ -98,7 +98,7 @@ def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db),
 
 @router.put("/{supplier_id}", response_model=SupplierOut)
 def update_supplier(supplier_id: int, payload: SupplierUpdate, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     supplier = _scoped_supplier(db, supplier_id, account_id)
 
@@ -115,7 +115,7 @@ def update_supplier(supplier_id: int, payload: SupplierUpdate, db: Session = Dep
 
 @router.delete("/{supplier_id}")
 def delete_supplier(supplier_id: int, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
+                    current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     supplier = _scoped_supplier(db, supplier_id, account_id)
     name = supplier.name
@@ -131,7 +131,7 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db),
 
 @router.get("/{supplier_id}/profile", response_model=SupplierProfile)
 def supplier_profile(supplier_id: int, db: Session = Depends(get_db),
-                     current_user: User = Depends(get_current_user)):
+                     current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     supplier = _scoped_supplier(db, supplier_id, account_id)
 
@@ -190,7 +190,7 @@ _IGNORED_NAMES = {"", "walk-in", "walk in", "walkin"}
 
 
 @router.post("/sync-existing")
-def sync_existing_suppliers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sync_existing_suppliers(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=400, detail="Superadmin cannot sync suppliers without a target account")

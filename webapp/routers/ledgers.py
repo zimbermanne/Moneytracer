@@ -346,7 +346,7 @@ def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(r
 
 @router.post("/creditors", response_model=CreditorOut)
 def add_creditor(payload: CreditorCreate, db: Session = Depends(get_db),
-                  current_user: User = Depends(get_current_user)):
+                  current_user: User = Depends(require_inventory_up)):
     account_id = get_account_filter(current_user)
     if account_id is None:
         raise HTTPException(status_code=403, detail="Superadmin cannot add creditors")

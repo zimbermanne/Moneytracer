@@ -247,7 +247,7 @@ def checkout(payload: CheckoutRequest, db: Session = Depends(get_db),
 
 @router.get("/", response_model=List[SaleOut])
 def list_sales(start: Optional[date] = None, end: Optional[date] = None,
-                db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+                db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Sale)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -328,7 +328,7 @@ def customer_purchase_history(db: Session = Depends(get_db), current_user: User 
 
 
 @router.get("/by-item/{item_id}", response_model=List[SaleOut])
-def sales_by_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sales_by_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Sale).filter(Sale.item_id == item_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -337,7 +337,7 @@ def sales_by_item(item_id: int, db: Session = Depends(get_db), current_user: Use
 
 
 @router.get("/{sale_id}", response_model=SaleOut)
-def get_sale(sale_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_sale(sale_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     query = db.query(Sale).filter(Sale.id == sale_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:

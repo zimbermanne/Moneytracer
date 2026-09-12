@@ -83,7 +83,7 @@ def create_item(payload: InventoryCreate, db: Session = Depends(get_db),
 
 
 @router.get("/metrics")
-def metrics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def metrics(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -103,7 +103,7 @@ def metrics(db: Session = Depends(get_db), current_user: User = Depends(get_curr
 
 
 @router.get("/low-stock/alerts", response_model=List[InventoryOut])
-def low_stock_alerts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def low_stock_alerts(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem).filter(InventoryItem.quantity <= InventoryItem.reorder_point)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -180,7 +180,7 @@ def find_redundant_inventory(items: List[InventoryItem]) -> dict:
 
 
 @router.get("/redundant/check")
-def check_redundant_inventory(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def check_redundant_inventory(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     """Surface likely-duplicate inventory rows for manual review/cleanup.
     Read-only: it never merges or deletes anything itself."""
     query = db.query(InventoryItem)
@@ -233,7 +233,7 @@ def merge_redundant_inventory(payload: MergeInventoryRequest, db: Session = Depe
 
 
 @router.get("/categories/list")
-def categories(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def categories(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem.category).distinct()
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -243,7 +243,7 @@ def categories(db: Session = Depends(get_db), current_user: User = Depends(get_c
 
 
 @router.get("/export/spreadsheet")
-def export_items(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def export_items(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -383,7 +383,7 @@ def get_item(item_id: int, db: Session = Depends(get_db), current_user: User = D
 
 @router.put("/{item_id}", response_model=InventoryOut)
 def update_item(item_id: int, payload: InventoryUpdate, db: Session = Depends(get_db),
-                 current_user: User = Depends(require_manager_up)):
+                 current_user: User = Depends(require_inventory_up)):
     query = db.query(InventoryItem).filter(InventoryItem.id == item_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:
@@ -427,7 +427,7 @@ def delete_item(item_id: int, db: Session = Depends(get_db), current_user: User 
 
 
 @router.get("/{item_id}/traceability")
-def get_item_traceability(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_item_traceability(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     """Fetch complete chronological history of an item: Purchases (In) and Sales (Out)
     with linked supplier/customer names and margin calculations."""
     account_id = get_account_filter(current_user)
