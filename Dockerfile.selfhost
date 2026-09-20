@@ -1,0 +1,29 @@
+# Single-container build for self-hosting: frontend + backend served
+# same-origin by the FastAPI app, so no CORS config and no second host
+# needed. Build from the REPO ROOT:
+#   docker build -f Dockerfile.selfhost -t moneytracer .
+
+# ---- Stage 1: build the React/Vite frontend ----
+FROM node:20-slim AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+# Same-origin deploy: leave VITE_API_URL unset so api-config.js falls back
+# to a relative path (see frontend/src/api-config.js).
+RUN npm run build
+
+# ---- Stage 2: the FastAPI backend, with the built frontend baked in ----
+FROM python:3.11-slim
+WORKDIR /app
+
+COPY webapp/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY webapp/ .
+# main.py mounts webapp/static as the SPA shell at "/" if the directory
+# exists — this is exactly that directory, populated from stage 1.
+COPY --from=frontend-build /app/frontend/dist ./static
+
+EXPOSE 8000
+CMD ["sh", "-c", "python init_db.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

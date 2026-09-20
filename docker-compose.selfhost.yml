@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moneytracer
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: moneytracer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No ports: exposed to the host — only `backend` can reach it, over the
+    # compose network. Nothing outside this machine can hit Postgres directly.
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.selfhost
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://moneytracer:${POSTGRES_PASSWORD}@db:5432/moneytracer
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      ALLOWED_ORIGINS: "https://${DOMAIN}"
+      FRONTEND_URL: "https://${DOMAIN}"
+    volumes:
+      - uploads:/app/uploads   # adjust path if attachments/receipts write elsewhere
+    # No ports: exposed either — only Caddy reaches it, over the compose network.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

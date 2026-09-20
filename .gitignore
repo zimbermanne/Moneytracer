@@ -1,2 +1,5 @@
 webapp/*.db
 *.db
+# Self-hosting secrets (never commit real values)
+.env
+webapp/static
