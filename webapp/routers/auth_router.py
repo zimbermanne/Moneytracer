@@ -21,7 +21,7 @@ from auth import (
 )
 from activity import log_activity_for_user, log_activity, log_superadmin_action
 from rate_limit import limiter
-from device_tracking import get_client_ip, geolocate_ip
+from device_tracking import get_client_ip, geolocate_ip, record_login_session
 import email_utils
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://moneytracer.up.railway.app")
@@ -103,8 +103,20 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
 def login(request: Request, response: Response, payload: LoginRequest, db: Session = Depends(get_db)):
+    client_info = {
+        "screen_width": payload.screen_width,
+        "screen_height": payload.screen_height,
+        "is_pwa": payload.is_pwa,
+        "connection_type": payload.connection_type,
+    }
+
     user = authenticate_user(db, payload.username, payload.password)
     if not user:
+        # Record failed attempt for security audit
+        from collections import namedtuple
+        FakeUser = namedtuple("FakeUser", ["username_attempt"])
+        record_login_session(db, FakeUser(username_attempt=payload.username), request,
+                              event="failed_login", client_info=client_info)
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     # Include account_id in JWT token
@@ -115,6 +127,7 @@ def login(request: Request, response: Response, payload: LoginRequest, db: Sessi
     token = create_access_token(token_data)
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "login", "User logged in")
+    record_login_session(db, user, request, event="login", client_info=client_info)
     return Token(access_token=token, user=user)
 
 
@@ -172,6 +185,7 @@ def demo_login(request: Request, response: Response, db: Session = Depends(get_d
     token = create_access_token(token_data)
     set_auth_cookie(response, token)
     log_activity_for_user(db, user, "demo_login", "Demo account accessed")
+    record_login_session(db, user, request, event="demo_login")
     return Token(access_token=token, user=user)
 
 
