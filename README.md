@@ -1,72 +1,62 @@
-# Feature: log IP / location / device on login, viewable in the superadmin panel
+# Moneytracer — Docker setup
 
-## What this adds
-Every login and demo-login now records: IP address, best-effort city/region/
-country (free IP geolocation, no API key needed), and device type/OS/browser
-parsed from the User-Agent — all viewable and exportable from a new
-"Devices & Locations" tab in the superadmin console, plus an aggregate
-breakdown (top device type / browser / country over the last 30 days) to
-guide optimization priorities (e.g. "60% of logins are mobile Android —
-prioritize that layout" or "nobody's on IE, drop that polyfill").
+Drop these files into your repo like this:
 
-## Files in this zip -> where they go
-Overwrite these at the exact same paths in your repo:
+```
+moneytracer/
+├── backend/
+│   ├── Dockerfile        <- from here
+│   ├── requirements.txt  <- already in your repo
+│   └── app/...           <- already in your repo
+├── frontend/
+│   ├── Dockerfile        <- from here
+│   ├── nginx.conf        <- from here
+│   ├── package.json      <- already in your repo
+│   └── src/...           <- already in your repo
+├── docker-compose.yml    <- from here
+├── init-schemas.sql      <- from here
+└── .env                  <- copy from .env.example, fill in real values
+```
 
-    webapp/models.py                        -> Moneytracer/webapp/models.py
-    webapp/schemas.py                       -> Moneytracer/webapp/schemas.py
-    webapp/device_tracking.py               -> Moneytracer/webapp/device_tracking.py   (NEW FILE)
-    webapp/routers/auth.py                  -> Moneytracer/webapp/routers/auth.py
-    webapp/routers/superadmin.py            -> Moneytracer/webapp/routers/superadmin.py
-    webapp/superadmin_static/index.html     -> Moneytracer/webapp/superadmin_static/index.html
+If your backend/frontend folders are named differently, adjust the `build:`
+paths in `docker-compose.yml` to match.
 
-Every file here is your original file with the new code added — nothing
-unrelated was changed. `device_tracking.py` is the only brand-new file.
+## First run
 
-## What changed, file by file
-- **models.py** — new `LoginSession` table (id, user_id, account_id,
-  username, ip_address, city/region/country/isp, device_type, os, browser,
-  user_agent, event, created_at). It's a new table, so no `migrate.py`
-  change is needed — `Base.metadata.create_all()` creates it automatically
-  on next deploy (see the comment at the top of `run_migrations()`).
-- **device_tracking.py** (new) — `record_login_session()`, called from
-  auth.py. Extracts the real client IP (`X-Forwarded-For`, since Railway
-  proxies requests), geolocates it via a free no-key API
-  (`ip-api.com`, 1.5s timeout, skipped entirely for private/local IPs),
-  and parses the User-Agent with regex (no new dependency). **Everything in
-  here is wrapped so it can never raise or block login** — if geolocation
-  times out or fails, the row is still saved with blank location fields.
-- **routers/auth.py** — calls `record_login_session(db, user, request, ...)`
-  right after issuing the token, in both `login()` and `demo_login()`.
-- **schemas.py** — `LoginSessionOut` response model.
-- **routers/superadmin.py** — three new endpoints (all `require_superadmin`-
-  gated, same pattern as the existing activity/audit-log endpoints):
-    - `GET /api/superadmin/login-sessions` — filterable list (username,
-      account_id, device_type, country, date range)
-    - `GET /api/superadmin/login-sessions/export` — CSV export
-    - `GET /api/superadmin/login-sessions/device-stats` — aggregate counts
-      by device type / OS / browser / country over a window (default 30d)
-- **superadmin_static/index.html** — new "Devices & Locations" tab: a stats
-  row (top device/browser/country) plus a filterable, exportable table.
-  Wired into the existing `switchTab()` router the same way every other tab
-  is.
+```bash
+cp .env.example .env
+# edit .env and set a real DB_PASSWORD (and any other backend secrets)
 
-## Deploy
-Just push and redeploy as usual — the new table is created automatically on
-startup (`create_all()` + `run_migrations()`, already called in `main.py`).
-No manual SQL, no Alembic, no downtime.
+docker compose up --build
+```
 
-## Notes / things worth knowing
-- **No new pip dependency.** Geolocation uses stdlib `urllib.request`; UA
-  parsing is stdlib `re`. Nothing was added to `requirements.txt`.
-- **Geolocation provider**: `ip-api.com`'s free tier (no key, ~45 req/min
-  limit, HTTP only). Fine for normal login volume; if you ever hit the rate
-  limit, geolocation just silently returns blank fields for that request —
-  IP/device data still gets recorded either way. If you outgrow the free
-  tier, swap the `_GEO_URL` in `device_tracking.py` for a paid provider —
-  everything else stays the same.
-- **Privacy**: this records data about *your own users* logging into *your
-  own product*, visible only to superadmins. Consider mentioning it in
-  your privacy policy / terms if you don't already cover login telemetry.
-- **Bots**: registrations/logins from scripts (curl, requests, etc.) are
-  tagged `device_type: "bot"` via a simple User-Agent keyword match, mostly
-  so they don't skew your device-mix stats.
+- Frontend: http://localhost
+- Backend API (direct): http://localhost:8000
+- Postgres: localhost:5432 (schemas `business`, `community`, `personal` are
+  created automatically on first boot via init-schemas.sql)
+
+## Running migrations
+
+If you use Alembic, run it as a one-off after the containers are up:
+
+```bash
+docker compose run backend alembic upgrade head
+```
+
+## Notes specific to your app
+
+- **httpOnly cookie auth**: since the frontend nginx proxies `/api/` to the
+  backend, both are served from the same origin (`http://localhost`) in this
+  setup, which avoids cross-origin cookie issues. If you call the backend
+  directly from the frontend JS instead of through the `/api/` proxy, update
+  your API base URL and CORS/cookie settings accordingly.
+- **PORT**: the backend Dockerfile hardcodes port 8000 rather than relying on
+  Railway's injected `$PORT`, which avoids the dynamic-PORT crash you hit
+  before.
+- **APScheduler reminders**: these run in-process with the API here. If you
+  want them isolated from web traffic, add a second service in
+  `docker-compose.yml` using the same backend image with a different `CMD`
+  (e.g. `celery`/scheduler entrypoint instead of `uvicorn`).
+- **Production**: for anything beyond local dev, put a real TLS-terminating
+  reverse proxy (Caddy, Traefik, or nginx with certs) in front of this stack,
+  and don't expose the Postgres port publicly.
