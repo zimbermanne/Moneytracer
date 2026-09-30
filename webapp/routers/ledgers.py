@@ -20,7 +20,7 @@ from schemas import (
     PaymentMethodOut, PaymentMethodCreate, PaymentMethodUpdate,
     ReconciliationEntry, ReconciliationStatement,
 )
-from auth import get_current_user, require_manager_up, require_admin, require_accountant_up
+from auth import get_current_user, require_manager_up, require_admin, require_accountant_up, require_sales_up, require_inventory_up
 from activity import log_activity_for_user
 from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods, signed_balance
 from routers.invoices import get_account_details
