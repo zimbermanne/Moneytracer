@@ -24,6 +24,7 @@ export default function PurchaseOrders() {
   const api = useApi()
   const { user } = useAuth()
   const canApprove = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager'
+  const canDelete = user?.role === 'admin'
   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
 
   const [docs, setDocs] = useState([])
@@ -197,7 +198,7 @@ export default function PurchaseOrders() {
             { label: 'Approve', icon: '👍', onClick: () => approvePO(r), hidden: !canApprove || (r.status !== 'draft' && r.status !== 'sent') },
             { label: 'Mark as Received', icon: '✓', onClick: () => markReceived(r), hidden: r.status !== 'approved' },
             { label: 'PDF', icon: '⬇', onClick: () => downloadPdf(r) },
-            { label: 'Delete', icon: '✕', onClick: () => removePO(r.id), danger: true, hidden: r.status === 'received' },
+            { label: 'Delete', icon: '✕', onClick: () => removePO(r.id), danger: true, hidden: r.status === 'received' || !canDelete },
           ]} />
         </div>
       ),
