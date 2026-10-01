@@ -13,7 +13,7 @@ from models import (
     Account, InventoryItem, Purchase,
 )
 from schemas import PurchaseOrderCreate, PurchaseOrderUpdate, PurchaseOrderOut
-from auth import get_current_user, require_manager_up, require_inventory_up
+from auth import get_current_user, require_manager_up, require_inventory_up, require_admin
 from activity import log_activity_for_user
 from ledger import post_purchase_entry
 from email_utils import send_email_with_attachment
@@ -170,7 +170,7 @@ def update_purchase_order(po_id: int, payload: PurchaseOrderUpdate, db: Session 
 
 
 @router.delete("/{po_id}")
-def delete_purchase_order(po_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_purchase_order(po_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     q = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id)
     account_id = get_account_filter(current_user)
     if account_id is not None:
