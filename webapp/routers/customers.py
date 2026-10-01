@@ -65,6 +65,35 @@ def lookup_customer_by_name(name: str, db: Session = Depends(get_db),
                        notes=customer.notes, created_at=customer.created_at)
 
 
+@router.get("/suggestions")
+def customer_suggestions(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
+    """Lightweight list for the POS customer-name dropdown: directory customers
+    plus anyone who has appeared on a past sale, most recent first.
+    Deliberately avoids the per-customer totals that list_customers computes."""
+    from sqlalchemy import func
+    account_id = get_account_filter(current_user)
+
+    cq = db.query(Customer)
+    if account_id is not None:
+        cq = cq.filter(Customer.account_id == account_id)
+    directory = {c.name: c.phone or "" for c in cq.all()}
+
+    sq = db.query(Sale.customer_name, func.max(Sale.created_at)).group_by(Sale.customer_name)
+    if account_id is not None:
+        sq = sq.filter(Sale.account_id == account_id)
+    last_sale = {name: ts for name, ts in sq.all() if name and name.strip().lower() != "walk-in"}
+
+    names = set(directory) | set(last_sale)
+    out = [
+        {"name": n, "phone": directory.get(n, ""), "last_purchase": last_sale[n].isoformat() if n in last_sale else None}
+        for n in names if n and n.strip().lower() != "walk-in"
+    ]
+    # most recent buyers first, never-purchased directory entries last (alphabetical)
+    recent = sorted([r for r in out if r["last_purchase"]], key=lambda r: r["last_purchase"], reverse=True)
+    rest = sorted([r for r in out if not r["last_purchase"]], key=lambda r: r["name"].lower())
+    return recent + rest
+
+
 @router.get("/", response_model=List[CustomerOut])
 def list_customers(db: Session = Depends(get_db), current_user: User = Depends(require_sales_up)):
     account_id = get_account_filter(current_user)

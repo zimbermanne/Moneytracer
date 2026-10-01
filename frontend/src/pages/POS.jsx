@@ -18,6 +18,9 @@ export default function POS() {
   const [paymentMethodId, setPaymentMethodId] = useState(null)
   const [customerName, setCustomerName] = useState('Walk-in')
   const [customerPhone, setCustomerPhone] = useState('')
+  const [customerOptions, setCustomerOptions] = useState([]) // previous customers for the dropdown
+  const [showCustomerMenu, setShowCustomerMenu] = useState(false)
+  const [customerTyped, setCustomerTyped] = useState(false) // only filter once the user actually types
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState(null)
@@ -82,6 +85,7 @@ export default function POS() {
       setPaymentMethods(methods)
       if (methods.length > 0) setPaymentMethodId((prev) => prev ?? methods[0].id)
     }).catch(() => {}) // POS still works with the legacy cash/credit default if this fails
+    api.get('/customers/suggestions').then(setCustomerOptions).catch(() => {}) // dropdown is optional; typing still works
     loadDrafts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -278,7 +282,49 @@ export default function POS() {
               <>
                 <div className="form-row">
                   <label>Customer name</label>
-                  <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      value={customerName}
+                      autoComplete="off"
+                      onFocus={(e) => { setCustomerTyped(false); setShowCustomerMenu(true); e.target.select() }}
+                      onClick={() => setShowCustomerMenu(true)}
+                      onBlur={() => setTimeout(() => setShowCustomerMenu(false), 150)}
+                      onChange={(e) => { setCustomerName(e.target.value); setCustomerTyped(true); setShowCustomerMenu(true) }}
+                    />
+                    {showCustomerMenu && (() => {
+                      const q = customerTyped ? customerName.trim().toLowerCase() : ''
+                      const matches = customerOptions
+                        .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.phone || '').includes(q))
+                        .slice(0, 8)
+                      if (matches.length === 0) return null
+                      return (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4,
+                          background: 'var(--surface)', border: '1px solid var(--border-strong)',
+                          borderRadius: 8, boxShadow: 'var(--shadow-lg)', maxHeight: 240, overflowY: 'auto'
+                        }}>
+                          {matches.map((c) => (
+                            <div
+                              key={c.name}
+                              // onMouseDown fires before the input's blur, so the pick isn't lost
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                setCustomerName(c.name)
+                                if (c.phone) setCustomerPhone(c.phone)
+                                setShowCustomerMenu(false)
+                              }}
+                              style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid var(--border)' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-sunken)' }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                            >
+                              <span style={{ fontWeight: 600 }}>{c.name}</span>
+                              {c.phone && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.phone}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })()}
+                  </div>
                 </div>
                 <div className="form-row">
                   <label>Payment Method</label>
