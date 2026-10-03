@@ -333,6 +333,10 @@ class Purchase(Base):
     # Sale: payment_mode answers "cash or credit", payment_method_id
     # answers "which specific account" when the answer is cash.
     payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
+    # Set when this purchase was raised by a Creditor record's items (the
+    # Creditors form / a received credit PO) — lets editing the creditor
+    # reverse and re-apply exactly the stock + ledger effect it created.
+    creditor_id = Column(Integer, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     item = relationship("InventoryItem")

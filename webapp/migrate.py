@@ -131,6 +131,7 @@ _SCHEMA_MIGRATIONS = {
         ("payment_method_id", "INTEGER", None),
     ],
     ("business", "purchases"): [
+        ("creditor_id", "INTEGER", None),
         # Proper FK to inventory instead of relying solely on name-matching.
         ("item_id", "INTEGER", None),
         # "Pay as Credit" — see models.Purchase.payment_mode. Stored as

@@ -227,6 +227,10 @@ export default function Creditors() {
             {itemsTotal > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Subtotal: {money(itemsTotal)}</span>}
           </div>
 
+          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 8 }}>
+            Items listed here are added to your inventory at this price and recorded as a purchase from this supplier. Editing them later adjusts stock to match.
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
             {form.items.map((line, idx) => (
               <div key={idx} className="card" style={{ padding: 12, position: 'relative' }}>

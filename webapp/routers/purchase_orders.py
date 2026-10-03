@@ -237,6 +237,8 @@ def _convert_po_to_purchases(db: Session, po: PurchaseOrder, current_user: User)
         )
         db.add(creditor)
         db.flush()
+        for p in created:
+            p.creditor_id = creditor.id
         for line in po.items:
             db.add(CreditorItem(
                 creditor_id=creditor.id,

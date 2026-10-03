@@ -11,7 +11,7 @@ from database import get_db
 from models import (
     Debtor, DebtorItem, Creditor, CreditorItem, User, LedgerStatus, RoleEnum,
     FiscalPeriod, FiscalPeriodStatus, ChartOfAccount, JournalEntry, JournalLine,
-    LedgerAccountType, PaymentMethod,
+    LedgerAccountType, PaymentMethod, Purchase, InventoryItem, PaymentMode,
 )
 from schemas import (
     DebtorCreate, DebtorUpdate, DebtorOut, CreditorCreate, CreditorUpdate, CreditorOut,
@@ -22,7 +22,7 @@ from schemas import (
 )
 from auth import get_current_user, require_manager_up, require_admin, require_accountant_up, require_sales_up, require_inventory_up
 from activity import log_activity_for_user
-from ledger import post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods, signed_balance
+from ledger import post_purchase_entry, find_journal_entry_by_reference, reverse_journal_entry, post_journal_entry, FiscalPeriodLockedError, ensure_default_chart_of_accounts, ensure_default_payment_methods, signed_balance
 from routers.invoices import get_account_details
 
 router = APIRouter(prefix="/api/ledgers", tags=["ledgers"])
@@ -335,6 +335,74 @@ def debtor_debit_note_pdf(debtor_id: int, db: Session = Depends(get_db),
         headers={"Content-Disposition": f'attachment; filename="DebitNote-DN-{debtor.id:06d}.pdf"'})
 
 
+def _items_signature(items):
+    return sorted(
+        (i.item_id or 0, (i.description or "").strip().lower(), float(i.quantity or 0), float(i.unit_price or 0))
+        for i in items if (i.description or "").strip()
+    )
+
+
+def _reverse_creditor_purchases(db: Session, creditor: Creditor, current_user: User):
+    """Undo the stock + ledger effect of every purchase this creditor's items
+    previously raised, so the items can be re-applied cleanly after an edit."""
+    purchases = db.query(Purchase).filter(
+        Purchase.account_id == creditor.account_id, Purchase.creditor_id == creditor.id,
+    ).all()
+    for p in purchases:
+        item = db.query(InventoryItem).filter(InventoryItem.id == p.item_id).first() if p.item_id else None
+        if item:
+            item.quantity = max(0, (item.quantity or 0) - (p.quantity or 0))
+        try:
+            original = find_journal_entry_by_reference(db, creditor.account_id, f"purchase-{p.id}")
+            if original:
+                reverse_journal_entry(db, creditor.account_id, original, created_by=current_user.username,
+                                      reason=f"Creditor {creditor.name} items edited")
+        except (ValueError, FiscalPeriodLockedError) as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_reverse_failed", str(e))
+        db.delete(p)
+    db.flush()
+
+
+def _apply_creditor_items(db: Session, creditor: Creditor, items, current_user: User):
+    """Items bought on credit from a supplier are real stock: add them to
+    inventory (creating the item if it's new) at the supplier's price, and
+    record a credit Purchase naming the supplier and the buying price."""
+    from routers.purchases import _apply_inventory_for_purchase
+    for line in items:
+        desc = (line.description or "").strip()
+        if not desc:
+            continue
+        qty = float(line.quantity or 0)
+        price = float(line.unit_price or 0)
+        item = None
+        if line.item_id:
+            item = db.query(InventoryItem).filter(
+                InventoryItem.id == line.item_id, InventoryItem.account_id == creditor.account_id,
+            ).first()
+        if item:
+            item.quantity = (item.quantity or 0) + qty
+            item.cost_price = price
+        else:
+            item = _apply_inventory_for_purchase(db, creditor.account_id, desc, qty, price)
+        purchase = Purchase(
+            account_id=creditor.account_id,
+            item_id=item.id,
+            item_name=item.name,
+            supplier=creditor.name,
+            quantity=qty,
+            unit_cost=price,
+            total=round(qty * price, 2),
+            payment_mode=PaymentMode.credit,
+            creditor_id=creditor.id,
+        )
+        db.add(purchase)
+        db.flush()
+        try:
+            post_purchase_entry(db, creditor.account_id, purchase, created_by=current_user.username)
+        except (ValueError, FiscalPeriodLockedError) as e:
+            log_activity_for_user(db, current_user, "CRITICAL: ledger_post_failed", str(e))
+
+
 @router.get("/creditors", response_model=List[CreditorOut])
 def list_creditors(db: Session = Depends(get_db), current_user: User = Depends(require_inventory_up)):
     query = db.query(Creditor)
@@ -357,6 +425,7 @@ def add_creditor(payload: CreditorCreate, db: Session = Depends(get_db),
     db.flush()  # need creditor.id before attaching items
     for line in payload.items:
         db.add(CreditorItem(creditor_id=creditor.id, **line.model_dump()))
+    _apply_creditor_items(db, creditor, payload.items, current_user)
     db.commit()
     db.refresh(creditor)
     log_activity_for_user(db, current_user, "creditor_add", f"Added creditor {creditor.name}")
@@ -374,15 +443,28 @@ def update_creditor(creditor_id: int, payload: CreditorUpdate, db: Session = Dep
     if not creditor:
         raise HTTPException(status_code=404, detail="Creditor not found")
 
+    old_name = creditor.name
     updates = payload.model_dump(exclude_unset=True, exclude={"items"})
     for field, value in updates.items():
         setattr(creditor, field, value)
     _update_status(creditor)
 
     if payload.items is not None:  # explicit [] clears items; omitted leaves them untouched
+        items_changed = _items_signature(creditor.items) != _items_signature(payload.items)
+        if items_changed:
+            # Undo the stock/ledger effect of the old items, then apply the new ones.
+            _reverse_creditor_purchases(db, creditor, current_user)
         db.query(CreditorItem).filter(CreditorItem.creditor_id == creditor.id).delete()
         for line in payload.items:
             db.add(CreditorItem(creditor_id=creditor.id, **line.model_dump()))
+        if items_changed:
+            _apply_creditor_items(db, creditor, payload.items, current_user)
+
+    if creditor.name != old_name:
+        # Keep the supplier shown on this creditor's purchase records in step.
+        db.query(Purchase).filter(
+            Purchase.account_id == creditor.account_id, Purchase.creditor_id == creditor.id,
+        ).update({"supplier": creditor.name})
 
     db.commit()
     db.refresh(creditor)
