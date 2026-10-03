@@ -133,7 +133,11 @@ _SCHEMA_MIGRATIONS = {
     ("business", "purchases"): [
         # Proper FK to inventory instead of relying solely on name-matching.
         ("item_id", "INTEGER", None),
-        # Which specific account the purchase was paid from.
+        # "Pay as Credit" — see models.Purchase.payment_mode. Stored as
+        # plain VARCHAR (not a native enum type) same as accounts.cogs_method,
+        # so existing rows self-heal without an enum-type migration.
+        ("payment_mode", "VARCHAR(20)", "'cash'"),
+        # Which specific account a CASH purchase was paid from.
         ("payment_method_id", "INTEGER", "NULL"),
     ],
     ("business", "invoices"): [
@@ -180,6 +184,8 @@ _SCHEMA_MIGRATIONS = {
         # Lets the PO preview pre-fill "Send to Supplier" instead of the
         # user having to look the address up and type it in every time.
         ("supplier_email", "VARCHAR(150)", "''"),
+        # "Pay as Credit" — see models.PurchaseOrder.payment_mode.
+        ("payment_mode", "VARCHAR(20)", "'cash'"),
     ],
     ("business", "bank_loan_payments"): [
         ("payment_method_id", "INTEGER", "NULL"),

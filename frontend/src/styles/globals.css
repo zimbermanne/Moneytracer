@@ -1594,9 +1594,11 @@ label {
 
   /* Desktop-density spacing is the single biggest reason a responsive page
      still "reads" as a shrunk desktop site instead of a native mobile
-     screen. Phones get tighter, edge-to-edge padding instead. */
+     screen. Phones get tighter, edge-to-edge padding instead. The extra
+     bottom padding clears the fixed .bottom-nav bar, which otherwise
+     covers the last bit of content on every page. */
   .page {
-    padding: 14px;
+    padding: 14px 14px calc(78px + env(safe-area-inset-bottom, 0px));
   }
 
   .page-header h1 {
@@ -1690,6 +1692,26 @@ label {
   .responsive-table td:empty,
   .responsive-table td[data-label=""] {
     display: none;
+  }
+
+  .pos-mobile-cart-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 57;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   }
 }
 
@@ -2403,77 +2425,6 @@ label {
   margin-bottom: 8px;
 }
 
-/* ---- Ledger / Creditors / Debtors line item editor ---- */
-.ledger-line-header {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) 75px 110px 100px 36px;
-  gap: 10px;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  padding: 0 4px;
-}
-
-.ledger-line-item {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) 75px 110px 100px 36px;
-  gap: 10px;
-  align-items: flex-start;
-  margin-bottom: 10px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.ledger-line-item .invoice-line-item-picker {
-  margin-bottom: 0;
-  width: 100%;
-}
-
-.ledger-line-item input[type="number"],
-.ledger-line-item input[type="text"] {
-  width: 100%;
-}
-
-.ledger-line-total {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dark);
-  text-align: right;
-  white-space: nowrap;
-  padding-top: 8px;
-}
-
-@media (max-width: 640px) {
-  .ledger-line-header {
-    display: none;
-  }
-  .ledger-line-item {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    position: relative;
-    padding-top: 36px;
-  }
-  .ledger-line-item .invoice-line-item-picker {
-    grid-column: 1 / -1;
-  }
-  .ledger-line-item .btn-remove-line {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-  }
-  .ledger-line-total {
-    grid-column: 1 / -1;
-    text-align: left;
-    padding-top: 0;
-  }
-}
-
 /* Extra column for the per-item profit annotation — only added when the
    account has show_quote_profit on and this is a quotation, never for
    invoices. See Documents.jsx's showProfit prop. */
@@ -2886,6 +2837,12 @@ label {
   background: var(--accent);
   color: #fff;
   box-shadow: var(--neu-accent-raised);
+}
+
+/* POS: sticky mobile cart summary. Hidden on desktop, where the cart panel
+   already sits next to the product grid with nothing to jump to. */
+.pos-mobile-cart-bar {
+  display: none;
 }
 
 .landing-hero-actions {

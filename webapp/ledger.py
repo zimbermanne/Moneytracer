@@ -306,12 +306,21 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     lines = []
     cost_code = "5000" if _get_cogs_method(db, account_id) == CogsMethod.cash else "1210"
 
+    # Same precedence as post_sale_entry's cash_or_ar_code resolution:
+    #   1. purchase.payment_method.chart_account.code — a specific funding
+    #      account (Cash, a named Bank/Mobile-Money till, ...) chosen for a
+    #      cash purchase, set via payment_method_id.
+    #   2. Fall back to the payment_mode enum: credit -> Accounts Payable
+    #      (2000), since nothing has actually left any funding account yet;
+    #      cash -> 1000. Covers any caller that doesn't set
+    #      payment_method_id (e.g. a PO marked received, which only ever
+    #      carries payment_mode — see purchase_orders.py).
     payment_method = getattr(purchase, "payment_method", None)
-    funding_account_code = (
-        payment_method.chart_account.code
-        if payment_method is not None and payment_method.chart_account is not None
-        else "1000" # default to Cash
-    )
+    if payment_method is not None and payment_method.chart_account is not None:
+        funding_account_code = payment_method.chart_account.code
+    else:
+        payment_mode = getattr(purchase, "payment_mode", None)
+        funding_account_code = "2000" if payment_mode is not None and payment_mode.value == "credit" else "1000"
 
     # Get tax rate from purchase if available (for future VAT support)
     tax_rate = getattr(purchase, "tax_rate", 0) or 0
@@ -325,7 +334,7 @@ def post_purchase_entry(db: Session, account_id: int, purchase, created_by: str 
     else:
         # Non-VAT purchase: full amount to cost/inventory
         lines.append((cost_code, purchase.total, 0))
-    
+
     lines.append((funding_account_code, 0, purchase.total))
     
     return post_journal_entry(

@@ -322,7 +322,16 @@ class Purchase(Base):
     quantity = Column(Float, default=1)
     unit_cost = Column(Float, default=0)
     total = Column(Float, default=0)
-    # Which account the purchase was paid from (Cash, Bank, etc.)
+    # cash (default) or credit — "pay as credit" registers this purchase as
+    # owed to the supplier instead of an immediate cash/bank outflow. Drives
+    # which side of the ledger post_purchase_entry() credits (Cash 1000 vs
+    # Accounts Payable 2000) and whether a Creditor row is raised. Reuses
+    # the same PaymentMode enum Sale already uses for the mirror case.
+    payment_mode = Column(Enum(PaymentMode), default=PaymentMode.cash)
+    # Which account a CASH purchase was paid from (Cash, Bank, etc.) —
+    # irrelevant/unset when payment_mode is credit. Same pairing as on
+    # Sale: payment_mode answers "cash or credit", payment_method_id
+    # answers "which specific account" when the answer is cash.
     payment_method_id = Column(Integer, ForeignKey("payment_methods.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
@@ -355,6 +364,11 @@ class PurchaseOrder(Base):
     discount = Column(Float, default=0)
     total = Column(Float, default=0)
     notes = Column(String(500), default="")
+    # cash (default) or credit — "Pay as Credit" on the PO. Carried onto the
+    # Purchase row(s) created when the PO is marked received, so the ledger
+    # posts against Accounts Payable instead of Cash and a Creditor is
+    # raised for the supplier. See Purchase.payment_mode.
+    payment_mode = Column(Enum(PaymentMode), default=PaymentMode.cash)
     status = Column(Enum(PurchaseOrderStatus), default=PurchaseOrderStatus.draft)
     # Who authorized this PO and when — set the moment status first
     # transitions to "approved". Distinct from created_by/created_at

@@ -457,6 +457,7 @@ class PurchaseCreate(BaseModel):
     supplier: Optional[str] = ""
     quantity: float = 1
     unit_cost: float = 0
+    payment_mode: PaymentMode = PaymentMode.cash
     payment_method_id: Optional[int] = None
 
 
@@ -465,6 +466,7 @@ class PurchaseUpdate(BaseModel):
     supplier: Optional[str] = None
     quantity: Optional[float] = None
     unit_cost: Optional[float] = None
+    payment_mode: Optional[PaymentMode] = None
     payment_method_id: Optional[int] = None
 
 
@@ -481,6 +483,7 @@ class PurchaseOut(BaseModel):
     quantity: float
     unit_cost: float
     total: float
+    payment_mode: PaymentMode = PaymentMode.cash
     payment_method_id: Optional[int] = None
     created_at: datetime
 
@@ -1358,6 +1361,7 @@ class PurchaseOrderCreate(BaseModel):
     tax_rate: float = 0
     discount: float = 0
     notes: Optional[str] = ""
+    payment_mode: PaymentMode = PaymentMode.cash
     items: List[DocumentLineIn] = []
     status: Optional[str] = None # Optional status override (e.g. 'draft')
 
@@ -1379,6 +1383,7 @@ class PurchaseOrderOut(BaseModel):
     discount: float
     total: float
     notes: str
+    payment_mode: PaymentMode = PaymentMode.cash
     status: PurchaseOrderStatus
     converted_to_purchase: bool = False
     approved_by: Optional[str] = None
@@ -1409,6 +1414,11 @@ class PurchaseOrderOut(BaseModel):
     def _none_to_zero(cls, v):
         return 0 if v is None else v
 
+    @field_validator("payment_mode", mode="before")
+    @classmethod
+    def _none_to_cash(cls, v):
+        return PaymentMode.cash if v is None else v
+
 
 class PurchaseOrderUpdate(BaseModel):
     supplier_name: Optional[str] = None
@@ -1420,6 +1430,7 @@ class PurchaseOrderUpdate(BaseModel):
     expected_date: Optional[datetime] = None
     tax_rate: Optional[float] = None
     discount: Optional[float] = None
+    payment_mode: Optional[PaymentMode] = None
     notes: Optional[str] = None
     items: Optional[List[DocumentLineIn]] = None
 
