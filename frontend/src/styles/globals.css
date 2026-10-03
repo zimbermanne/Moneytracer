@@ -2403,6 +2403,77 @@ label {
   margin-bottom: 8px;
 }
 
+/* ---- Ledger / Creditors / Debtors line item editor ---- */
+.ledger-line-header {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 75px 110px 100px 36px;
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.ledger-line-item {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 75px 110px 100px 36px;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.ledger-line-item .invoice-line-item-picker {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.ledger-line-item input[type="number"],
+.ledger-line-item input[type="text"] {
+  width: 100%;
+}
+
+.ledger-line-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  text-align: right;
+  white-space: nowrap;
+  padding-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .ledger-line-header {
+    display: none;
+  }
+  .ledger-line-item {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    position: relative;
+    padding-top: 36px;
+  }
+  .ledger-line-item .invoice-line-item-picker {
+    grid-column: 1 / -1;
+  }
+  .ledger-line-item .btn-remove-line {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+  .ledger-line-total {
+    grid-column: 1 / -1;
+    text-align: left;
+    padding-top: 0;
+  }
+}
+
 /* Extra column for the per-item profit annotation — only added when the
    account has show_quote_profit on and this is a quotation, never for
    invoices. See Documents.jsx's showProfit prop. */

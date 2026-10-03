@@ -347,38 +347,51 @@ export default function Debtors() {
             {itemsTotal > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Subtotal: {money(itemsTotal)}</span>}
           </div>
 
+          {form.items.length > 0 && (
+            <div className="ledger-line-header">
+              <span>Item / Description</span>
+              <span>Qty</span>
+              <span>Unit Price</span>
+              <span style={{ textAlign: 'right' }}>Total</span>
+              <span></span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
             {form.items.map((line, idx) => (
-              <div key={idx} className="card" style={{ padding: 12, position: 'relative' }}>
-                <button className="btn-icon" style={{ position: 'absolute', top: 8, right: 8 }} onClick={() => removeLine(idx)}>✕</button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 100px', gap: 10, alignItems: 'end' }}>
-                  <div className="invoice-line-item-picker" style={{ marginBottom: 0 }}>
-                    <label style={{ fontSize: 11 }}>Item / Description</label>
-                    <select
-                      className="invoice-line-item-select"
-                      value={line.item_id ?? ''}
-                      onChange={(e) => selectInventoryItem(idx, e.target.value)}
-                      style={{ marginBottom: line.item_id ? 0 : 6 }}
-                    >
-                      <option value="">— Custom item —</option>
-                      {inventoryItems.map((it) => (
-                        <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
-                      ))}
-                    </select>
-                    {!line.item_id && (
-                      <input placeholder="Describe item..." value={line.description}
-                        onChange={(e) => updateLine(idx, 'description', e.target.value)} />
-                    )}
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11 }}>Qty</label>
-                    <input type="number" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11 }}>Price</label>
-                    <input type="number" value={line.unit_price} onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                  </div>
+              <div key={idx} className="ledger-line-item">
+                <div className="invoice-line-item-picker">
+                  <select
+                    className="invoice-line-item-select"
+                    value={line.item_id ?? ''}
+                    onChange={(e) => selectInventoryItem(idx, e.target.value)}
+                  >
+                    <option value="">— Custom item (not in inventory) —</option>
+                    {inventoryItems.map((it) => (
+                      <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="Describe the item"
+                    value={line.description}
+                    onChange={(e) => updateLine(idx, 'description', e.target.value)}
+                    style={{ marginTop: 4 }}
+                  />
                 </div>
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  placeholder="Unit Price"
+                  value={line.unit_price}
+                  onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))}
+                />
+                <span className="ledger-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
+                <button className="btn btn-danger btn-remove-line" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
               </div>
             ))}
           </div>
