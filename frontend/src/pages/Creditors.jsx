@@ -5,6 +5,7 @@ import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
+import CreditorEditor from '../components/CreditorEditor.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
 
@@ -176,6 +177,16 @@ export default function Creditors() {
     return { ...f, items }
   })
 
+  const moveLine = (idx, dir) => setForm((f) => {
+    const items = [...f.items]
+    const targetIdx = idx + dir
+    if (targetIdx < 0 || targetIdx >= items.length) return f
+    const temp = items[idx]
+    items[idx] = items[targetIdx]
+    items[targetIdx] = temp
+    return { ...f, items }
+  })
+
   const selectInventoryItem = (idx, itemId) => {
     if (!itemId) { updateLine(idx, 'item_id', null); return }
     const inv = inventoryItems.find((it) => String(it.id) === String(itemId))
@@ -307,114 +318,25 @@ export default function Creditors() {
       </div>
 
       {open && (
-        <Modal
-          title={editingId ? `Edit Creditor — ${form.name || ''}` : 'Add Creditor'}
+        <CreditorEditor
+          editingId={editingId}
+          form={form}
+          setForm={setForm}
+          company={account}
+          error={error}
+          updateLine={updateLine}
+          addLine={addLine}
+          removeLine={removeLine}
+          moveLine={moveLine}
+          itemsTotal={itemsTotal}
+          lockTotal={lockTotal}
+          setLockTotal={setLockTotal}
           onClose={() => setOpen(false)}
-          wide={true}
-          footer={(<>
-            <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
-            </button>
-          </>)}
-        >
-          <div className="debtor-section-label">Supplier / Creditor Details</div>
-          <div className="debtor-form-grid">
-            <div className="form-row">
-              <label>Name</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Supplier or company name" />
-            </div>
-            <div className="form-row">
-              <label>Phone</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +255 7XX XXX XXX" />
-            </div>
-            <div className="form-row">
-              <label>TIN</label>
-              <input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} placeholder="Optional — used to reconcile with debtor records" />
-            </div>
-            <div className="form-row">
-              <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-                Total Owed
-                <span style={{ fontSize: 10, cursor: 'pointer', color: lockTotal ? 'var(--accent)' : 'var(--text-muted)' }} onClick={() => setLockTotal(!lockTotal)}>
-                  {lockTotal ? '🔒 Auto' : '🔓 Manual'}
-                </span>
-              </label>
-              <input
-                type="number"
-                value={form.total_owed}
-                onChange={(e) => { setForm({ ...form, total_owed: Number(e.target.value) }); setLockTotal(false); }}
-                disabled={lockTotal && itemsTotal > 0}
-              />
-              {lockTotal && itemsTotal > 0 && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Calculated from items</div>}
-            </div>
-            <div className="form-row span-2">
-              <label>Note</label>
-              <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional note about this debt" />
-            </div>
-            {editingId && (
-              <div className="form-row span-2">
-                <label>Date Added</label>
-                <input value={new Date(form.created_at).toLocaleString()} disabled />
-              </div>
-            )}
-          </div>
-
-          <div className="debtor-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Items (optional — what was bought on credit from this supplier)</span>
-            {itemsTotal > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Subtotal: {money(itemsTotal)}</span>}
-          </div>
-
-          {form.items.length > 0 && (
-            <div className="ledger-line-header">
-              <span>Item / Description</span>
-              <span>Qty</span>
-              <span>Unit Price</span>
-              <span style={{ textAlign: 'right' }}>Total</span>
-              <span></span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {form.items.map((line, idx) => (
-              <div key={idx} className="ledger-line-item">
-                <div className="invoice-line-item-picker">
-                  <select
-                    className="invoice-line-item-select"
-                    value={line.item_id ?? ''}
-                    onChange={(e) => selectInventoryItem(idx, e.target.value)}
-                  >
-                    <option value="">— Custom item (not in inventory) —</option>
-                    {inventoryItems.map((it) => (
-                      <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
-                    ))}
-                  </select>
-                  <input
-                    placeholder="Describe the item"
-                    value={line.description}
-                    onChange={(e) => updateLine(idx, 'description', e.target.value)}
-                    style={{ marginTop: 4 }}
-                  />
-                </div>
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  value={line.quantity}
-                  onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
-                />
-                <input
-                  type="number"
-                  placeholder="Unit Price"
-                  value={line.unit_price}
-                  onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))}
-                />
-                <span className="ledger-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
-                <button className="btn btn-danger btn-remove-line" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
-              </div>
-            ))}
-          </div>
-
-          <button className="btn btn-outline" onClick={addLine}>+ Add Line</button>
-        </Modal>
+          onSave={save}
+          saving={saving}
+          inventoryItems={inventoryItems}
+          selectInventoryItem={selectInventoryItem}
+        />
       )}
 
       {payTarget && (
