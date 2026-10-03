@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useApi } from '../hooks/useApi.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
@@ -7,7 +7,6 @@ import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
-import CreditorEditor from '../components/CreditorEditor.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
@@ -40,7 +39,7 @@ export default function Creditors() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
-  const [editingPaid, setEditingPaid] = useState(0)
+  const [lockTotal, setLockTotal] = useState(true)
 
   const [payTarget, setPayTarget] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
@@ -56,10 +55,19 @@ export default function Creditors() {
     api.get('/inventory/').then(setInventoryItems).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openNew = () => { setEditingId(null); setEditingPaid(0); setForm(emptyForm()); setError(''); setOpen(true) }
+  const itemsTotal = useMemo(() => {
+    return form.items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0)
+  }, [form.items])
+
+  useEffect(() => {
+    if (lockTotal && itemsTotal > 0) {
+      setForm((f) => ({ ...f, total_owed: itemsTotal }))
+    }
+  }, [itemsTotal, lockTotal])
+
+  const openNew = () => { setEditingId(null); setForm(emptyForm()); setLockTotal(true); setError(''); setOpen(true) }
   const openEdit = (c) => {
     setEditingId(c.id)
-    setEditingPaid(c.amount_paid || 0)
     setForm({
       name: c.name, phone: c.phone || '', tin_number: c.tin_number || '', total_owed: c.total_owed, note: c.note || '',
       created_at: c.created_at,
@@ -67,6 +75,7 @@ export default function Creditors() {
         item_id: it.item_id, description: it.description, quantity: it.quantity, unit_price: it.unit_price,
       })),
     })
+    setLockTotal(c.items?.length > 0)
     setError('')
     setOpen(true)
   }
@@ -76,13 +85,6 @@ export default function Creditors() {
   const updateLine = (idx, field, value) => setForm((f) => {
     const items = [...f.items]
     items[idx] = { ...items[idx], [field]: value }
-    return { ...f, items }
-  })
-  const moveLine = (idx, dir) => setForm((f) => {
-    const j = idx + dir
-    if (j < 0 || j >= f.items.length) return f
-    const items = [...f.items]
-    ;[items[idx], items[j]] = [items[j], items[idx]]
     return { ...f, items }
   })
   const selectInventoryItem = (idx, itemId) => {
@@ -189,23 +191,79 @@ export default function Creditors() {
              emptyText={query ? 'No creditors match your search.' : 'No creditors recorded yet.'} onRowClick={openEdit} />
 
       {open && (
-        <CreditorEditor
-          editingId={editingId}
-          form={form}
-          setForm={setForm}
-          company={account}
-          error={error}
-          saving={saving}
-          updateLine={updateLine}
-          addLine={addLine}
-          removeLine={removeLine}
-          moveLine={moveLine}
-          inventoryItems={inventoryItems}
-          selectInventoryItem={selectInventoryItem}
-          amountPaid={editingPaid}
+        <Modal
+          title={editingId ? `Edit Creditor — ${form.name || ''}` : 'Add Creditor'}
           onClose={() => setOpen(false)}
-          onSave={save}
-        />
+          wide={true}
+          footer={(<>
+            <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}>
+              {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
+            </button>
+          </>)}
+        >
+          <div className="debtor-section-label">Creditor Details</div>
+          <div className="debtor-form-grid">
+            <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Supplier or company name" /></div>
+            <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +255 7XX XXX XXX" /></div>
+            <div className="form-row"><label>TIN</label><input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} placeholder="Optional — used to reconcile with debtor records" /></div>
+
+            <div className="form-row">
+              <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+                Total Owed
+                <span style={{ fontSize: 10, cursor: 'pointer', color: lockTotal ? 'var(--accent)' : 'var(--text-muted)' }} onClick={() => setLockTotal(!lockTotal)}>
+                  {lockTotal ? '🔒 Auto' : '🔓 Manual'}
+                </span>
+              </label>
+              <input type="number" value={form.total_owed} onChange={(e) => { setForm({ ...form, total_owed: Number(e.target.value) }); setLockTotal(false) }} disabled={lockTotal && itemsTotal > 0} />
+              {lockTotal && itemsTotal > 0 && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Calculated from items</div>}
+            </div>
+
+            <div className="form-row span-2"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional note about this debt" /></div>
+          </div>
+
+          <div className="debtor-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Items (optional)</span>
+            {itemsTotal > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Subtotal: {money(itemsTotal)}</span>}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {form.items.map((line, idx) => (
+              <div key={idx} className="card" style={{ padding: 12, position: 'relative' }}>
+                <button className="btn-icon" style={{ position: 'absolute', top: 8, right: 8 }} onClick={() => removeLine(idx)}>✕</button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 100px', gap: 10, alignItems: 'end' }}>
+                  <div className="invoice-line-item-picker" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: 11 }}>Item / Description</label>
+                    <select
+                      className="invoice-line-item-select"
+                      value={line.item_id ?? ''}
+                      onChange={(e) => selectInventoryItem(idx, e.target.value)}
+                      style={{ marginBottom: line.item_id ? 0 : 6 }}
+                    >
+                      <option value="">— Custom item —</option>
+                      {inventoryItems.map((it) => (
+                        <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
+                      ))}
+                    </select>
+                    {!line.item_id && (
+                      <input placeholder="Describe item..." value={line.description}
+                        onChange={(e) => updateLine(idx, 'description', e.target.value)} />
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11 }}>Qty</label>
+                    <input type="number" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11 }}>Price</label>
+                    <input type="number" value={line.unit_price} onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-outline" style={{ width: '100%' }} onClick={addLine}>+ Add Item Line</button>
+        </Modal>
       )}
 
       {payTarget && (
