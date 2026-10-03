@@ -7,6 +7,7 @@ import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
+import CreditorEditor from '../components/CreditorEditor.jsx'
 
 const money = (n) => `TZS ${(Number(n) || 0).toLocaleString()}`
 
@@ -39,6 +40,7 @@ export default function Creditors() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
+  const [editingPaid, setEditingPaid] = useState(0)
 
   const [payTarget, setPayTarget] = useState(null)
   const [payAmount, setPayAmount] = useState(0)
@@ -54,9 +56,10 @@ export default function Creditors() {
     api.get('/inventory/').then(setInventoryItems).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openNew = () => { setEditingId(null); setForm(emptyForm()); setError(''); setOpen(true) }
+  const openNew = () => { setEditingId(null); setEditingPaid(0); setForm(emptyForm()); setError(''); setOpen(true) }
   const openEdit = (c) => {
     setEditingId(c.id)
+    setEditingPaid(c.amount_paid || 0)
     setForm({
       name: c.name, phone: c.phone || '', tin_number: c.tin_number || '', total_owed: c.total_owed, note: c.note || '',
       created_at: c.created_at,
@@ -73,6 +76,13 @@ export default function Creditors() {
   const updateLine = (idx, field, value) => setForm((f) => {
     const items = [...f.items]
     items[idx] = { ...items[idx], [field]: value }
+    return { ...f, items }
+  })
+  const moveLine = (idx, dir) => setForm((f) => {
+    const j = idx + dir
+    if (j < 0 || j >= f.items.length) return f
+    const items = [...f.items]
+    ;[items[idx], items[j]] = [items[j], items[idx]]
     return { ...f, items }
   })
   const selectInventoryItem = (idx, itemId) => {
@@ -179,61 +189,23 @@ export default function Creditors() {
              emptyText={query ? 'No creditors match your search.' : 'No creditors recorded yet.'} onRowClick={openEdit} />
 
       {open && (
-        <Modal
-          title={editingId ? 'Edit Creditor' : 'Add Creditor'}
+        <CreditorEditor
+          editingId={editingId}
+          form={form}
+          setForm={setForm}
+          company={account}
+          error={error}
+          saving={saving}
+          updateLine={updateLine}
+          addLine={addLine}
+          removeLine={removeLine}
+          moveLine={moveLine}
+          inventoryItems={inventoryItems}
+          selectInventoryItem={selectInventoryItem}
+          amountPaid={editingPaid}
           onClose={() => setOpen(false)}
-          wide={true}
-          footer={(<>
-            <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
-            </button>
-          </>)}
-        >
-          <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="form-row"><label>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div className="form-row"><label>TIN</label><input value={form.tin_number} onChange={(e) => setForm({ ...form, tin_number: e.target.value })} placeholder="Optional — used to reconcile with debtor records" /></div>
-          <div className="form-row"><label>Total Owed</label><input type="number" value={form.total_owed} onChange={(e) => setForm({ ...form, total_owed: Number(e.target.value) })} /></div>
-          <div className="form-row"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
-          {editingId && (
-            <div className="form-row">
-              <label>Date Added</label>
-              <input value={new Date(form.created_at).toLocaleString()} disabled />
-            </div>
-          )}
-
-          <div className="invoice-editor-section-label">Items (optional — what was bought on credit from this supplier)</div>
-          {form.items.map((line, idx) => {
-            const isCustom = !line.item_id
-            return (
-              <div key={idx} className="invoice-editor-line">
-                <div className="invoice-line-item-picker">
-                  <select
-                    className="invoice-line-item-select"
-                    value={line.item_id ?? ''}
-                    onChange={(e) => selectInventoryItem(idx, e.target.value)}
-                  >
-                    <option value="">— Custom item (not in inventory) —</option>
-                    {inventoryItems.map((it) => (
-                      <option key={it.id} value={it.id}>{it.name} ({it.quantity} in stock)</option>
-                    ))}
-                  </select>
-                  {isCustom && (
-                    <input placeholder="Describe the item" value={line.description}
-                      onChange={(e) => updateLine(idx, 'description', e.target.value)} />
-                  )}
-                </div>
-                <input type="number" placeholder="Qty" value={line.quantity}
-                  onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-                <input type="number" placeholder="Unit Price" value={line.unit_price}
-                  onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
-                <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
-              </div>
-            )
-          })}
-          <button className="btn btn-outline" style={{ marginTop: 8 }} onClick={addLine}>+ Add Line</button>
-        </Modal>
+          onSave={save}
+        />
       )}
 
       {payTarget && (
