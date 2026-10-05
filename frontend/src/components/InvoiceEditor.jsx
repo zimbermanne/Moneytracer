@@ -156,6 +156,7 @@ export default function InvoiceEditor({
                 </button>
                 <div className="invoice-line-item-picker">
                   <span className="invoice-line-field-label">Item</span>
+                  <div className="invoice-line-item-row">
                   <select
                     className="invoice-line-item-select"
                     value={line.item_id ?? ''}
@@ -172,6 +173,7 @@ export default function InvoiceEditor({
                     <input placeholder="Describe the item" value={line.description}
                       onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                   )}
+                  </div>
                 </div>
                 <label className="invoice-line-field invoice-line-qty">
                   <span className="invoice-line-field-label">Qty</span>
