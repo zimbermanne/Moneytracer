@@ -155,6 +155,7 @@ export default function InvoiceEditor({
                   <span className="invoice-line-handle-text">Drag to reorder · {idx + 1}</span>
                 </button>
                 <div className="invoice-line-item-picker">
+                  <span className="invoice-line-field-label">Item</span>
                   <select
                     className="invoice-line-item-select"
                     value={line.item_id ?? ''}
@@ -172,22 +173,31 @@ export default function InvoiceEditor({
                       onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                   )}
                 </div>
-                <input type="number" placeholder="Qty" value={line.quantity}
-                  onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
-                <input type="number" placeholder="Unit Price" value={line.unit_price}
-                  onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
+                <label className="invoice-line-field invoice-line-qty">
+                  <span className="invoice-line-field-label">Qty</span>
+                  <input type="number" inputMode="decimal" placeholder="Qty" value={line.quantity}
+                    onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                </label>
+                <label className="invoice-line-field invoice-line-price">
+                  <span className="invoice-line-field-label">Unit price</span>
+                  <input type="number" inputMode="decimal" placeholder="Unit Price" value={line.unit_price}
+                    onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
+                </label>
+                <div className="invoice-line-field invoice-line-total">
+                  <span className="invoice-line-field-label">Line total</span>
+                  <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
+                </div>
                 {showProfit && (() => {
                   const inv = line.item_id ? inventoryItems.find((it) => String(it.id) === String(line.item_id)) : null
-                  if (!inv) return <span className="doc-sheet-item-profit">—</span>
+                  if (!inv) return <span className="doc-sheet-item-profit invoice-line-profit">—</span>
                   const profit = ((Number(line.unit_price) || 0) - (inv.cost_price || 0)) * (Number(line.quantity) || 0)
                   return (
-                    <span className={`doc-sheet-item-profit${profit < 0 ? ' negative' : ''}`} title="Profit for this line — visible to you only, never shown to the customer or on the PDF">
-                      {profit >= 0 ? '+' : ''}{money(profit)}
+                    <span className={`doc-sheet-item-profit invoice-line-profit${profit < 0 ? ' negative' : ''}`} title="Profit for this line — visible to you only, never shown to the customer or on the PDF">
+                      Profit: {profit >= 0 ? '+' : ''}{money(profit)}
                     </span>
                   )
                 })()}
-                <button className="btn btn-danger" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
+                <button className="btn btn-danger invoice-line-remove" onClick={() => removeLine(idx)} aria-label="Remove line">✕</button>
               </div>
             )})}
             <button className="btn btn-outline" onClick={addLine} style={{ marginBottom: 20 }}>+ Add Line</button>
