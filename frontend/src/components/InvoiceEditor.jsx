@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
 
 function money(n) {
@@ -19,6 +19,52 @@ export default function InvoiceEditor({
 }) {
   const [checkAmount, setCheckAmount] = useState('')
   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
+
+  // Drag-to-reorder: press and hold the handle on a line, then slide up or
+  // down over the other lines. Pointer events cover mouse, touch and pen with
+  // one code path; the handle is also keyboard-operable (Arrow Up / Down).
+  const [dragIdx, setDragIdx] = useState(null)
+  const dragRef = useRef(null)
+  const scrollerRef = useRef(null)
+
+  const scrollParent = (node) => {
+    for (let el = node.parentElement; el; el = el.parentElement) {
+      const oy = getComputedStyle(el).overflowY
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el
+    }
+    return document.scrollingElement
+  }
+  const startDrag = (e, idx) => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    scrollerRef.current = scrollParent(e.currentTarget)
+    dragRef.current = idx
+    setDragIdx(idx)
+  }
+  const onDragMove = (e) => {
+    const cur = dragRef.current
+    if (cur == null) return
+    // Near the top/bottom edge of the scroll area: scroll so long lists work.
+    const sc = scrollerRef.current
+    if (sc) {
+      const r = sc === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : sc.getBoundingClientRect()
+      if (e.clientY < r.top + 70) sc.scrollBy(0, -12)
+      else if (e.clientY > r.bottom - 70) sc.scrollBy(0, 12)
+    }
+    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-line-idx]')
+    if (!row) return
+    const target = Number(row.dataset.lineIdx)
+    if (target === cur) return
+    const step = target > cur ? 1 : -1
+    moveLine(cur, step)
+    dragRef.current = cur + step
+    setDragIdx(cur + step)
+  }
+  const endDrag = () => { dragRef.current = null; setDragIdx(null) }
+  const onHandleKey = (e, idx) => {
+    if (e.key === 'ArrowUp' && idx > 0) { e.preventDefault(); moveLine(idx, -1) }
+    else if (e.key === 'ArrowDown' && idx < form.items.length - 1) { e.preventDefault(); moveLine(idx, 1) }
+  }
   const label = isInvoice ? 'Invoice' : 'Quotation'
 
   useEffect(() => {
@@ -93,25 +139,21 @@ export default function InvoiceEditor({
             {form.items.map((line, idx) => {
               const isCustom = !line.item_id
               return (
-              <div key={idx} className={`invoice-editor-line${showProfit ? ' invoice-editor-line-with-profit' : ''}`}>
-                <div className="invoice-line-reorder">
-                  <button
-                    type="button"
-                    className="invoice-line-reorder-btn"
-                    onClick={() => moveLine(idx, -1)}
-                    disabled={idx === 0}
-                    aria-label="Move item up"
-                    title="Move up"
-                  >▲</button>
-                  <button
-                    type="button"
-                    className="invoice-line-reorder-btn"
-                    onClick={() => moveLine(idx, 1)}
-                    disabled={idx === form.items.length - 1}
-                    aria-label="Move item down"
-                    title="Move down"
-                  >▼</button>
-                </div>
+              <div key={idx} data-line-idx={idx} className={`invoice-editor-line${showProfit ? ' invoice-editor-line-with-profit' : ''}${dragIdx === idx ? ' invoice-editor-line-dragging' : ''}`}>
+                <button
+                  type="button"
+                  className="invoice-line-handle"
+                  onPointerDown={(e) => startDrag(e, idx)}
+                  onPointerMove={onDragMove}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  onKeyDown={(e) => onHandleKey(e, idx)}
+                  aria-label={`Reorder item ${idx + 1}. Drag, or use the up and down arrow keys.`}
+                  title="Drag to reorder"
+                >
+                  <span className="invoice-line-handle-grip">⠿</span>
+                  <span className="invoice-line-handle-text">Drag to reorder · {idx + 1}</span>
+                </button>
                 <div className="invoice-line-item-picker">
                   <select
                     className="invoice-line-item-select"

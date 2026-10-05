@@ -89,11 +89,13 @@ export default function Documents({ kind }) {
   // the order items print on the invoice/quotation, so this is how the
   // user controls that without deleting and re-adding lines.
   const moveLine = (idx, direction) => {
-    const target = idx + direction
-    if (target < 0 || target >= form.items.length) return
-    const items = [...form.items]
-    ;[items[idx], items[target]] = [items[target], items[idx]]
-    setForm({ ...form, items })
+    setForm((f) => {
+      const target = idx + direction
+      if (target < 0 || target >= f.items.length) return f
+      const items = [...f.items]
+      ;[items[idx], items[target]] = [items[target], items[idx]]
+      return { ...f, items }
+    })
   }
 
   const openEdit = (doc) => {
