@@ -2406,7 +2406,7 @@ label {
 
 .invoice-editor-form {
   flex: 1 1 55%;
-  max-width: 720px;
+  max-width: 640px;
   overflow-y: auto;
   padding: 24px;
 }
@@ -2417,17 +2417,16 @@ label {
   font-weight: 600;
 }
 
-/* Each line is a small card: handle | item picker | remove on top, then
-   Qty / Unit price / Line total as three equal fields underneath. Equal
-   columns keep everything proportional at any width, and all text is 14px+. */
+/* One compact card per line: the item picker takes all the leftover width,
+   Qty and Price stay narrow. Line total (and profit, if shown) sit on a thin
+   second row so the main row is never crowded. */
 .invoice-editor-line {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 76px 110px 40px;
   grid-template-areas:
-    "handle picker picker picker remove"
-    "handle qty    price  total  total"
-    ".      profit profit profit profit";
-  gap: 10px;
+    "handle picker qty price remove"
+    ".      profit total total total";
+  gap: 6px 10px;
   align-items: end;
   padding: 12px;
   margin-bottom: 12px;
@@ -2439,17 +2438,14 @@ label {
 .invoice-editor-line .invoice-line-item-picker { grid-area: picker; }
 .invoice-editor-line .invoice-line-qty { grid-area: qty; }
 .invoice-editor-line .invoice-line-price { grid-area: price; }
-.invoice-editor-line .invoice-line-total { grid-area: total; }
-.invoice-editor-line .invoice-line-profit { grid-area: profit; text-align: right; font-size: 13px; }
-.invoice-editor-line .invoice-line-remove { grid-area: remove; align-self: start; height: 42px; padding: 0; font-size: 16px; }
+.invoice-editor-line .invoice-line-total { grid-area: total; display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; }
+.invoice-editor-line .invoice-line-profit { grid-area: profit; text-align: left; font-size: 13px; }
+.invoice-editor-line .invoice-line-remove { grid-area: remove; align-self: end; height: 42px; padding: 0; font-size: 16px; }
 
 .invoice-line-field { display: flex; flex-direction: column; gap: 4px; margin: 0; min-width: 0; }
 .invoice-line-field-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.invoice-line-field input { min-height: 42px; font-size: 15px; }
-.invoice-line-total .invoice-editor-line-total {
-  display: flex; align-items: center; justify-content: flex-end;
-  min-height: 42px; font-size: 15px; font-weight: 700; color: var(--text-dark);
-}
+.invoice-line-field input { min-height: 42px; font-size: 14px; padding-left: 8px; padding-right: 8px; }
+.invoice-line-total .invoice-editor-line-total { font-size: 14px; font-weight: 700; color: var(--text-dark); }
 
 /* Drag handle for reordering line items. Big touch target on purpose:
    44px tall on every screen size (the old up/down arrows were ~9px). */
@@ -2512,7 +2508,7 @@ label {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  font-size: 15px;
+  font-size: 14px;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -2602,7 +2598,7 @@ label {
   .invoice-editor-form { max-width: 100%; overflow-y: visible; }
   .invoice-editor-preview { border-left: none; border-top: 1px solid var(--border); min-width: 0; }
   .invoice-editor-line {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-columns: 84px 110px minmax(0, 1fr) 44px;
     grid-template-areas:
       "handle handle handle remove"
       "picker picker picker picker"

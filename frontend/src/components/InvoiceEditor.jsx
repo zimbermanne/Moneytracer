@@ -161,7 +161,7 @@ export default function InvoiceEditor({
                     value={line.item_id ?? ''}
                     onChange={(e) => selectInventoryItem(idx, e.target.value)}
                   >
-                    <option value="">— Custom item (not in inventory) —</option>
+                    <option value="">Lookup</option>
                     {inventoryItems.map((it) => (
                       <option key={it.id} value={it.id} disabled={it.quantity <= 0}>
                         {it.name} {it.quantity <= 0 ? '(out of stock)' : `(${it.quantity} in stock)`}
@@ -179,12 +179,12 @@ export default function InvoiceEditor({
                     onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
                 </label>
                 <label className="invoice-line-field invoice-line-price">
-                  <span className="invoice-line-field-label">Unit price</span>
+                  <span className="invoice-line-field-label">Price</span>
                   <input type="number" inputMode="decimal" placeholder="Unit Price" value={line.unit_price}
                     onChange={(e) => updateLine(idx, 'unit_price', Number(e.target.value))} />
                 </label>
-                <div className="invoice-line-field invoice-line-total">
-                  <span className="invoice-line-field-label">Line total</span>
+                <div className="invoice-line-total">
+                  <span className="invoice-line-field-label">Total</span>
                   <span className="invoice-editor-line-total">{money((Number(line.quantity) || 0) * (Number(line.unit_price) || 0))}</span>
                 </div>
                 {showProfit && (() => {
