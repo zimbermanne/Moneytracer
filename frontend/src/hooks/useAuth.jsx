@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { apiUrl } from '../api-config.js'
 
 const AuthContext = createContext(null)
@@ -210,6 +210,49 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
+  // --- Re-login without losing the screen ---------------------------------
+  // When the server answers 401 mid-session we don't log out (that unmounts
+  // every page and wipes open forms). We raise a "session expired" prompt on
+  // top of the app, wait for the person to sign back in, then retry the
+  // request that failed. Concurrent 401s share one prompt.
+  const [sessionExpired, setSessionExpired] = useState(false)
+  const reauthRef = useRef(null)
+
+  const requestReauth = useCallback(() => {
+    if (!reauthRef.current) {
+      let resolve
+      const promise = new Promise((r) => { resolve = r })
+      reauthRef.current = { promise, resolve }
+      setSessionExpired(true)
+    }
+    return reauthRef.current.promise
+  }, [])
+
+  const finishReauth = useCallback((ok) => {
+    reauthRef.current?.resolve(ok)
+    reauthRef.current = null
+    setSessionExpired(false)
+  }, [])
+
+  const reauth = useCallback(async (password) => {
+    let res
+    try {
+      res = await fetch(apiUrl('/api/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user?.username, password }),
+        credentials: 'include',
+      })
+    } catch {
+      throw new Error('Could not reach the server — it may be restarting. Try again in a few seconds.')
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || 'Sign-in failed')
+    }
+    finishReauth(true)
+  }, [user, finishReauth])
+
   const logout = useCallback(() => {
     if (isAuthenticated) {
       // Record the logout for the audit trail, then clear the server-side
@@ -226,12 +269,18 @@ export function AuthProvider({ children }) {
     setIsAuthenticated(false)
     setUser(null)
     setAccount(null)
+    reauthRef.current?.resolve(false)
+    reauthRef.current = null
+    setSessionExpired(false)
   }, [isAuthenticated])
+
+  const cancelReauth = useCallback(() => { logout() }, [logout])
 
   return (
     <AuthContext.Provider value={{
       isAuthenticated, user, loading, login, loginAsDemo, quickSignup, completeProfile, logout,
       account, accountLoading, accountError, setAccount, refreshAccount,
+      sessionExpired, requestReauth, reauth, cancelReauth,
     }}>
       {children}
     </AuthContext.Provider>

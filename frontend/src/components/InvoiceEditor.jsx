@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigationGuard } from '../hooks/useNavigationGuard.jsx'
+import DraftBanner from './DraftBanner.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -15,7 +16,7 @@ function money(n) {
 export default function InvoiceEditor({
   kind, isInvoice, editingId, form, setForm, company, error,
   updateLine, addLine, removeLine, moveLine, subtotal, taxAmt, total,
-  onClose, onSave, saving, inventoryItems = [], selectInventoryItem, showProfit = false,
+  onClose, onSave, saving, inventoryItems = [], selectInventoryItem, showProfit = false, draft,
 }) {
   const [checkAmount, setCheckAmount] = useState('')
   const { setDirty, setDirtyMessage, setOnSaveDraft } = useNavigationGuard()
@@ -112,6 +113,7 @@ export default function InvoiceEditor({
 
         <div className="invoice-editor-body">
           <div className="invoice-editor-form">
+            <DraftBanner draft={draft} />
             <div className="form-row"><label>Customer Name *</label>
               <input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} /></div>
             <div className="form-row"><label>Phone</label>

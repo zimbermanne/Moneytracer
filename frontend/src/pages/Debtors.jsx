@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useDraft } from '../hooks/useDraft.js'
+import DraftBanner from '../components/DraftBanner.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import Table from '../components/Table.jsx'
 import Modal from '../components/Modal.jsx'
@@ -122,6 +124,11 @@ export default function Debtors() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
+
+  // Autosave the open form to this device so a logout/restart/refresh can't wipe it.
+  const draft = useDraft(open ? `debtors:${editingId ?? 'new'}` : null, form, setForm, {
+    isEmpty: (f) => !f.name.trim() && !f.note.trim() && !(Number(f.total_owed) > 0) && f.items.every((l) => !l.description.trim()),
+  })
   const [lockTotal, setLockTotal] = useState(true)
 
   const [payTarget, setPayTarget] = useState(null)
@@ -209,6 +216,7 @@ export default function Debtors() {
       }
       if (editingId) await api.put(`/ledgers/debtors/${editingId}`, payload)
       else await api.post('/ledgers/debtors', payload)
+      draft.clear()
       setOpen(false); setEditingId(null); setForm(emptyForm()); load()
     } catch (e) {
       setError(e.message)
@@ -313,15 +321,16 @@ export default function Debtors() {
       {open && (
         <Modal
           title={editingId ? `Edit Debtor — ${form.name || ''}` : 'Add Debtor'}
-          onClose={() => setOpen(false)}
+          onClose={() => { draft.clear(); setOpen(false) }}
           wide={true}
           footer={(<>
-            <button className="btn btn-outline" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn btn-outline" onClick={() => { draft.clear(); setOpen(false) }}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={saving}>
               {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
             </button>
           </>)}
         >
+          <DraftBanner draft={draft} />
           <div className="debtor-section-label">Debtor Details</div>
           <div className="debtor-form-grid">
             <div className="form-row"><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client or company name" /></div>

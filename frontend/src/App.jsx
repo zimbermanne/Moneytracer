@@ -9,6 +9,8 @@ import MobileTopBar from './components/MobileTopBar.jsx'
 import BottomNav from './components/BottomNav.jsx'
 import PageLoader from './components/PageLoader.jsx'
 import PlatformBanner from './components/PlatformBanner.jsx'
+import ServerStatusBanner from './components/ServerStatusBanner.jsx'
+import SessionExpiredModal from './components/SessionExpiredModal.jsx'
 import Clock from './Clock.jsx'
 import LiquidGlassFilter from './components/LiquidGlassFilter.jsx'
 // Landing and Login are the two screens almost everyone hits first (an
@@ -149,6 +151,7 @@ function Layout({ children }) {
       <div className={`mobile-backdrop ${mobileOpen ? 'open' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-content">
+        <ServerStatusBanner />
         <PlatformBanner />
         {user?.profile_incomplete && location.pathname !== '/app/settings' && (
           <div style={{
@@ -275,6 +278,7 @@ export default function App() {
     <AuthProvider>
       <LiquidGlassFilter />
       <NavigationGuardProvider>
+        <SessionExpiredModal />
         <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />

@@ -6,6 +6,7 @@ import { downloadFile } from '../utils/download.js'
 import Table from '../components/Table.jsx'
 import DocumentPreview from '../components/DocumentPreview.jsx'
 import InvoiceEditor from '../components/InvoiceEditor.jsx'
+import { useDraft } from '../hooks/useDraft.js'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import { useSearch } from '../hooks/useSearch.js'
@@ -40,6 +41,11 @@ export default function Documents({ kind }) {
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [inventoryItems, setInventoryItems] = useState([])
+
+  // Autosave the open form to this device so a logout/restart/refresh can't wipe it.
+  const draft = useDraft(open ? `${kind}:${editingId ?? 'new'}` : null, form, setForm, {
+    isEmpty: (f) => !f.customer_name.trim() && !f.notes.trim() && f.items.every((l) => !l.description.trim()),
+  })
 
   const [shareDoc, setShareDoc] = useState(null)
   const [shareQuery, setShareQuery] = useState('')
@@ -138,6 +144,7 @@ export default function Documents({ kind }) {
       } else {
         await api.post(`/${kind}/`, payload)
       }
+      draft.clear()
       setOpen(false); setEditingId(null); setForm(emptyForm()); load()
       return true // success
     } catch (e) { setError(e.message); return false }
@@ -282,7 +289,8 @@ export default function Documents({ kind }) {
           subtotal={subtotal}
           taxAmt={taxAmt}
           total={total}
-          onClose={() => { setOpen(false); setEditingId(null) }}
+          draft={draft}
+          onClose={() => { draft.clear(); setOpen(false); setEditingId(null) }}
           onSave={save}
         />
       )}
