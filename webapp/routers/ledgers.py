@@ -335,6 +335,174 @@ def debtor_debit_note_pdf(debtor_id: int, db: Session = Depends(get_db),
         headers={"Content-Disposition": f'attachment; filename="DebitNote-DN-{debtor.id:06d}.pdf"'})
 
 
+def _render_credit_note_pdf(creditor: Creditor, account: dict) -> io.BytesIO:
+    """Renders a Credit Note / Creditor Statement PDF styled after classic trading
+    credit note layout: boxed header with supplier + document details, a CREDIT NOTE
+    title, an itemised charges table, a total line, and supplier details."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+    BLUE  = colors.HexColor("#2980B9")
+    NAVY  = colors.HexColor("#1F3864")
+    INK   = colors.HexColor("#2B2622")
+    LINE  = colors.HexColor("#8C8C8C")
+
+    biz_name    = (account or {}).get("name") or COMPANY_NAME
+    biz_address = (account or {}).get("address") or COMPANY_ADDRESS
+    biz_phone   = (account or {}).get("phone") or COMPANY_PHONE
+    biz_email   = (account or {}).get("email") or COMPANY_EMAIL
+
+    cn_no   = f"CN-{creditor.id:06d}"
+    cn_date = creditor.created_at.strftime("%d %b, %Y").upper() if creditor.created_at else ""
+
+    buf = io.BytesIO()
+    pdf = SimpleDocTemplate(buf, pagesize=A4,
+          topMargin=16*mm, bottomMargin=20*mm, leftMargin=16*mm, rightMargin=16*mm)
+    styles = getSampleStyleSheet()
+    normal   = ParagraphStyle("N", parent=styles["Normal"], fontSize=9.5, leading=13, textColor=NAVY)
+    normal_b = ParagraphStyle("NB", parent=normal, fontName="Helvetica-Bold")
+    label    = ParagraphStyle("L", parent=normal, fontName="Helvetica-Bold", fontSize=9)
+
+    elems = []
+
+    # ---- Letterhead ----
+    company_style = ParagraphStyle("Co", parent=styles["Normal"], fontSize=16, leading=19,
+                                    alignment=TA_CENTER, textColor=NAVY, fontName="Helvetica-Bold")
+    sub_style = ParagraphStyle("Sub", parent=styles["Normal"], fontSize=9, leading=12,
+                                alignment=TA_CENTER, textColor=INK)
+    elems.append(Paragraph(biz_name, company_style))
+    contact_bits = [b for b in [biz_address, biz_phone and f"Tel: {biz_phone}", biz_email] if b]
+    if contact_bits:
+        elems.append(Paragraph(" &nbsp;•&nbsp; ".join(contact_bits), sub_style))
+    elems.append(Spacer(1, 3*mm))
+
+    hr = Table([[""]], colWidths=[178*mm])
+    hr.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 1, NAVY)]))
+    elems += [hr, Spacer(1, 5*mm)]
+
+    title_style = ParagraphStyle("Title", parent=styles["Normal"], fontSize=20, leading=24,
+                                  alignment=TA_CENTER, textColor=BLUE, fontName="Helvetica-Bold")
+    elems.append(Paragraph("CREDIT PURCHASE STATEMENT", title_style))
+    cn_meta_style = ParagraphStyle("CNM", parent=styles["Normal"], fontSize=9, leading=12,
+                                    alignment=TA_CENTER, textColor=INK)
+    elems.append(Paragraph(f"C/N No.: {cn_no} &nbsp;&nbsp;/&nbsp;&nbsp; Dated: {cn_date}", cn_meta_style))
+    elems.append(Spacer(1, 5*mm))
+
+    # ---- Boxed Supplier info grid ----
+    to_lines = [f"<b>{creditor.name}</b>"]
+    if creditor.note:
+        to_lines.append(creditor.note)
+    phone_cell = creditor.phone or "—"
+    tin_cell = creditor.tin_number or "—"
+
+    box_rows = [
+        [Paragraph("Supplier:", label), Paragraph("<br/>".join(to_lines), normal)],
+        [Paragraph("Phone:", label), Paragraph(phone_cell, normal)],
+        [Paragraph("TIN:", label), Paragraph(tin_cell, normal)],
+        [Paragraph("Date:", label), Paragraph(cn_date, normal)],
+    ]
+    box = Table(box_rows, colWidths=[28*mm, 150*mm])
+    box.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.6, LINE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elems += [box, Spacer(1, 6*mm)]
+
+    section_title = ParagraphStyle("SecT", parent=styles["Normal"], fontSize=9.5, leading=12,
+                                    alignment=TA_CENTER, textColor=colors.white, fontName="Helvetica-Bold")
+    section_bar = Table([[Paragraph("GOODS AND SERVICES BOUGHT ON CREDIT", section_title)]], colWidths=[178*mm])
+    section_bar.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    elems += [section_bar]
+
+    # ---- Items table ----
+    rows = [["DESCRIPTION", f"UNIT PRICE ({CURRENCY})", "QUANTITY", f"TOTAL PRICE ({CURRENCY})"]]
+    items = creditor.items or []
+    if items:
+        for it in items:
+            line_total = (it.quantity or 0) * (it.unit_price or 0)
+            rows.append([it.description, f"{it.unit_price:,.2f}", f"{it.quantity:g}", f"{line_total:,.2f}"])
+    else:
+        rows.append(["Credit Purchase", "", "", f"{creditor.total_owed:,.2f}"])
+
+    col_widths = [82*mm, 34*mm, 26*mm, 36*mm]
+    t = Table(rows, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+        ("TEXTCOLOR", (0, 0), (-1, -1), NAVY),
+        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+        ("ALIGN", (2, 0), (2, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.6, LINE),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F6F7FA")]),
+        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elems += [t]
+
+    balance = (creditor.total_owed or 0) - (creditor.amount_paid or 0)
+    tot_rows = [["TOTAL OWED", f"{CURRENCY} {creditor.total_owed:,.2f}"]]
+    if creditor.amount_paid:
+        tot_rows.append(["AMOUNT PAID", f"{CURRENCY} {creditor.amount_paid:,.2f}"])
+    tot_rows.append(["OUTSTANDING BALANCE", f"{CURRENCY} {balance:,.2f}"])
+    tt = Table(tot_rows, colWidths=[142*mm, 36*mm])
+    tt.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.6, LINE),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+        ("TEXTCOLOR", (0, 0), (-1, -1), BLUE),
+        ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elems += [tt, Spacer(1, 10*mm)]
+
+    if creditor.note:
+        elems += [Paragraph("Notes", label), Paragraph(creditor.note.replace("\n", "<br/>"), normal)]
+
+    footer_style = ParagraphStyle("Footer", parent=styles["Normal"], fontSize=8,
+                                   alignment=TA_CENTER, textColor=colors.HexColor("#A79D8E"))
+
+    def draw_footer(canvas, pdf_doc):
+        canvas.saveState()
+        p = Paragraph("Moneytracer", footer_style)
+        w, h = p.wrap(pdf_doc.width, pdf_doc.bottomMargin)
+        p.drawOn(canvas, pdf_doc.leftMargin, 10*mm)
+        canvas.restoreState()
+
+    pdf.build(elems, onFirstPage=draw_footer, onLaterPages=draw_footer)
+    buf.seek(0)
+    return buf
+
+
+@router.get("/creditors/{creditor_id}/credit-note/pdf")
+def creditor_credit_note_pdf(creditor_id: int, db: Session = Depends(get_db),
+                             current_user: User = Depends(get_current_user)):
+    query = db.query(Creditor).filter(Creditor.id == creditor_id)
+    account_id = get_account_filter(current_user)
+    if account_id is not None:
+        query = query.filter(Creditor.account_id == account_id)
+    creditor = query.first()
+    if not creditor:
+        raise HTTPException(status_code=404, detail="Creditor not found")
+
+    account = get_account_details(db, creditor.account_id)
+    buf = _render_credit_note_pdf(creditor, account)
+    log_activity_for_user(db, current_user, "creditor_credit_note_pdf", f"Exported credit note for {creditor.name}")
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="CreditNote-CN-{creditor.id:06d}.pdf"'})
+
+
 def _items_signature(items):
     return sorted(
         (i.item_id or 0, (i.description or "").strip().lower(), float(i.quantity or 0), float(i.unit_price or 0))
