@@ -2422,13 +2422,13 @@ label {
    second row so the main row is never crowded. */
 .invoice-editor-line {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 64px 96px 40px;
+  grid-template-columns: 42px minmax(220px, 1fr) 72px 115px 38px;
   grid-template-areas:
     "handle picker qty price remove"
     ".      profit total total total";
-  gap: 6px 10px;
+  gap: 8px 12px;
   align-items: end;
-  padding: 12px;
+  padding: 14px;
   margin-bottom: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -2501,10 +2501,10 @@ label {
   gap: 6px;
 }
 
-.invoice-line-item-row { display: flex; gap: 8px; align-items: stretch; min-width: 0; }
-.invoice-line-item-row > select { flex: 0 0 36%; min-width: 110px; }
-.invoice-line-item-row > select:last-child { flex: 1 1 auto; } /* inventory item picked: no description box */
-.invoice-line-item-row > input { flex: 1 1 0; min-width: 0; min-height: 42px; font-size: 14px; }
+.invoice-line-item-row { display: flex; gap: 10px; align-items: stretch; min-width: 0; }
+.invoice-line-item-row > select { flex: 0 0 42%; min-width: 130px; }
+.invoice-line-item-row > select:last-child { flex: 1 1 100%; } /* inventory item picked: no description box */
+.invoice-line-item-row > input { flex: 1 1 58%; min-width: 130px; min-height: 42px; font-size: 14px; }
 
 .invoice-line-item-select {
   width: 100%;
