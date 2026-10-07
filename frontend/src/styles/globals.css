@@ -2501,10 +2501,18 @@ label {
   gap: 6px;
 }
 
-.invoice-line-item-row { display: flex; gap: 10px; align-items: stretch; min-width: 0; }
-.invoice-line-item-row > select { flex: 0 0 42%; min-width: 130px; }
-.invoice-line-item-row > select:last-child { flex: 1 1 100%; } /* inventory item picked: no description box */
-.invoice-line-item-row > input { flex: 1 1 58%; min-width: 130px; min-height: 42px; font-size: 14px; }
+.invoice-line-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.invoice-line-item-row > select,
+.invoice-line-item-row > input {
+  width: 100%;
+  min-height: 42px;
+  font-size: 14px;
+}
 
 .invoice-line-item-select {
   width: 100%;

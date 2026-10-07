@@ -157,14 +157,14 @@ export default function InvoiceEditor({
                   <span className="invoice-line-handle-text">Drag to reorder · {idx + 1}</span>
                 </button>
                 <div className="invoice-line-item-picker">
-                  <span className="invoice-line-field-label">Item</span>
+                  <span className="invoice-line-field-label">Item / Description</span>
                   <div className="invoice-line-item-row">
                   <select
                     className="invoice-line-item-select"
                     value={line.item_id ?? ''}
                     onChange={(e) => selectInventoryItem(idx, e.target.value)}
                   >
-                    <option value="">Lookup</option>
+                    <option value="">— Custom item / Inventory Lookup —</option>
                     {inventoryItems.map((it) => (
                       <option key={it.id} value={it.id} disabled={it.quantity <= 0}>
                         {it.name} {it.quantity <= 0 ? '(out of stock)' : `(${it.quantity} in stock)`}
@@ -172,7 +172,7 @@ export default function InvoiceEditor({
                     ))}
                   </select>
                   {isCustom && (
-                    <input placeholder="Describe the item" value={line.description}
+                    <input placeholder="Describe the item..." value={line.description}
                       onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                   )}
                   </div>
