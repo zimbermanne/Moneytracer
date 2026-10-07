@@ -2422,29 +2422,29 @@ label {
    second row so the main row is never crowded. */
 .invoice-editor-line {
   display: grid;
-  grid-template-columns: 42px minmax(220px, 1fr) 72px 115px 38px;
+  grid-template-columns: 40px minmax(0, 1.2fr) 68px 90px 36px;
   grid-template-areas:
     "handle picker qty price remove"
     ".      profit total total total";
-  gap: 8px 12px;
+  gap: 8px 8px;
   align-items: end;
-  padding: 14px;
+  padding: 12px;
   margin-bottom: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
 }
 .invoice-editor-line .invoice-line-handle { grid-area: handle; align-self: stretch; min-height: 44px; }
-.invoice-editor-line .invoice-line-item-picker { grid-area: picker; }
-.invoice-editor-line .invoice-line-qty { grid-area: qty; }
-.invoice-editor-line .invoice-line-price { grid-area: price; }
+.invoice-editor-line .invoice-line-item-picker { grid-area: picker; min-width: 0; }
+.invoice-editor-line .invoice-line-qty { grid-area: qty; min-width: 0; }
+.invoice-editor-line .invoice-line-price { grid-area: price; min-width: 0; }
 .invoice-editor-line .invoice-line-total { grid-area: total; display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; }
 .invoice-editor-line .invoice-line-profit { grid-area: profit; text-align: left; font-size: 13px; }
 .invoice-editor-line .invoice-line-remove { grid-area: remove; align-self: end; height: 42px; padding: 0; font-size: 16px; }
 
 .invoice-line-field { display: flex; flex-direction: column; gap: 4px; margin: 0; min-width: 0; }
 .invoice-line-field-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.invoice-line-field input { min-height: 42px; font-size: 14px; padding-left: 8px; padding-right: 8px; }
+.invoice-line-field input { min-height: 42px; font-size: 14px; padding-left: 6px; padding-right: 6px; width: 100%; box-sizing: border-box; }
 .invoice-line-total .invoice-editor-line-total { font-size: 14px; font-weight: 700; color: var(--text-dark); }
 
 /* Drag handle for reordering line items. Big touch target on purpose:
@@ -2503,15 +2503,26 @@ label {
 
 .invoice-line-item-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
+  align-items: center;
   width: 100%;
+  min-width: 0;
 }
-.invoice-line-item-row > select,
+.invoice-line-item-row > select {
+  flex: 1 1 45%;
+  min-width: 0;
+}
+.invoice-line-item-row > select:last-child {
+  flex: 1 1 100%;
+}
 .invoice-line-item-row > input {
-  width: 100%;
+  flex: 1 1 55%;
+  min-width: 0;
   min-height: 42px;
   font-size: 14px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .invoice-line-item-select {
