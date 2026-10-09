@@ -300,14 +300,39 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
     creditors = _scoped(db.query(Creditor), Creditor, account_id).all()
     total_owed = sum(c.total_owed - c.amount_paid for c in creditors)
     by_status = defaultdict(int)
+    accounts = []
+
     for c in creditors:
         by_status[c.status.value] += 1
+        balance = round(c.total_owed - c.amount_paid, 2)
+        accounts.append({
+            "id": c.id,
+            "name": c.name,
+            "phone": c.phone or "",
+            "tin_number": c.tin_number or "",
+            "total_owed": round(c.total_owed, 2),
+            "amount_paid": round(c.amount_paid, 2),
+            "balance": balance,
+            "status": c.status.value,
+            "note": c.note or "",
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "items": [
+                {
+                    "description": it.description,
+                    "quantity": it.quantity,
+                    "unit_price": it.unit_price,
+                    "total": round((it.quantity or 0) * (it.unit_price or 0), 2)
+                } for it in (c.items or [])
+            ]
+        })
+
+    accounts.sort(key=lambda a: a["balance"], reverse=True)
+
     top = sorted(
         ({"name": c.name, "outstanding": round(c.total_owed - c.amount_paid, 2), "status": c.status.value} for c in creditors),
         key=lambda r: r["outstanding"], reverse=True
     )[:10]
 
-    # Include aging info inline
     aging = creditors_aging_report(db, current_user)
 
     return {
@@ -315,6 +340,7 @@ def creditors_report(db: Session = Depends(get_db), current_user: User = Depends
         "count": len(creditors),
         "by_status": dict(by_status),
         "top_creditors": top,
+        "accounts": accounts,
         "aging": aging
     }
 

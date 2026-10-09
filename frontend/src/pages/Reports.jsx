@@ -165,8 +165,18 @@ function CashFlow({ data }) {
   )
 }
 
-function LedgerReport({ data, listKey, title, onReconcile }) {
-  const list = data[listKey] || []
+function LedgerReport({ data, listKey, title, onReconcile, isCreditorReport = false }) {
+  const [categorizeBy, setCategorizeBy] = useState('accounts') // 'accounts' or 'aging'
+  const accounts = data.accounts || []
+
+  const downloadNote = (acc) => {
+    if (isCreditorReport) {
+      downloadFile(apiUrl(`/api/ledgers/creditors/${acc.id}/credit-note/pdf`), `CreditNote-${acc.name.replace(/\s+/g, '-')}.pdf`)
+    } else {
+      downloadFile(apiUrl(`/api/ledgers/debtors/${acc.id}/debit-note/pdf`), `DebitNote-${acc.name.replace(/\s+/g, '-')}.pdf`)
+    }
+  }
+
   return (
     <>
       <div className="card-grid">
@@ -175,7 +185,7 @@ function LedgerReport({ data, listKey, title, onReconcile }) {
           <div className="value">{money(data.total_outstanding)}</div>
         </div>
         <div className="card home-kpi-card metric-card">
-          <div className="label">Count</div>
+          <div className="label">Total Accounts</div>
           <div className="value">{data.count}</div>
         </div>
         {Object.entries(data.by_status || {}).map(([status, count]) => (
@@ -186,15 +196,99 @@ function LedgerReport({ data, listKey, title, onReconcile }) {
         ))}
       </div>
 
-      {data.aging && (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0 }}>Aging Summary</h3>
-            <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({})}>
-              🤝 Reconcile Account
+      <div style={{ marginTop: 24, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Categorize by:</span>
+          <div className="receipt-width-toggle">
+            <button
+              type="button"
+              className={categorizeBy === 'accounts' ? 'active' : ''}
+              onClick={() => setCategorizeBy('accounts')}
+            >
+              Customer / Supplier Accounts ({accounts.length})
+            </button>
+            <button
+              type="button"
+              className={categorizeBy === 'aging' ? 'active' : ''}
+              onClick={() => setCategorizeBy('aging')}
+            >
+              Time Aging Buckets
             </button>
           </div>
-          <div className="card-grid">
+        </div>
+        <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({})}>
+          🤝 Reconcile Account
+        </button>
+      </div>
+
+      {categorizeBy === 'accounts' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {accounts.map((acc) => (
+            <Accordion
+              key={acc.id}
+              title={`${acc.name} — Balance: ${money(acc.balance)} (${acc.status})`}
+              defaultOpen={acc.balance > 0}
+            >
+              <div style={{ padding: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      Phone: {acc.phone || '—'} | TIN: {acc.tin_number || '—'} | Added: {acc.created_at ? new Date(acc.created_at).toLocaleDateString() : '—'}
+                    </div>
+                    {acc.note && <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>Note: {acc.note}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => downloadNote(acc)}>
+                      {isCreditorReport ? '⬇ Credit Note (PDF)' : '⬇ Debit Note (PDF)'}
+                    </button>
+                    <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({ phone: acc.phone || '', tin: acc.tin_number || '' })}>
+                      🤝 Reconcile
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 16, marginBottom: 12, padding: '10px 14px', background: 'var(--surface-sunken)', borderRadius: 8, flexWrap: 'wrap' }}>
+                  <div><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>TOTAL OWED: </span><strong>{money(acc.total_owed)}</strong></div>
+                  <div><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>PAID: </span><strong>{money(acc.amount_paid)}</strong></div>
+                  <div><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>REMAINING BALANCE: </span><strong style={{ color: acc.balance > 0 ? 'var(--danger)' : 'var(--success)' }}>{money(acc.balance)}</strong></div>
+                </div>
+
+                {acc.items && acc.items.length > 0 ? (
+                  <table className="pl-table" style={{ fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        <th>Item Description</th>
+                        <th style={{ textAlign: 'right' }}>Qty</th>
+                        <th style={{ textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ textAlign: 'right' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {acc.items.map((it, idx) => (
+                        <tr key={idx}>
+                          <td>{it.description}</td>
+                          <td style={{ textAlign: 'right' }}>{it.quantity}</td>
+                          <td style={{ textAlign: 'right' }}>{money(it.unit_price)}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(it.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>No itemized breakdown recorded for this account.</div>
+                )}
+              </div>
+            </Accordion>
+          ))}
+          {accounts.length === 0 && (
+            <div className="card" style={{ color: 'var(--text-muted)', padding: 16 }}>No creditor accounts found.</div>
+          )}
+        </div>
+      )}
+
+      {categorizeBy === 'aging' && data.aging && (
+        <div>
+          <div className="card-grid" style={{ marginBottom: 16 }}>
             {Object.entries({
               current_0_30: '0–30 days',
               days_31_60: '31–60 days',
@@ -241,27 +335,6 @@ function LedgerReport({ data, listKey, title, onReconcile }) {
             )
           })}
         </div>
-      )}
-
-      {list.length > 0 && (
-        <Accordion title={title} defaultOpen={true}>
-          <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
-            {list.map((r, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <strong>{r.name}</strong>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>({r.status})</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontWeight: 700 }}>{money(r.outstanding)}</span>
-                  <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({ phone: r.phone || '', tin: r.tin_number || '' })}>
-                    🤝 Reconcile
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Accordion>
       )}
     </>
   )
