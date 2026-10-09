@@ -884,6 +884,7 @@ class DebtorCreate(BaseModel):
     tin_number: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
+    adjustment_reason: Optional[str] = ""
     items: List[DebtorItemIn] = []
 
 
@@ -893,6 +894,7 @@ class DebtorUpdate(BaseModel):
     tin_number: Optional[str] = None
     total_owed: Optional[float] = None
     note: Optional[str] = None
+    adjustment_reason: Optional[str] = None
     items: Optional[List[DebtorItemIn]] = None  # omit to leave items untouched; [] clears them
 
 
@@ -906,6 +908,7 @@ class DebtorOut(BaseModel):
     amount_paid: float
     status: LedgerStatus
     note: str
+    adjustment_reason: str = ""
     created_at: datetime
     items: List[DebtorItemOut] = []
 
@@ -1006,6 +1009,7 @@ class CreditorCreate(BaseModel):
     tin_number: Optional[str] = ""
     total_owed: float = 0
     note: Optional[str] = ""
+    adjustment_reason: Optional[str] = ""
     items: List[CreditorItemIn] = []
 
 
@@ -1015,6 +1019,7 @@ class CreditorUpdate(BaseModel):
     tin_number: Optional[str] = None
     total_owed: Optional[float] = None
     note: Optional[str] = None
+    adjustment_reason: Optional[str] = None
     items: Optional[List[CreditorItemIn]] = None  # omit to leave items untouched; [] clears them
 
 
@@ -1028,6 +1033,7 @@ class CreditorOut(BaseModel):
     amount_paid: float
     status: LedgerStatus
     note: str
+    adjustment_reason: str = ""
     created_at: datetime
     items: List[CreditorItemOut] = []
 
@@ -1072,6 +1078,53 @@ class LedgerOut(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: float
+    method: Optional[str] = "cash"
+    note: Optional[str] = ""
+    paid_at: Optional[datetime] = None  # back-date a payment recorded late; defaults to now
+
+
+class StatementLine(BaseModel):
+    date: Optional[datetime] = None
+    kind: str  # "charge" | "adjustment" | "payment" | "opening"
+    description: str
+    quantity: Optional[float] = None
+    unit_price: Optional[float] = None
+    charge: float = 0       # increases the balance
+    payment: float = 0      # reduces the balance
+    balance: float = 0      # running balance after this line
+    method: str = ""
+    note: str = ""
+    recorded_by: str = ""
+
+
+class StockReceiptLine(BaseModel):
+    date: Optional[datetime] = None
+    item_name: str
+    quantity: float
+    unit_cost: float
+    total: float
+
+
+class PartyStatement(BaseModel):
+    party_type: str  # "debtor" | "creditor"
+    id: int
+    name: str
+    phone: str = ""
+    tin_number: str = ""
+    note: str = ""
+    created_at: Optional[datetime] = None
+    items_subtotal: float
+    adjustment: float
+    adjustment_reason: str = ""
+    total_owed: float
+    total_paid: float
+    balance: float
+    status: str
+    payments_count: int
+    payments_match: bool  # does the sum of payment rows equal the stored Amount Paid?
+    payments_sum: float
+    lines: List[StatementLine]
+    stock_receipts: List[StockReceiptLine] = []
 
 
 # ---------- Activity ----------

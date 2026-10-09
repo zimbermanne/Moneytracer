@@ -9,6 +9,8 @@ import SearchBar from '../components/SearchBar.jsx'
 import RowActionsMenu from '../components/RowActionsMenu.jsx'
 import DebtorStatement from '../components/DebtorStatement.jsx'
 import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
+import AccountStatement from '../components/AccountStatement.jsx'
+import PaymentFields, { emptyPayment, paymentBody } from '../components/PaymentFields.jsx'
 import { useSearch } from '../hooks/useSearch.js'
 import { apiUrl } from '../api-config.js'
 import { downloadFile, openPdfForPrint } from '../utils/download.js'
@@ -17,7 +19,7 @@ function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
 }
 
-const emptyForm = () => ({ name: '', phone: '', tin_number: '', total_owed: 0, note: '', items: [] })
+const emptyForm = () => ({ name: '', phone: '', tin_number: '', total_owed: 0, note: '', adjustment_reason: '', items: [] })
 const emptyLine = () => ({ item_id: null, description: '', quantity: 1, unit_price: 0 })
 
 function statusBadge(status) {
@@ -32,7 +34,7 @@ function itemsSummary(items) {
   return <span title={text}>{text.length > 40 ? text.slice(0, 40) + '…' : text}</span>
 }
 
-function DebtorDetail({ debtor, onBack, onEdit, onDelete, onPay, onPrint, onReconcile, downloadDebitNote, isAdmin }) {
+function DebtorDetail({ debtor, onBack, onEdit, onDelete, onPay, onStatement, onPrint, onReconcile, downloadDebitNote, isAdmin }) {
   return (
     <div className="customers-detail-pane">
       <div className="customer-detail-header">
@@ -101,6 +103,7 @@ function DebtorDetail({ debtor, onBack, onEdit, onDelete, onPay, onPrint, onReco
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 24 }}>
+        <button className="btn btn-primary" onClick={() => onStatement(debtor)}>📄 Account Statement</button>
         <button className="btn btn-outline" onClick={() => onPrint(debtor)}>🖨 Thermal Statement</button>
         <button className="btn btn-outline" onClick={() => downloadDebitNote(debtor)}>⬇ Debit Note (PDF)</button>
         <button className="btn btn-outline" onClick={() => onReconcile(debtor)}>🤝 Reconcile Account</button>
@@ -132,7 +135,8 @@ export default function Debtors() {
   const [lockTotal, setLockTotal] = useState(true)
 
   const [payTarget, setPayTarget] = useState(null)
-  const [payAmount, setPayAmount] = useState(0)
+  const [payment, setPayment] = useState(emptyPayment())
+  const [statementTarget, setStatementTarget] = useState(null)
   const [printTarget, setPrintTarget] = useState(null)
   const [reconcileTarget, setReconcileTarget] = useState(null)
 
@@ -171,7 +175,7 @@ export default function Debtors() {
   const openEdit = (d) => {
     setEditingId(d.id)
     setForm({
-      name: d.name, phone: d.phone || '', tin_number: d.tin_number || '', total_owed: d.total_owed, note: d.note || '',
+      name: d.name, phone: d.phone || '', tin_number: d.tin_number || '', total_owed: d.total_owed, note: d.note || '', adjustment_reason: d.adjustment_reason || '',
       created_at: d.created_at,
       items: (d.items || []).map((it) => ({
         item_id: it.item_id, description: it.description, quantity: it.quantity, unit_price: it.unit_price,
@@ -210,6 +214,7 @@ export default function Debtors() {
       const payload = {
         name: form.name.trim(), phone: form.phone, tin_number: form.tin_number, total_owed: Number(form.total_owed) || 0,
         note: form.note,
+        adjustment_reason: form.adjustment_reason,
         items: form.items
           .filter((l) => l.description.trim())
           .map((l) => ({ item_id: l.item_id, description: l.description, quantity: Number(l.quantity) || 1, unit_price: Number(l.unit_price) || 0 })),
@@ -227,9 +232,9 @@ export default function Debtors() {
 
   const recordPayment = async () => {
     try {
-      await api.post(`/ledgers/debtors/pay/${payTarget.id}`, { amount: Number(payAmount) })
+      await api.post(`/ledgers/debtors/pay/${payTarget.id}`, paymentBody(payment))
       setPayTarget(null)
-      setPayAmount(0)
+      setPayment(emptyPayment())
       load()
     } catch (e) {
       setError(e.message)
@@ -305,7 +310,8 @@ export default function Debtors() {
               onBack={() => setSelected(null)}
               onEdit={openEdit}
               onDelete={remove}
-              onPay={(d) => { setPayTarget(d); setPayAmount(d.total_owed - d.amount_paid) }}
+              onPay={(d) => { setPayTarget(d); setPayment({ ...emptyPayment(), amount: d.total_owed - d.amount_paid }) }}
+              onStatement={(d) => setStatementTarget(d)}
               onPrint={setPrintTarget}
               onReconcile={(d) => setReconcileTarget({ phone: d.phone || '', tin_number: d.tin_number || '' })}
               downloadDebitNote={downloadDebitNote}
@@ -347,6 +353,13 @@ export default function Debtors() {
               <input type="number" value={form.total_owed} onChange={(e) => { setForm({ ...form, total_owed: Number(e.target.value) }); setLockTotal(false); }} disabled={lockTotal && itemsTotal > 0} />
               {lockTotal && itemsTotal > 0 && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Calculated from items</div>}
             </div>
+
+            {itemsTotal > 0 && Math.abs((Number(form.total_owed) || 0) - itemsTotal) >= 0.5 && (
+              <div className="form-row span-2">
+                <label>Why is Total Owed different from the items ({money(itemsTotal)})?</label>
+                <input value={form.adjustment_reason} onChange={(e) => setForm({ ...form, adjustment_reason: e.target.value })} placeholder="e.g. discount given, transport added, rounding" />
+              </div>
+            )}
 
             <div className="form-row span-2"><label>Note</label><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional note about this debt" /></div>
           </div>
@@ -411,10 +424,15 @@ export default function Debtors() {
             </div>
             <div className="form-row" style={{ textAlign: 'left' }}>
               <label>Amount Received</label>
-              <input type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} autoFocus />
+              <input type="number" value={payment.amount} onChange={(e) => setPayment({ ...payment, amount: e.target.value })} autoFocus />
             </div>
           </div>
+          <PaymentFields value={payment} onChange={setPayment} />
         </Modal>
+      )}
+
+      {statementTarget && (
+        <AccountStatement partyType="debtor" partyId={statementTarget.id} company={account} onClose={() => setStatementTarget(null)} />
       )}
 
       {printTarget && (

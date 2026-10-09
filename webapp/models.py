@@ -492,7 +492,12 @@ class Debtor(Base):
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Why Total Owed differs from the sum of the item lines, when it does
+    # (a typed override). Shown on the account statement.
+    adjustment_reason = Column(String(255), default="")
+
     items = relationship("DebtorItem", back_populates="debtor", cascade="all, delete-orphan")
+    payments = relationship("DebtorPayment", back_populates="debtor", cascade="all, delete-orphan")
 
 
 class DebtorItem(Base):
@@ -532,7 +537,53 @@ class Creditor(Base):
     note = Column(String(255), default="")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Mirrors Debtor.adjustment_reason.
+    adjustment_reason = Column(String(255), default="")
+
     items = relationship("CreditorItem", back_populates="creditor", cascade="all, delete-orphan")
+    payments = relationship("CreditorPayment", back_populates="creditor", cascade="all, delete-orphan")
+
+
+class DebtorPayment(Base):
+    """One payment received against a Debtor. Debtor.amount_paid is kept as the
+    running total (so existing reports keep working), but this table is the
+    record of HOW it got there — date, method, note, who entered it.
+    kind="opening" marks the single row created for money that was already
+    recorded before payments were tracked individually."""
+    __tablename__ = "debtor_payments"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    debtor_id = Column(Integer, ForeignKey(fk_ref("debtors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    paid_at = Column(DateTime, default=datetime.utcnow)
+    method = Column(String(40), default="cash")
+    note = Column(String(255), default="")
+    recorded_by = Column(String(100), default="")
+    kind = Column(String(20), default="payment")  # "payment" | "opening"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    debtor = relationship("Debtor", back_populates="payments")
+
+
+class CreditorPayment(Base):
+    """Mirrors DebtorPayment — one payment MADE to a supplier (Creditor)."""
+    __tablename__ = "creditor_payments"
+    __table_args__ = schema_args(SCHEMA_BUSINESS)
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    creditor_id = Column(Integer, ForeignKey(fk_ref("creditors.id", SCHEMA_BUSINESS)), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    paid_at = Column(DateTime, default=datetime.utcnow)
+    method = Column(String(40), default="cash")
+    note = Column(String(255), default="")
+    recorded_by = Column(String(100), default="")
+    kind = Column(String(20), default="payment")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    creditor = relationship("Creditor", back_populates="payments")
 
 
 class CreditorItem(Base):

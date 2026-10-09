@@ -106,10 +106,13 @@ _SCHEMA_MIGRATIONS = {
         # Reconciliation key alongside phone — see models.Debtor.tin_number
         # and routers/ledgers.py:reconcile_party().
         ("tin_number", "VARCHAR(50)", "''"),
+        # Reason Total Owed differs from the items total — see models.Debtor.adjustment_reason.
+        ("adjustment_reason", "VARCHAR(255)", "''"),
     ],
     ("business", "creditors"): [
         # Mirrors debtors.tin_number — see models.Creditor.tin_number.
         ("tin_number", "VARCHAR(50)", "''"),
+        ("adjustment_reason", "VARCHAR(255)", "''"),
     ],
     ("business", "expenses"): [
         # Which till/bank/mobile-money account the expense was paid from —
@@ -347,3 +350,33 @@ def run_migrations(engine: Engine):
     _migrate_inventory_sku_constraint(engine, inspector, is_sqlite)
     _migrate_po_approved_enum_value(engine, is_sqlite)
     _migrate_renumber_chart_of_accounts(engine, inspector)
+    _backfill_opening_payments(engine)
+
+
+def _backfill_opening_payments(engine: Engine):
+    """Before individual payments were recorded, a debtor/creditor only had a
+    running Amount Paid. Give every such party ONE honest "opening" payment
+    row for that amount, so statements add up to the same figure as before —
+    without inventing a history that was never recorded. Idempotent: a party
+    that already has any payment row is skipped."""
+    from datetime import datetime
+    from sqlalchemy.orm import Session
+    from models import Debtor, Creditor, DebtorPayment, CreditorPayment
+
+    with Session(engine) as db:
+        for Party, Pay, fk in ((Debtor, DebtorPayment, "debtor_id"), (Creditor, CreditorPayment, "creditor_id")):
+            have_rows = {row[0] for row in db.query(getattr(Pay, fk)).distinct()}
+            added = 0
+            for party in db.query(Party).filter(Party.amount_paid > 0):
+                if party.id in have_rows:
+                    continue
+                db.add(Pay(
+                    account_id=party.account_id, **{fk: party.id},
+                    amount=party.amount_paid, paid_at=party.created_at or datetime.utcnow(),
+                    method="legacy", kind="opening",
+                    note="Opening balance (before detailed records)", recorded_by="system",
+                ))
+                added += 1
+            if added:
+                print(f"[migrate] backfilled {added} opening payment row(s) for {Party.__tablename__}")
+        db.commit()
