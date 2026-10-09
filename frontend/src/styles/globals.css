@@ -2417,6 +2417,105 @@ label {
   font-weight: 600;
 }
 
+/* ---- Reconcile Modal & Statement Styling ---- */
+.reconcile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.reconcile-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.reconcile-party-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.reconcile-party-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.reconcile-status-badge {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+.reconcile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface-sunken);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.reconcile-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.reconcile-summary-val {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.reconcile-val-net {
+  color: var(--success);
+}
+
+.reconcile-val-net.we-owe {
+  color: var(--danger);
+}
+
+.reconcile-offset-row {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reconcile-offset-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.reconcile-offset-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.reconcile-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--text-dark);
+}
+
 /* One compact card per line: the item picker takes all the leftover width,
    Qty and Price stay narrow. Line total (and profit, if shown) sit on a thin
    second row so the main row is never crowded. */

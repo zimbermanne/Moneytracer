@@ -21,14 +21,6 @@ function shortDate(d) {
 
 const MATCH_LABELS = { phone: 'Phone', tin: 'TIN', 'phone+tin': 'Phone + TIN' }
 
-/**
- * Dedicated Account Reconciliation & Contra Offset Window.
- *
- * Pulls every Debtor row and every Creditor row tied to a single party (GET /ledgers/reconcile),
- * displays a unified accounting ledger with net position, enables single-click
- * Contra Offset netting (POST /ledgers/reconcile/offset) to clear overlapping debt, and
- * exports a formal A4 PDF Reconciliation Statement (GET /ledgers/reconcile/pdf).
- */
 export default function ReconciliationStatement({ company, initialPhone = '', initialTin = '', onClose }) {
   const api = useApi()
   const [phone, setPhone] = useState(initialPhone)
@@ -76,7 +68,7 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
       return
     }
 
-    if (!confirm(`Offset TZS ${money(maxOffset)} between Debtor and Creditor balances for ${statement.party_name}?`)) {
+    if (!confirm(`Offset TZS ${money(maxOffset)} directly between Debtor and Creditor balances for ${statement.party_name}?`)) {
       return
     }
 
@@ -146,8 +138,8 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
         </>)}
       >
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-          A counterparty can be both a customer (Debtor) and a supplier (Creditor).
-          Enter their phone number or TIN to pull their unified ledger statement.
+          A party can be both a debtor and a creditor. Enter their phone number
+          or TIN to pull their unified ledger statement.
         </div>
         {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
         <div className="form-row">
@@ -162,30 +154,30 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
     )
   }
 
-  // ---- Step 2: Dedicated Reconciliation Window ----
+  // ---- Step 2: Statement Window ----
   const net = statement.net_balance || 0
   const unpaidDebtor = statement.entries.filter((e) => e.kind === 'debit').reduce((s, e) => s + (e.amount - e.paid), 0)
   const unpaidCreditor = statement.entries.filter((e) => e.kind === 'credit').reduce((s, e) => s + (e.amount - e.paid), 0)
   const maxOffset = Math.min(unpaidDebtor, unpaidCreditor)
 
   const columns = [
-    { key: 'date', header: 'Date', render: (r) => shortDate(r.date) },
-    { key: 'doc_no', header: 'Ref #', render: (r) => <strong>{r.doc_no}</strong> },
+    { key: 'date', header: 'DATE', render: (r) => shortDate(r.date) },
+    { key: 'doc_no', header: 'REF #', render: (r) => <strong>{r.doc_no}</strong> },
     {
       key: 'kind',
-      header: 'Type',
+      header: 'TYPE',
       render: (r) => (
         <span className={`badge badge-${r.kind === 'debit' ? 'unpaid' : 'partial'}`}>
           {r.kind === 'debit' ? 'Debtor (Receivable)' : 'Creditor (Payable)'}
         </span>
       ),
     },
-    { key: 'reference', header: 'Notes / Reference', render: (r) => r.reference || '—' },
-    { key: 'amount', header: 'Total Owed', render: (r) => `TZS ${money(r.amount)}` },
-    { key: 'paid', header: 'Paid', render: (r) => `TZS ${money(r.paid)}` },
+    { key: 'reference', header: 'NOTES / REFERENCE', render: (r) => r.reference || '—' },
+    { key: 'amount', header: 'TOTAL OWED', render: (r) => `TZS ${money(r.amount)}` },
+    { key: 'paid', header: 'PAID', render: (r) => `TZS ${money(r.paid)}` },
     {
       key: 'balance',
-      header: 'Net Running Balance',
+      header: 'NET RUNNING BALANCE',
       render: (r) => (
         <strong style={{ color: r.balance > 0 ? 'var(--success)' : r.balance < 0 ? 'var(--danger)' : 'inherit' }}>
           TZS {money(Math.abs(r.balance))} {r.balance > 0 ? '(Dr)' : r.balance < 0 ? '(Cr)' : ''}
@@ -220,41 +212,41 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
       {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
       {/* Summary Header Card */}
-      <div className="card" style={{ padding: 18, marginBottom: 20, background: 'var(--surface)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+      <div className="reconcile-card">
+        <div className="reconcile-header-row">
           <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{statement.party_name}</h2>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            <div className="reconcile-party-name">{statement.party_name}</div>
+            <div className="reconcile-party-sub">
               Phone: {statement.phone || '—'} | TIN: {statement.tin_number || '—'} | Matched on: {MATCH_LABELS[statement.matched_on] || statement.matched_on}
             </div>
           </div>
-          <span className={`badge badge-${net === 0 ? 'paid' : net > 0 ? 'unpaid' : 'partial'}`} style={{ fontSize: 13, padding: '6px 12px' }}>
+          <span className={`badge badge-${net === 0 ? 'paid' : net > 0 ? 'unpaid' : 'partial'} reconcile-status-badge`}>
             {net === 0 ? 'SETTLED / RECONCILED' : net > 0 ? 'THEY OWE US' : 'WE OWE THEM'}
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, padding: 14, background: 'var(--surface-sunken)', borderRadius: 10 }}>
+        <div className="reconcile-summary-grid">
           <div>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Total Receivable (Debtor)</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-dark)', marginTop: 2 }}>TZS {money(statement.total_debit)}</div>
+            <div className="reconcile-summary-label">TOTAL RECEIVABLE (DEBTOR)</div>
+            <div className="reconcile-summary-val">TZS {money(statement.total_debit)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Total Payable (Creditor)</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-dark)', marginTop: 2 }}>TZS {money(statement.total_credit)}</div>
+            <div className="reconcile-summary-label">TOTAL PAYABLE (CREDITOR)</div>
+            <div className="reconcile-summary-val">TZS {money(statement.total_credit)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Net Position</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: net > 0 ? 'var(--success)' : net < 0 ? 'var(--danger)' : 'var(--text-dark)', marginTop: 2 }}>
+            <div className="reconcile-summary-label">NET POSITION</div>
+            <div className={`reconcile-summary-val reconcile-val-net${net < 0 ? ' we-owe' : ''}`}>
               TZS {money(Math.abs(net))} {net > 0 ? '(Dr)' : net < 0 ? '(Cr)' : ''}
             </div>
           </div>
         </div>
 
         {maxOffset > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div className="reconcile-offset-row">
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Overlapping Debt Available for Contra Offset</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              <div className="reconcile-offset-title">Overlapping Debt Available for Contra Offset</div>
+              <div className="reconcile-offset-desc">
                 You can offset <strong>TZS {money(maxOffset)}</strong> directly between Debtor and Creditor balances in equal measure.
               </div>
             </div>
@@ -267,7 +259,7 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
 
       {/* Unified Chronological Ledger Table */}
       <div style={{ marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Unified Ledger Entries</h3>
+        <h3 className="reconcile-section-title">Unified Ledger Entries</h3>
         <Table
           columns={columns}
           rows={statement.entries || []}
