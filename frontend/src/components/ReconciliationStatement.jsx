@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Modal from './Modal.jsx'
 import Table from './Table.jsx'
 import { useApi } from '../hooks/useApi.js'
+import { apiUrl } from '../api-config.js'
+import { downloadFile } from '../utils/download.js'
 import { buildReconciliationStatementEscPos } from '../utils/escpos.js'
 import {
   isBluetoothSupported, connectPrinter, printBytes, getConnectedPrinterName, disconnectPrinter,
@@ -23,10 +25,9 @@ const MATCH_LABELS = { phone: 'Phone', tin: 'TIN', 'phone+tin': 'Phone + TIN' }
  * Dedicated Account Reconciliation & Contra Offset Window.
  *
  * Pulls every Debtor row and every Creditor row tied to a single party (GET /ledgers/reconcile),
- * displays a unified accounting ledger with net position, and enables single-click
- * Contra Offset netting (POST /ledgers/reconcile/offset) to clear overlapping debt.
- *
- * Includes an optional Thermal Print Preview section for 58mm/80mm Bluetooth & POS printers.
+ * displays a unified accounting ledger with net position, enables single-click
+ * Contra Offset netting (POST /ledgers/reconcile/offset) to clear overlapping debt, and
+ * exports a formal A4 PDF Reconciliation Statement (GET /ledgers/reconcile/pdf).
  */
 export default function ReconciliationStatement({ company, initialPhone = '', initialTin = '', onClose }) {
   const api = useApi()
@@ -94,6 +95,15 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
     } finally {
       setOffsetting(false)
     }
+  }
+
+  const handleExportPdf = () => {
+    if (!statement) return
+    const params = new URLSearchParams()
+    if (statement.phone || phone) params.set('phone', statement.phone || phone)
+    if (statement.tin_number || tin) params.set('tin', statement.tin_number || tin)
+    const filename = `ReconciliationStatement-${statement.party_name.replace(/\s+/g, '-')}.pdf`
+    downloadFile(apiUrl(`/api/ledgers/reconcile/pdf?${params.toString()}`), filename)
   }
 
   const handleSystemPrint = () => window.print()
@@ -193,14 +203,15 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
         <>
           <button className="btn btn-outline" onClick={() => setStatement(null)}>← New Search</button>
           <button className="btn btn-outline" onClick={() => setShowThermalPreview(!showThermalPreview)}>
-            {showThermalPreview ? '📋 Hide Receipt Preview' : '🖨 Thermal Receipt Preview'}
+            {showThermalPreview ? '📋 Hide Thermal Receipt' : '🖨 Thermal Receipt'}
           </button>
           {isBluetoothSupported() && (
             <button className="btn btn-outline" onClick={handleBluetoothPrint} disabled={btBusy}>
-              {btBusy ? 'Sending…' : btPrinterName ? `🖨 Print to ${btPrinterName}` : '🔵 Print via Bluetooth'}
+              {btBusy ? 'Sending…' : btPrinterName ? `🖨 Print to ${btPrinterName}` : '🔵 Bluetooth Print'}
             </button>
           )}
-          <button className="btn btn-primary" onClick={handleSystemPrint}>🖨 Print Statement</button>
+          <button className="btn btn-primary" onClick={handleExportPdf}>⬇ Export PDF Statement</button>
+          <button className="btn btn-outline" onClick={handleSystemPrint}>🖨 Print</button>
           <button className="btn btn-outline" onClick={onClose}>Close</button>
         </>
       )}

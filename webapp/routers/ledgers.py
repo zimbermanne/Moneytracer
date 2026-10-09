@@ -737,6 +737,207 @@ def reconcile_party(
     )
 
 
+def _render_reconciliation_pdf(statement: ReconciliationStatement, account: dict) -> io.BytesIO:
+    """Renders a complete, highly presentable A4 PDF Reconciliation Statement document
+    including letterhead, boxed party metadata, 3-column financial summary card (Receivable,
+    Payable, Net Position), and a clean chronological unified ledger table with running balances."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+    NAVY  = colors.HexColor("#1F3864")
+    GREEN = colors.HexColor("#2E7D32")
+    RED   = colors.HexColor("#C0392B")
+    INK   = colors.HexColor("#2B2622")
+    LINE  = colors.HexColor("#D1D5DB")
+    BG_LIGHT = colors.HexColor("#F9FAFB")
+
+    biz_name    = (account or {}).get("name") or COMPANY_NAME
+    biz_address = (account or {}).get("address") or COMPANY_ADDRESS
+    biz_phone   = (account or {}).get("phone") or COMPANY_PHONE
+    biz_email   = (account or {}).get("email") or COMPANY_EMAIL
+
+    buf = io.BytesIO()
+    pdf = SimpleDocTemplate(buf, pagesize=A4,
+          topMargin=14*mm, bottomMargin=18*mm, leftMargin=14*mm, rightMargin=14*mm)
+    styles = getSampleStyleSheet()
+
+    normal   = ParagraphStyle("N", parent=styles["Normal"], fontSize=9, leading=12, textColor=INK)
+    normal_b = ParagraphStyle("NB", parent=normal, fontName="Helvetica-Bold")
+    label    = ParagraphStyle("L", parent=normal, fontName="Helvetica-Bold", fontSize=8.5, textColor=NAVY)
+
+    elems = []
+
+    # ---- 1. Company Letterhead ----
+    company_style = ParagraphStyle("Co", parent=styles["Normal"], fontSize=18, leading=22,
+                                    alignment=TA_CENTER, textColor=NAVY, fontName="Helvetica-Bold")
+    sub_style = ParagraphStyle("Sub", parent=styles["Normal"], fontSize=9, leading=12,
+                                alignment=TA_CENTER, textColor=INK)
+    elems.append(Paragraph(biz_name, company_style))
+    contact_bits = [b for b in [biz_address, biz_phone and f"Tel: {biz_phone}", biz_email] if b]
+    if contact_bits:
+        elems.append(Paragraph(" &nbsp;•&nbsp; ".join(contact_bits), sub_style))
+    elems.append(Spacer(1, 3*mm))
+
+    hr = Table([[""]], colWidths=[182*mm])
+    hr.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 1.2, NAVY)]))
+    elems += [hr, Spacer(1, 4*mm)]
+
+    # ---- 2. Document Title ----
+    title_style = ParagraphStyle("Title", parent=styles["Normal"], fontSize=18, leading=22,
+                                  alignment=TA_CENTER, textColor=NAVY, fontName="Helvetica-Bold")
+    elems.append(Paragraph("CLIENT RECONCILIATION STATEMENT", title_style))
+    meta_style = ParagraphStyle("Meta", parent=styles["Normal"], fontSize=8.5, leading=11,
+                                 alignment=TA_CENTER, textColor=INK)
+    elems.append(Paragraph(f"Date Printed: {datetime.now().strftime('%d %b, %Y %I:%M %p')}", meta_style))
+    elems.append(Spacer(1, 4*mm))
+
+    # ---- 3. Party Info & Summary Card ----
+    net = statement.net_balance or 0.0
+    net_label = "SETTLED / RECONCILED" if net == 0 else ("THEY OWE US (Receivable)" if net > 0 else "WE OWE THEM (Payable)")
+    net_color = GREEN if net > 0 else (RED if net < 0 else NAVY)
+
+    party_box_rows = [
+        [
+            Paragraph(f"<b>Client / Counterparty:</b> {statement.party_name}", normal),
+            Paragraph(f"<b>Status:</b> <font color='{net_color.hexval()}'><b>{net_label}</b></font>", normal)
+        ],
+        [
+            Paragraph(f"<b>Phone:</b> {statement.phone or '—'}", normal),
+            Paragraph(f"<b>TIN:</b> {statement.tin_number or '—'} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Match:</b> {statement.matched_on}", normal)
+        ]
+    ]
+    party_box = Table(party_box_rows, colWidths=[100*mm, 82*mm])
+    party_box.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, LINE),
+        ("BACKGROUND", (0, 0), (-1, -1), BG_LIGHT),
+        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elems += [party_box, Spacer(1, 4*mm)]
+
+    # 3-Column Financial Position Card
+    card_title_style = ParagraphStyle("CT", parent=styles["Normal"], fontSize=8, leading=10, textColor=colors.HexColor("#6B7280"), fontName="Helvetica-Bold", alignment=TA_CENTER)
+    card_val_style = ParagraphStyle("CV", parent=styles["Normal"], fontSize=11, leading=14, textColor=NAVY, fontName="Helvetica-Bold", alignment=TA_CENTER)
+    net_val_style = ParagraphStyle("NV", parent=styles["Normal"], fontSize=11, leading=14, textColor=net_color, fontName="Helvetica-Bold", alignment=TA_CENTER)
+
+    summary_card = Table([
+        [
+            Paragraph("TOTAL RECEIVABLE (DEBTOR)", card_title_style),
+            Paragraph("TOTAL PAYABLE (CREDITOR)", card_title_style),
+            Paragraph("NET POSITION", card_title_style),
+        ],
+        [
+            Paragraph(f"TZS {statement.total_debit:,.2f}", card_val_style),
+            Paragraph(f"TZS {statement.total_credit:,.2f}", card_val_style),
+            Paragraph(f"TZS {abs(net):,.2f} {'(Dr)' if net > 0 else '(Cr)' if net < 0 else ''}", net_val_style),
+        ]
+    ], colWidths=[60.6*mm, 60.6*mm, 60.6*mm])
+    summary_card.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.6, NAVY),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F4F6")),
+        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elems += [summary_card, Spacer(1, 6*mm)]
+
+    # ---- 4. Table Header Section ----
+    sec_hdr_style = ParagraphStyle("SH", parent=styles["Normal"], fontSize=10, leading=12, textColor=colors.white, fontName="Helvetica-Bold")
+    sec_hdr = Table([[Paragraph("UNIFIED CHRONOLOGICAL LEDGER ENTRIES", sec_hdr_style)]], colWidths=[182*mm])
+    sec_hdr.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elems += [sec_hdr]
+
+    # ---- 5. Ledger Entries Table ----
+    table_hdr_style = ParagraphStyle("TH", parent=styles["Normal"], fontSize=8, leading=10, textColor=NAVY, fontName="Helvetica-Bold")
+    table_cell_style = ParagraphStyle("TC", parent=styles["Normal"], fontSize=8, leading=10, textColor=INK)
+    table_cell_bold = ParagraphStyle("TCB", parent=table_cell_style, fontName="Helvetica-Bold")
+    table_cell_right = ParagraphStyle("TCR", parent=table_cell_style, alignment=TA_RIGHT)
+    table_cell_right_bold = ParagraphStyle("TCRB", parent=table_cell_bold, alignment=TA_RIGHT)
+
+    table_rows = [[
+        Paragraph("DATE", table_hdr_style),
+        Paragraph("REF #", table_hdr_style),
+        Paragraph("TYPE", table_hdr_style),
+        Paragraph("NOTES / REFERENCE", table_hdr_style),
+        Paragraph("OWED (TZS)", ParagraphStyle("THR", parent=table_hdr_style, alignment=TA_RIGHT)),
+        Paragraph("PAID (TZS)", ParagraphStyle("THR", parent=table_hdr_style, alignment=TA_RIGHT)),
+        Paragraph("NET BALANCE (TZS)", ParagraphStyle("THR", parent=table_hdr_style, alignment=TA_RIGHT)),
+    ]]
+
+    for e in statement.entries:
+        dt_str = e.date.strftime("%d/%m/%Y") if isinstance(e.date, datetime) else str(e.date)[:10]
+        type_str = "Debtor (In)" if e.kind == "debit" else "Creditor (Out)"
+        bal_str = f"{abs(e.balance):,.2f} {'(Dr)' if e.balance > 0 else '(Cr)' if e.balance < 0 else ''}"
+
+        table_rows.append([
+            Paragraph(dt_str, table_cell_style),
+            Paragraph(e.doc_no, table_cell_bold),
+            Paragraph(type_str, table_cell_style),
+            Paragraph(e.reference or "—", table_cell_style),
+            Paragraph(f"{e.amount:,.2f}", table_cell_right),
+            Paragraph(f"{e.paid:,.2f}", table_cell_right),
+            Paragraph(bal_str, table_cell_right_bold),
+        ])
+
+    if not statement.entries:
+        table_rows.append([
+            Paragraph("No transactions on record.", table_cell_style), "", "", "", "", "", ""
+        ])
+
+    col_widths = [22*mm, 24*mm, 28*mm, 42*mm, 22*mm, 20*mm, 24*mm]
+    ledger_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
+    ledger_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, LINE),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, BG_LIGHT]),
+        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elems += [ledger_table, Spacer(1, 6*mm)]
+
+    # ---- 6. Footer Notes ----
+    elems.append(Paragraph("<b>Note:</b> This Reconciliation Statement reflects all recorded debtor and creditor transactions up to the printed date.", ParagraphStyle("FootN", parent=normal, fontSize=8, textColor=colors.HexColor("#6B7280"))))
+
+    def draw_page_footer(canvas, pdf_doc):
+        canvas.saveState()
+        p = Paragraph("Moneytracer Accounting System", ParagraphStyle("FP", parent=styles["Normal"], fontSize=8, alignment=TA_CENTER, textColor=colors.HexColor("#9CA3AF")))
+        w, h = p.wrap(pdf_doc.width, pdf_doc.bottomMargin)
+        p.drawOn(canvas, pdf_doc.leftMargin, 8*mm)
+        canvas.restoreState()
+
+    pdf.build(elems, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
+    buf.seek(0)
+    return buf
+
+
+@router.get("/reconcile/pdf")
+def reconcile_party_pdf(
+    phone: Optional[str] = Query(None, description="Phone number to match on"),
+    tin: Optional[str] = Query(None, description="TIN to match on"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate and return a formal A4 PDF Reconciliation Statement for a party matched by phone/TIN."""
+    statement = reconcile_party(phone=phone, tin=tin, db=db, current_user=current_user)
+    account_id = get_account_filter(current_user)
+    account = get_account_details(db, account_id) if account_id else None
+    buf = _render_reconciliation_pdf(statement, account)
+    log_activity_for_user(db, current_user, "reconciliation_pdf_export", f"Exported reconciliation PDF for {statement.party_name}")
+    safe_filename = statement.party_name.replace(" ", "-")
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="ReconciliationStatement-{safe_filename}.pdf"'}
+    )
+
+
 @router.post("/reconcile/offset", response_model=ReconciliationOffsetResponse)
 def offset_reconciliation_party(
     payload: ReconciliationOffsetRequest,
