@@ -25,10 +25,8 @@ const MATCH_LABELS = { phone: 'Phone', tin: 'TIN', 'phone+tin': 'Phone + TIN' }
  * so a customer who is also a supplier (or was, at different times) gets
  * one statement instead of two disconnected ledgers.
  *
- * Two-step modal: search form first, then the printable statement once a
- * match is found — same "search -> preview -> print" shape as the rest of
- * the ledger print flows (see ThermalStatement.jsx), reusing the same
- * paper-width preference and Bluetooth/system print paths.
+ * Includes single-click Contra Offset functionality (POST /ledgers/reconcile/offset)
+ * to net out overlapping debtor and creditor debts in equal measure.
  */
 export default function ReconciliationStatement({ company, initialPhone = '', initialTin = '', onClose }) {
   const api = useApi()
@@ -36,6 +34,7 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
   const [tin, setTin] = useState(initialTin)
   const [statement, setStatement] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [offsetting, setOffsetting] = useState(false)
   const [error, setError] = useState('')
 
   const [paperWidth, setPaperWidth] = useState(() => localStorage.getItem(PAPER_WIDTH_KEY) || '58')
@@ -61,6 +60,39 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleOffset = async () => {
+    if (!statement) return
+    const maxOffset = Math.min(
+      statement.entries.filter((e) => e.kind === 'debit').reduce((s, e) => s + (e.amount - e.paid), 0),
+      statement.entries.filter((e) => e.kind === 'credit').reduce((s, e) => s + (e.amount - e.paid), 0)
+    )
+    if (maxOffset <= 0) {
+      setError('No overlapping balance available between Debtor and Creditor accounts to offset.')
+      return
+    }
+
+    if (!confirm(`Offset TZS ${money(maxOffset)} between Debtor and Creditor balances for ${statement.party_name}?`)) {
+      return
+    }
+
+    setOffsetting(true)
+    setError('')
+    setNotice('')
+    try {
+      const res = await api.post('/ledgers/reconcile/offset', {
+        phone: statement.phone || phone,
+        tin: statement.tin_number || tin,
+      })
+      setNotice(res.message || `Successfully offset TZS ${money(res.offset_amount)}.`)
+      // Refresh statement
+      search()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setOffsetting(false)
     }
   }
 
@@ -115,8 +147,11 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
     )
   }
 
-  // ---- Step 2: found — show the merged, printable statement ----
+  // ---- Step 2: found — show statement with summary card & contra offset action ----
   const net = statement.net_balance || 0
+  const unpaidDebtor = statement.entries.filter((e) => e.kind === 'debit').reduce((s, e) => s + (e.amount - e.paid), 0)
+  const unpaidCreditor = statement.entries.filter((e) => e.kind === 'credit').reduce((s, e) => s + (e.amount - e.paid), 0)
+  const maxOffset = Math.min(unpaidDebtor, unpaidCreditor)
 
   return (
     <Modal title={`Reconciliation — ${statement.party_name}`} onClose={onClose} isDirty={false} footer={(
@@ -131,6 +166,48 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
         <button className="btn btn-primary" onClick={handleSystemPrint}>🖨 Print</button>
       </>
     )}>
+      <div className="card" style={{ padding: 16, marginBottom: 16, background: 'var(--surface)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{statement.party_name}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Phone: {statement.phone || '—'} | TIN: {statement.tin_number || '—'}
+            </div>
+          </div>
+          <span className={`badge badge-${net === 0 ? 'paid' : net > 0 ? 'unpaid' : 'partial'}`}>
+            {net === 0 ? 'SETTLED' : net > 0 ? 'THEY OWE US' : 'WE OWE THEM'}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: 12, background: 'var(--surface-sunken)', borderRadius: 8 }}>
+          <div>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Receivable (Debtor)</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{money(statement.total_debit)} TZS</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Payable (Creditor)</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>{money(statement.total_credit)} TZS</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Net Position</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: net > 0 ? 'var(--success)' : net < 0 ? 'var(--danger)' : 'var(--text-dark)' }}>
+              {money(Math.abs(net))} TZS {net > 0 ? '(Dr)' : net < 0 ? '(Cr)' : ''}
+            </div>
+          </div>
+        </div>
+
+        {maxOffset > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Overlapping balance available to offset: <strong>TZS {money(maxOffset)}</strong>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={handleOffset} disabled={offsetting}>
+              {offsetting ? 'Offsetting…' : '⚡ Contra Offset Net Balance'}
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="receipt-controls">
         <label>Paper width</label>
         <div className="receipt-width-toggle">
@@ -144,7 +221,7 @@ export default function ReconciliationStatement({ company, initialPhone = '', in
         )}
       </div>
 
-      {notice && <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 8 }}>{notice}</div>}
+      {notice && <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 8, fontWeight: 600 }}>{notice}</div>}
       {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
 
       <div className={`receipt-print-area receipt-width-${paperWidth}`}>

@@ -1064,6 +1064,20 @@ class ReconciliationStatement(BaseModel):
     entries: List[ReconciliationEntry]
 
 
+class ReconciliationOffsetRequest(BaseModel):
+    phone: Optional[str] = None
+    tin: Optional[str] = None
+    amount: Optional[float] = None
+    note: Optional[str] = ""
+
+
+class ReconciliationOffsetResponse(BaseModel):
+    success: bool
+    offset_amount: float
+    party_name: str
+    message: str
+
+
 class LedgerOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

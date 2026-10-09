@@ -20,6 +20,7 @@ from schemas import (
     ChartOfAccountOut, JournalEntryOut, JournalEntryCreate, JournalLineOut,
     PaymentMethodOut, PaymentMethodCreate, PaymentMethodUpdate,
     ReconciliationEntry, ReconciliationStatement,
+    ReconciliationOffsetRequest, ReconciliationOffsetResponse,
     PartyStatement, StatementLine, StockReceiptLine,
 )
 from auth import get_current_user, require_manager_up, require_admin, require_accountant_up, require_sales_up, require_inventory_up
@@ -733,6 +734,109 @@ def reconcile_party(
         total_credit=total_credit,
         net_balance=running,
         entries=entries,
+    )
+
+
+@router.post("/reconcile/offset", response_model=ReconciliationOffsetResponse)
+def offset_reconciliation_party(
+    payload: ReconciliationOffsetRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Contra-offset / netting endpoint: when a party is both a debtor (they owe us)
+    and a creditor (we owe them), offset their overlapping balances in equal measure,
+    reducing both total_owed/amount_paid positions simultaneously and logging a
+    'Contra Offset' payment record on both ledgers."""
+    phone = payload.phone.strip() if payload.phone else None
+    tin = payload.tin.strip() if payload.tin else None
+    if not phone and not tin:
+        raise HTTPException(status_code=400, detail="Provide a phone number or TIN to perform offset on")
+
+    account_id = get_account_filter(current_user)
+    norm_phone = _normalize_phone(phone) if phone else None
+    tin_clean = tin if tin else None
+
+    def _scoped_query(model):
+        q = db.query(model)
+        if account_id is not None:
+            q = q.filter(model.account_id == account_id)
+        return q.all()
+
+    debtors = [d for d in _scoped_query(Debtor)
+               if (norm_phone and _normalize_phone(d.phone) == norm_phone)
+               or (tin_clean and d.tin_number and d.tin_number.strip() == tin_clean)]
+    creditors = [c for c in _scoped_query(Creditor)
+                 if (norm_phone and _normalize_phone(c.phone) == norm_phone)
+                 or (tin_clean and c.tin_number and c.tin_number.strip() == tin_clean)]
+
+    if not debtors and not creditors:
+        raise HTTPException(status_code=404, detail="No matching debtor or creditor records found for offset")
+
+    party_name = (debtors + creditors)[0].name
+
+    # Calculate active unpaid balances
+    unpaid_debtors = [d for d in debtors if (d.total_owed or 0) - (d.amount_paid or 0) > 0.001]
+    unpaid_creditors = [c for c in creditors if (c.total_owed or 0) - (c.amount_paid or 0) > 0.001]
+
+    total_debtor_balance = sum((d.total_owed or 0) - (d.amount_paid or 0) for d in unpaid_debtors)
+    total_creditor_balance = sum((c.total_owed or 0) - (c.amount_paid or 0) for c in unpaid_creditors)
+
+    max_possible_offset = min(total_debtor_balance, total_creditor_balance)
+
+    if max_possible_offset <= 0:
+        raise HTTPException(status_code=400, detail="No overlapping debt between Debtor and Creditor balances to offset")
+
+    offset_amount = max_possible_offset
+    if payload.amount is not None and payload.amount > 0:
+        offset_amount = min(payload.amount, max_possible_offset)
+
+    # 1. Apply offset across unpaid Debtors
+    rem_debtor_offset = offset_amount
+    for d in unpaid_debtors:
+        if rem_debtor_offset <= 0:
+            break
+        d_balance = (d.total_owed or 0) - (d.amount_paid or 0)
+        alloc = min(d_balance, rem_debtor_offset)
+        d.amount_paid = (d.amount_paid or 0) + alloc
+        _update_status(d)
+        db.add(DebtorPayment(
+            account_id=d.account_id, debtor_id=d.id,
+            amount=alloc, paid_at=datetime.utcnow(),
+            method="Contra Offset",
+            note=f"Reconciliation contra offset against creditor balance. {payload.note or ''}".strip(),
+            recorded_by=current_user.username, kind="payment",
+        ))
+        rem_debtor_offset -= alloc
+
+    # 2. Apply offset across unpaid Creditors
+    rem_creditor_offset = offset_amount
+    for c in unpaid_creditors:
+        if rem_creditor_offset <= 0:
+            break
+        c_balance = (c.total_owed or 0) - (c.amount_paid or 0)
+        alloc = min(c_balance, rem_creditor_offset)
+        c.amount_paid = (c.amount_paid or 0) + alloc
+        _update_status(c)
+        db.add(CreditorPayment(
+            account_id=c.account_id, creditor_id=c.id,
+            amount=alloc, paid_at=datetime.utcnow(),
+            method="Contra Offset",
+            note=f"Reconciliation contra offset against debtor balance. {payload.note or ''}".strip(),
+            recorded_by=current_user.username, kind="payment",
+        ))
+        rem_creditor_offset -= alloc
+
+    db.commit()
+    log_activity_for_user(
+        db, current_user, "reconciliation_offset",
+        f"Performed TZS {offset_amount:,.2f} contra offset for {party_name}"
+    )
+
+    return ReconciliationOffsetResponse(
+        success=True,
+        offset_amount=round(offset_amount, 2),
+        party_name=party_name,
+        message=f"Successfully offset TZS {offset_amount:,.2f} between Debtor and Creditor balances for {party_name}."
     )
 
 
