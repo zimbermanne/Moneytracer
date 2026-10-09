@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useApi } from '../hooks/useApi.js'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { apiUrl } from '../api-config.js'
 import { downloadFile } from '../utils/download.js'
 import Accordion from '../components/Accordion.jsx'
 import { AlertBannerContainer } from '../components/AlertBanner.jsx'
+import ReconciliationStatement from '../components/ReconciliationStatement.jsx'
 
 function money(n) {
   return `TZS ${Number(n || 0).toLocaleString()}`
@@ -99,57 +101,25 @@ function ProfitLoss({ data }) {
 
       <Accordion title="2. Expenses by Category" defaultOpen={true}>
         <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
-          {Object.entries(data.expense_by_category).map(([name, val]) => (
-            <Row key={name} left={name} right={money(val)} />
+          {Object.entries(data.by_category || {}).map(([cat, amount]) => (
+            <Row key={cat} left={cat} right={money(amount)} />
           ))}
           <Row left="Total Operating Expenses" right={money(data.total_expenses)} bold border />
-          <Row left="Cost of Goods Sold (COGS)" right={money(data.cogs)} />
-          <Row left="Net Profit" right={money(data.net_profit)} bold color={marginColor(data.net_profit)} border />
         </div>
       </Accordion>
 
-      <Accordion title="3. Revenue by Item" defaultOpen={false}>
+      <Accordion title="3. Margin by Item (Top Sales)" defaultOpen={false}>
         <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
-          {Object.entries(data.revenue_by_item).map(([name, val]) => (
-            <Row key={name} left={name} right={money(val)} />
+          {(data.item_breakdown || []).map((it) => (
+            <Row
+              key={it.name}
+              left={`${it.name} (${it.quantity_sold} sold)`}
+              right={`${money(it.profit)} profit (${it.margin_pct}%)`}
+              color={marginColor(it.profit)}
+            />
           ))}
-          <Row left="Total Revenue" right={money(data.total_revenue)} bold border />
         </div>
       </Accordion>
-
-      {data.item_profitability && data.item_profitability.length > 0 && (
-        <Accordion title="4. Item Profitability Analysis" defaultOpen={true}>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 15 }}>
-            Sorted by gross profit — which items are actually making you money.
-          </div>
-          <div style={{ overflowX: 'auto', background: 'transparent', borderRadius: '12px' }}>
-            <table className="pl-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty Sold</th>
-                  <th>Revenue</th>
-                  <th>COGS</th>
-                  <th>Gross Profit</th>
-                  <th>Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.item_profitability.map((r) => (
-                  <tr key={r.item_name}>
-                    <td>{r.item_name}</td>
-                    <td>{r.quantity_sold}</td>
-                    <td>{money(r.revenue)}</td>
-                    <td>{money(r.cogs)}</td>
-                    <td style={{ color: marginColor(r.gross_profit), fontWeight: 600 }}>{money(r.gross_profit)}</td>
-                    <td>{r.gross_margin_pct}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Accordion>
-      )}
     </>
   )
 }
@@ -157,14 +127,15 @@ function ProfitLoss({ data }) {
 function CashFlow({ data }) {
   return (
     <>
-      <div className="card-grid">
-        <div className="card metric-card"><div className="label">Total Incoming</div><div className="value">{money(data.total_incoming)}</div></div>
-        <div className="card metric-card"><div className="label">Total Outgoing</div><div className="value">{money(data.total_outgoing)}</div></div>
-        <div className="card metric-card"><div className="label">Net</div><div className="value" style={{ color: marginColor(data.net) }}>{money(data.net)}</div></div>
-        <div className="card metric-card"><div className="label">Ending Balance</div><div className="value">{money(data.ending_balance)}</div></div>
+      <div className="card-grid" style={{ marginBottom: 20 }}>
+        <div className="card home-kpi-card metric-card">
+          <div className="label">12-Month Net Flow</div>
+          <div className="value" style={{ color: marginColor(data.net_12m) }}>{money(data.net_12m)}</div>
+        </div>
       </div>
-      <div className="card" style={{ marginTop: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Monthly Breakdown</h3>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Monthly Cash Flow</h3>
         <div style={{ overflowX: 'auto' }}>
           <table className="pl-table">
             <thead>
@@ -194,7 +165,7 @@ function CashFlow({ data }) {
   )
 }
 
-function LedgerReport({ data, listKey, title }) {
+function LedgerReport({ data, listKey, title, onReconcile }) {
   const list = data[listKey] || []
   return (
     <>
@@ -217,7 +188,12 @@ function LedgerReport({ data, listKey, title }) {
 
       {data.aging && (
         <div style={{ marginTop: 24 }}>
-          <h3 style={{ marginBottom: 16 }}>Aging Summary</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>Aging Summary</h3>
+            <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({})}>
+              🤝 Reconcile Account
+            </button>
+          </div>
           <div className="card-grid">
             {Object.entries({
               current_0_30: '0–30 days',
@@ -246,12 +222,19 @@ function LedgerReport({ data, listKey, title }) {
               <Accordion key={key} title={`${label} — Detailed List (${rows.length})`} defaultOpen={key === 'over_90'}>
                 <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
                   {rows.map((r, idx) => (
-                    <Row
-                      key={idx}
-                      left={`${r.name}${r.phone ? ` (${r.phone})` : ''} — ${r.age_days}d`}
-                      right={money(r.balance)}
-                      color={key === 'over_90' ? 'var(--danger)' : undefined}
-                    />
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                      <div>
+                        <strong>{r.name}</strong>
+                        {r.phone && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}> ({r.phone})</span>}
+                        <span style={{ fontSize: 12, color: 'var(--text-faint)', marginLeft: 8 }}>— {r.age_days}d</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontWeight: 700, color: key === 'over_90' ? 'var(--danger)' : 'inherit' }}>{money(r.balance)}</span>
+                        <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({ phone: r.phone || '', tin: r.tin_number || '' })}>
+                          🤝 Reconcile
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </Accordion>
@@ -264,58 +247,22 @@ function LedgerReport({ data, listKey, title }) {
         <Accordion title={title} defaultOpen={true}>
           <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
             {list.map((r, idx) => (
-              <Row key={idx} left={`${r.name} (${r.status})`} right={money(r.outstanding)} />
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                <div>
+                  <strong>{r.name}</strong>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>({r.status})</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontWeight: 700 }}>{money(r.outstanding)}</span>
+                  <button className="btn btn-outline btn-sm" onClick={() => onReconcile && onReconcile({ phone: r.phone || '', tin: r.tin_number || '' })}>
+                    🤝 Reconcile
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </Accordion>
       )}
-    </>
-  )
-}
-
-function AgingReport({ data, title }) {
-  const buckets = data.buckets || {}
-  const bucketLabels = {
-    current_0_30: '0–30 days',
-    days_31_60: '31–60 days',
-    days_61_90: '61–90 days',
-    over_90: 'Over 90 days (at risk)',
-  }
-  return (
-    <>
-      <div className="card-grid">
-        <div className="card home-kpi-card metric-card">
-          <div className="label">Total Outstanding</div>
-          <div className="value">{money(data.total_outstanding)}</div>
-        </div>
-        {Object.entries(bucketLabels).map(([key, label]) => (
-          <div className="card home-kpi-card metric-card" key={key}>
-            <div className="label">{label}</div>
-            <div className="value" style={key === 'over_90' ? { color: 'var(--danger)' } : undefined}>
-              {money((data.summary || {})[key])}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {Object.entries(bucketLabels).map(([key, label]) => {
-        const rows = buckets[key] || []
-        if (rows.length === 0) return null
-        return (
-          <Accordion key={key} title={`${label} — ${title} (${rows.length})`} defaultOpen={key === 'over_90'}>
-            <div style={{ background: 'transparent', padding: '4px 16px', borderRadius: '12px' }}>
-              {rows.map((r, idx) => (
-                <Row
-                  key={idx}
-                  left={`${r.name}${r.phone ? ` (${r.phone})` : ''} — ${r.age_days}d`}
-                  right={money(r.balance)}
-                  color={key === 'over_90' ? 'var(--danger)' : undefined}
-                />
-              ))}
-            </div>
-          </Accordion>
-        )
-      })}
     </>
   )
 }
@@ -507,12 +454,14 @@ const VIEW_CONFIG = {
 
 export default function Reports({ view }) {
   const api = useApi()
+  const { account } = useAuth()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [exporting, setExporting] = useState(false)
   const [reminders, setReminders] = useState([])
+  const [reconcileTarget, setReconcileTarget] = useState(null)
 
   const config = VIEW_CONFIG[view] || VIEW_CONFIG['financial-summary']
 
@@ -555,7 +504,6 @@ export default function Reports({ view }) {
   }
 
   useEffect(() => {
-    // Reset the date range whenever the view changes, then load fresh data.
     setStart('')
     setEnd('')
     setData(null)
@@ -582,36 +530,50 @@ export default function Reports({ view }) {
     <div className="page">
       <div className="page-header">
         <h1>{config.title}</h1>
-        <button className="btn btn-outline" onClick={handleExport} disabled={exporting || !data}>
-          {exporting ? 'Exporting…' : '⬇ Export Excel'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline" onClick={handleExport} disabled={exporting || !data}>
+            {exporting ? 'Exporting…' : ' Export Excel'}
+          </button>
+        </div>
       </div>
 
+      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+
       {config.dateFilter && (
-        <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-row" style={{ marginBottom: 0 }}>
-            <label>From</label>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>From:</label>
             <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
           </div>
-          <div className="form-row" style={{ marginBottom: 0 }}>
-            <label>To</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label style={{ fontSize: 13, color: 'var(--text-muted)' }}>To:</label>
             <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
           </div>
-          <button className="btn btn-primary" onClick={load}>Apply</button>
+          <button className="btn btn-outline" onClick={load}>Apply Filter</button>
           {(start || end) && (
-            <button className="btn btn-outline" onClick={() => { setStart(''); setEnd(''); setData(null); api.get(config.endpoint).then(setData).catch((e) => setError(e.message)) }}>
-              Clear (All-time)
+            <button className="btn btn-outline" onClick={() => { setStart(''); setEnd(''); load() }}>
+              Reset
             </button>
           )}
         </div>
       )}
 
-      {error && <div className="error-text">{error}</div>}
+      {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
 
-      <AlertBannerContainer reminders={reminders} onDismiss={dismissReminder} />
+      {!data ? (
+        <div className="card" style={{ padding: 24, color: 'var(--text-muted)' }}>Loading report…</div>
+      ) : (
+        <Component data={data} onReconcile={(target) => setReconcileTarget(target)} />
+      )}
 
-      {!data && !error && <div style={{ color: 'var(--text-muted)' }}>Loading…</div>}
-      {data && <Component data={data} />}
+      {reconcileTarget && (
+        <ReconciliationStatement
+          company={account}
+          initialPhone={reconcileTarget.phone || ''}
+          initialTin={reconcileTarget.tin || ''}
+          onClose={() => setReconcileTarget(null)}
+        />
+      )}
     </div>
   )
 }
